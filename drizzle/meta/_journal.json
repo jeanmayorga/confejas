@@ -1,1 +1,20 @@
-{"version":"7","dialect":"postgresql","entries":[]}
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1788219638236,
+      "tag": "0000_church_units",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788219647717,
+      "tag": "0001_seed_samborondon_church_units",
+      "breakpoints": true
+    }
+  ]
+}
