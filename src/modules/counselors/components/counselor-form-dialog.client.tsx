@@ -38,6 +38,8 @@ type EditableCounselor = {
   governmentId: string | null;
   firstNames: string | null;
   lastNames: string | null;
+  whatsapp: string | null;
+  email: string | null;
   companyId: string | null;
 };
 
@@ -240,6 +242,36 @@ export function CounselorFormDialog({
                 defaultValue={counselor?.lastNames ?? ""}
                 maxLength={160}
                 required
+              />
+            </Field>
+            <Field>
+              <FieldLabel
+                htmlFor={`counselor-whatsapp-${counselor?.id ?? "new"}`}
+              >
+                WhatsApp
+              </FieldLabel>
+              <Input
+                id={`counselor-whatsapp-${counselor?.id ?? "new"}`}
+                name="whatsapp"
+                type="tel"
+                defaultValue={counselor?.whatsapp ?? ""}
+                placeholder="Ej. 0991234567"
+                autoComplete="tel"
+                maxLength={32}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={`counselor-email-${counselor?.id ?? "new"}`}>
+                Correo electrónico
+              </FieldLabel>
+              <Input
+                id={`counselor-email-${counselor?.id ?? "new"}`}
+                name="email"
+                type="email"
+                defaultValue={counselor?.email ?? ""}
+                placeholder="nombre@correo.com"
+                autoComplete="email"
+                maxLength={254}
               />
             </Field>
             <Field className="sm:col-span-2">

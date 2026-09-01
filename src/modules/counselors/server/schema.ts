@@ -18,6 +18,8 @@ export const counselors = pgTable(
     firstNames: varchar({ length: 160 }),
     lastNames: varchar({ length: 160 }),
     name: varchar({ length: 160 }).notNull(),
+    whatsapp: varchar({ length: 32 }),
+    email: varchar({ length: 254 }),
     companyId: uuid().references(() => companies.id, {
       onDelete: "set null",
       onUpdate: "cascade",

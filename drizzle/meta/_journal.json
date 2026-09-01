@@ -71,6 +71,13 @@
       "when": 1788234646604,
       "tag": "0009_narrow_groot",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788235465894,
+      "tag": "0010_cuddly_wolf_cub",
+      "breakpoints": true
     }
   ]
 }

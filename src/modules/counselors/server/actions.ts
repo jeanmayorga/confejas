@@ -54,6 +54,30 @@ function requiredText(
   return value;
 }
 
+function optionalText(formData: FormData, field: string, maxLength: number) {
+  const value = String(formData.get(field) ?? "").trim();
+
+  if (!value) {
+    return null;
+  }
+
+  if (value.length > maxLength) {
+    throw new Error(`El valor no puede superar ${maxLength} caracteres.`);
+  }
+
+  return value;
+}
+
+function getOptionalEmail(formData: FormData) {
+  const email = optionalText(formData, "email", 254)?.toLocaleLowerCase() ?? null;
+
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error("Ingresa un correo electrónico válido.");
+  }
+
+  return email;
+}
+
 function getCounselorData(formData: FormData) {
   const governmentId = normalizeGovernmentId(
     String(formData.get("governmentId") ?? ""),
@@ -80,6 +104,8 @@ function getCounselorData(formData: FormData) {
     firstNames,
     lastNames,
     name,
+    whatsapp: optionalText(formData, "whatsapp", 32),
+    email: getOptionalEmail(formData),
   };
 }
 

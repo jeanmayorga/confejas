@@ -1,10 +1,13 @@
 import UserGroup02Icon from "@hugeicons/core-free-icons/UserGroup02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Link from "next/link";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -30,7 +33,10 @@ import { requireParticipantManagementAccess } from "@/modules/auth/server/sessio
 import { listCompanyOptions } from "@/modules/companies/server/queries";
 import { CounselorFormDialog } from "@/modules/counselors/components/counselor-form-dialog.client";
 import { DeleteCounselorButton } from "@/modules/counselors/components/delete-counselor-button.client";
-import { listCounselors } from "@/modules/counselors/server/queries";
+import {
+  listCounselors,
+  type CounselorSort,
+} from "@/modules/counselors/server/queries";
 
 function getCounselorInitials({
   firstNames,
@@ -54,10 +60,24 @@ function getCounselorInitials({
   }`.toLocaleUpperCase("es");
 }
 
-export default async function CounselorsPage() {
+function getCounselorSort(value: string | string[] | undefined): CounselorSort {
+  const sort = Array.isArray(value) ? value[0] : value;
+
+  return sort === "name" ? "name" : "company";
+}
+
+type CounselorsPageProps = {
+  searchParams: Promise<{ sort?: string | string[] }>;
+};
+
+export default async function CounselorsPage({
+  searchParams,
+}: CounselorsPageProps) {
+  const { sort: sortParam } = await searchParams;
+  const sort = getCounselorSort(sortParam);
   const session = await requireParticipantManagementAccess();
   const [counselors, companies] = await Promise.all([
-    listCounselors(),
+    listCounselors(sort),
     listCompanyOptions(),
   ]);
   const canDelete = canDeleteParticipants(session.user.role);
@@ -88,6 +108,31 @@ export default async function CounselorsPage() {
             {assignedCount.toLocaleString("es-EC")} de {counselors.length} están
             asignados a una compañía.
           </CardDescription>
+          <CardAction className="col-span-2 col-start-1 row-span-1 row-start-3 mt-2 flex w-full items-center justify-between gap-2 @sm/card-header:col-span-1 @sm/card-header:col-start-2 @sm/card-header:row-span-2 @sm/card-header:row-start-1 @sm/card-header:mt-0 @sm/card-header:w-auto @sm/card-header:justify-end">
+            <span className="text-xs text-muted-foreground">Ordenar por</span>
+            <div className="flex items-center gap-1">
+              <Link
+                href="/dashboard/counselors?sort=company"
+                aria-current={sort === "company" ? "page" : undefined}
+                className={buttonVariants({
+                  variant: sort === "company" ? "secondary" : "ghost",
+                  size: "sm",
+                })}
+              >
+                Compañía
+              </Link>
+              <Link
+                href="/dashboard/counselors?sort=name"
+                aria-current={sort === "name" ? "page" : undefined}
+                className={buttonVariants({
+                  variant: sort === "name" ? "secondary" : "ghost",
+                  size: "sm",
+                })}
+              >
+                Nombre
+              </Link>
+            </div>
+          </CardAction>
         </CardHeader>
         <CardContent>
           {counselors.length === 0 ? (
@@ -108,7 +153,7 @@ export default async function CounselorsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Consejero</TableHead>
-                  <TableHead>Cédula</TableHead>
+                  <TableHead>Contacto</TableHead>
                   <TableHead>Compañía</TableHead>
                   <TableHead className="w-28 text-right">Acciones</TableHead>
                 </TableRow>
@@ -127,7 +172,26 @@ export default async function CounselorsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {counselor.governmentId ?? "Sin registrar"}
+                      <div className="flex flex-col gap-1">
+                        {counselor.email ? (
+                          <a
+                            href={`mailto:${counselor.email}`}
+                            className="underline-offset-4 hover:underline"
+                          >
+                            {counselor.email}
+                          </a>
+                        ) : null}
+                        {counselor.whatsapp ? (
+                          <span className="text-xs text-muted-foreground">
+                            WhatsApp: {counselor.whatsapp}
+                          </span>
+                        ) : null}
+                        {!counselor.email && !counselor.whatsapp ? (
+                          <span className="text-muted-foreground">
+                            Sin registrar
+                          </span>
+                        ) : null}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {counselor.companyName ? (
