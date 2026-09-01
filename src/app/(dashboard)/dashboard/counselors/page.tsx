@@ -7,9 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
-  CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -81,9 +79,6 @@ export default async function CounselorsPage({
     listCompanyOptions(),
   ]);
   const canDelete = canDeleteParticipants(session.user.role);
-  const assignedCount = counselors.filter(
-    (counselor) => counselor.companyId !== null,
-  ).length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -101,22 +96,24 @@ export default async function CounselorsPage({
         <CounselorFormDialog companies={companies} />
       </div>
 
-      <Card>
+      <Card size="sm">
         <CardHeader>
-          <CardTitle>Consejeros del evento</CardTitle>
-          <CardDescription>
-            {assignedCount.toLocaleString("es-EC")} de {counselors.length} están
-            asignados a una compañía.
-          </CardDescription>
-          <CardAction className="col-span-2 col-start-1 row-span-1 row-start-3 mt-2 flex w-full items-center justify-between gap-2 @sm/card-header:col-span-1 @sm/card-header:col-start-2 @sm/card-header:row-span-2 @sm/card-header:row-start-1 @sm/card-header:mt-0 @sm/card-header:w-auto @sm/card-header:justify-end">
+          <CardTitle>Filtros</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <nav
+            aria-label="Ordenar consejeros"
+            className="flex w-full flex-col gap-2 sm:flex-row sm:items-center"
+          >
             <span className="text-xs text-muted-foreground">Ordenar por</span>
-            <div className="flex items-center gap-1">
+            <div className="flex w-full items-center gap-1 sm:w-auto">
               <Link
                 href="/dashboard/counselors?sort=company"
                 aria-current={sort === "company" ? "page" : undefined}
                 className={buttonVariants({
                   variant: sort === "company" ? "secondary" : "ghost",
                   size: "sm",
+                  className: "flex-1 sm:flex-none",
                 })}
               >
                 Compañía
@@ -127,12 +124,19 @@ export default async function CounselorsPage({
                 className={buttonVariants({
                   variant: sort === "name" ? "secondary" : "ghost",
                   size: "sm",
+                  className: "flex-1 sm:flex-none",
                 })}
               >
                 Nombre
               </Link>
             </div>
-          </CardAction>
+          </nav>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="sr-only">
+          <CardTitle>Lista de consejeros</CardTitle>
         </CardHeader>
         <CardContent>
           {counselors.length === 0 ? (
