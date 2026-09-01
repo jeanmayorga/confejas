@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Pdf02Icon from "@hugeicons/core-free-icons/Pdf02Icon";
 import QrCodeScanIcon from "@hugeicons/core-free-icons/QrCodeScanIcon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import UserAdd01Icon from "@hugeicons/core-free-icons/UserAdd01Icon";
@@ -72,22 +71,6 @@ function getParticipantsHref(query: Record<string, string | undefined>) {
     : "/dashboard/participants";
 }
 
-function getParticipantsExportHref(query: Record<string, string | undefined>) {
-  const params = new URLSearchParams();
-
-  for (const [key, value] of Object.entries(query)) {
-    if (value) {
-      params.set(key, value);
-    }
-  }
-
-  const value = params.toString();
-
-  return value
-    ? `/api/participants/export?${value}`
-    : "/api/participants/export";
-}
-
 export default async function ParticipantsPage({
   searchParams,
 }: ParticipantsPageProps) {
@@ -136,7 +119,6 @@ export default async function ParticipantsPage({
     ...directoryQuery,
     q: undefined,
   });
-  const exportHref = getParticipantsExportHref(directoryQuery);
   const hasActiveCriteria = Boolean(
     result.search || result.companyId || result.wardId || result.stakeId,
   );
@@ -162,16 +144,6 @@ export default async function ParticipantsPage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {result.total > 0 ? (
-            <a
-              href={exportHref}
-              download
-              className={buttonVariants({ variant: "outline" })}
-            >
-              <HugeiconsIcon icon={Pdf02Icon} data-icon="inline-start" />
-              Exportar PDF
-            </a>
-          ) : null}
           {canCheckInParticipants(session.user.role) ? (
             <Link
               href="/dashboard/check-in"
@@ -243,6 +215,7 @@ export default async function ParticipantsPage({
 
           <ParticipantDirectoryFilters
             search={result.search}
+            canExport={result.total > 0}
             filters={{
               sort: result.sort,
               companyId: result.companyId,
