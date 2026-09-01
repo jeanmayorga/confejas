@@ -159,24 +159,22 @@ export default async function ParticipantsPage({
         </div>
       </div>
 
+      <ParticipantDirectoryFilters
+        key={result.search}
+        canExport={result.total > 0}
+        filters={{
+          search: result.search,
+          sort: result.sort,
+          companyId: result.companyId,
+          wardId: result.wardId ? String(result.wardId) : "",
+          stakeId: result.stakeId ? String(result.stakeId) : "",
+        }}
+        companies={companies}
+        wards={wards}
+        stakes={stakes}
+      />
+
       <div className="flex min-h-[calc(100svh-12rem)] flex-1 flex-col overflow-hidden rounded-2xl border bg-card">
-        <div className="flex flex-col gap-4 p-4">
-          <ParticipantDirectoryFilters
-            key={result.search}
-            canExport={result.total > 0}
-            filters={{
-              search: result.search,
-              sort: result.sort,
-              companyId: result.companyId,
-              wardId: result.wardId ? String(result.wardId) : "",
-              stakeId: result.stakeId ? String(result.stakeId) : "",
-            }}
-            companies={companies}
-            wards={wards}
-            stakes={stakes}
-          />
-        </div>
-        <Separator />
         <div className="flex-1">
           {result.rows.length === 0 ? (
             <Empty className="min-h-96">

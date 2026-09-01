@@ -12,6 +12,14 @@ import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -128,151 +136,156 @@ export function ParticipantDirectoryFilters({
   const exportDisabled = pending || !canExport;
 
   return (
-    <form className="flex flex-col gap-4" onSubmit={submitSearch}>
-      <FieldGroup className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Field
-          className="md:col-span-2 xl:col-span-2"
-          data-disabled={pending || undefined}
-        >
-          <FieldLabel htmlFor="participant-search">Buscar</FieldLabel>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Input
-              id="participant-search"
-              name="q"
-              value={searchDraft}
-              disabled={pending}
-              className="min-w-0 flex-1"
-              placeholder="Nombre, cédula, compañía o unidad"
-              aria-label="Buscar participantes"
-              onChange={(event) => setSearchDraft(event.currentTarget.value)}
-            />
-            <Button
-              type="submit"
-              variant="secondary"
-              className="w-full sm:w-auto"
-              disabled={pending}
+    <form onSubmit={submitSearch}>
+      <Card size="sm">
+        <CardHeader className="border-b">
+          <CardTitle>Filtros de participantes</CardTitle>
+          <CardDescription>
+            Busca por nombre o cédula y combina los filtros que necesites.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          <FieldGroup className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <Field
+              className="sm:col-span-2 xl:col-span-4"
+              data-disabled={pending || undefined}
             >
-              <HugeiconsIcon icon={Search01Icon} data-icon="inline-start" />
-              Buscar
-            </Button>
-          </div>
-        </Field>
+              <FieldLabel htmlFor="participant-search">
+                Buscar participante
+              </FieldLabel>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  id="participant-search"
+                  name="q"
+                  value={searchDraft}
+                  disabled={pending}
+                  className="min-w-0 flex-1"
+                  placeholder="Escribe un nombre o número de cédula"
+                  aria-label="Buscar participantes"
+                  onChange={(event) => setSearchDraft(event.currentTarget.value)}
+                />
+                <Button
+                  type="submit"
+                  className="w-full sm:w-auto"
+                  disabled={pending}
+                >
+                  <HugeiconsIcon icon={Search01Icon} data-icon="inline-start" />
+                  Buscar
+                </Button>
+              </div>
+            </Field>
 
-        <Field data-disabled={pending || undefined}>
-          <FieldLabel htmlFor="participant-sort">Ordenar por</FieldLabel>
-          <NativeSelect
-            id="participant-sort"
-            value={selectedFilters.sort}
-            disabled={pending}
-            className="w-full"
-            onChange={(event) => updateFilter("sort", event.currentTarget.value)}
-          >
-            <NativeSelectOption value="name">Nombres (A–Z)</NativeSelectOption>
-            <NativeSelectOption value="age_asc">
-              Edad (menor a mayor)
-            </NativeSelectOption>
-            <NativeSelectOption value="age_desc">
-              Edad (mayor a menor)
-            </NativeSelectOption>
-          </NativeSelect>
-        </Field>
-
-        <Field data-disabled={pending || undefined}>
-          <FieldLabel htmlFor="participant-company-filter">Compañía</FieldLabel>
-          <NativeSelect
-            id="participant-company-filter"
-            value={selectedFilters.companyId}
-            disabled={pending}
-            className="w-full"
-            onChange={(event) =>
-              updateFilter("companyId", event.currentTarget.value)
-            }
-          >
-            <NativeSelectOption value="">Todas las compañías</NativeSelectOption>
-            <NativeSelectOption value="unassigned">Sin asignar</NativeSelectOption>
-            {companies.map((company) => (
-              <NativeSelectOption key={company.id} value={company.id}>
-                {company.name}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
-        </Field>
-
-        <Field data-disabled={pending || undefined}>
-          <FieldLabel htmlFor="participant-ward-filter">Barrio</FieldLabel>
-          <NativeSelect
-            id="participant-ward-filter"
-            value={selectedFilters.wardId}
-            disabled={pending}
-            className="w-full"
-            onChange={(event) =>
-              updateFilter("wardId", event.currentTarget.value)
-            }
-          >
-            <NativeSelectOption value="">Todos los barrios</NativeSelectOption>
-            {wards.map((ward) => (
-              <NativeSelectOption key={ward.id} value={String(ward.id)}>
-                {ward.name}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
-        </Field>
-
-        <Field data-disabled={pending || undefined}>
-          <FieldLabel htmlFor="participant-stake-filter">Estaca</FieldLabel>
-          <NativeSelect
-            id="participant-stake-filter"
-            value={selectedFilters.stakeId}
-            disabled={pending}
-            className="w-full"
-            onChange={(event) =>
-              updateFilter("stakeId", event.currentTarget.value)
-            }
-          >
-            <NativeSelectOption value="">Todas las estacas</NativeSelectOption>
-            {stakes.map((stake) => (
-              <NativeSelectOption key={stake.id} value={String(stake.id)}>
-                {stake.name}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
-        </Field>
-
-        <Field
-          aria-label="Acciones de filtros"
-          className="justify-end md:col-span-2 xl:col-span-2"
-          data-disabled={pending || undefined}
-        >
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            {hasFilters ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="w-full sm:w-auto"
+            <Field data-disabled={pending || undefined}>
+              <FieldLabel htmlFor="participant-sort">Ordenar por</FieldLabel>
+              <NativeSelect
+                id="participant-sort"
+                value={selectedFilters.sort}
                 disabled={pending}
-                onClick={clearFilters}
+                className="w-full"
+                onChange={(event) =>
+                  updateFilter("sort", event.currentTarget.value)
+                }
               >
-                Limpiar filtros
-              </Button>
-            ) : null}
-            <a
-              href={exportHref}
-              download
-              aria-disabled={exportDisabled}
-              tabIndex={exportDisabled ? -1 : undefined}
-              className={cn(
-                buttonVariants({ variant: "outline" }),
-                "w-full sm:ml-auto sm:w-auto",
-                exportDisabled && "pointer-events-none opacity-50",
-              )}
-            >
-              <HugeiconsIcon icon={Pdf02Icon} data-icon="inline-start" />
-              Exportar PDF
-            </a>
-          </div>
-        </Field>
-      </FieldGroup>
+                <NativeSelectOption value="name">Nombres (A–Z)</NativeSelectOption>
+                <NativeSelectOption value="age_asc">
+                  Edad (menor a mayor)
+                </NativeSelectOption>
+                <NativeSelectOption value="age_desc">
+                  Edad (mayor a menor)
+                </NativeSelectOption>
+              </NativeSelect>
+            </Field>
+
+            <Field data-disabled={pending || undefined}>
+              <FieldLabel htmlFor="participant-company-filter">Compañía</FieldLabel>
+              <NativeSelect
+                id="participant-company-filter"
+                value={selectedFilters.companyId}
+                disabled={pending}
+                className="w-full"
+                onChange={(event) =>
+                  updateFilter("companyId", event.currentTarget.value)
+                }
+              >
+                <NativeSelectOption value="">Todas las compañías</NativeSelectOption>
+                <NativeSelectOption value="unassigned">Sin asignar</NativeSelectOption>
+                {companies.map((company) => (
+                  <NativeSelectOption key={company.id} value={company.id}>
+                    {company.name}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </Field>
+
+            <Field data-disabled={pending || undefined}>
+              <FieldLabel htmlFor="participant-ward-filter">Barrio</FieldLabel>
+              <NativeSelect
+                id="participant-ward-filter"
+                value={selectedFilters.wardId}
+                disabled={pending}
+                className="w-full"
+                onChange={(event) =>
+                  updateFilter("wardId", event.currentTarget.value)
+                }
+              >
+                <NativeSelectOption value="">Todos los barrios</NativeSelectOption>
+                {wards.map((ward) => (
+                  <NativeSelectOption key={ward.id} value={String(ward.id)}>
+                    {ward.name}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </Field>
+
+            <Field data-disabled={pending || undefined}>
+              <FieldLabel htmlFor="participant-stake-filter">Estaca</FieldLabel>
+              <NativeSelect
+                id="participant-stake-filter"
+                value={selectedFilters.stakeId}
+                disabled={pending}
+                className="w-full"
+                onChange={(event) =>
+                  updateFilter("stakeId", event.currentTarget.value)
+                }
+              >
+                <NativeSelectOption value="">Todas las estacas</NativeSelectOption>
+                {stakes.map((stake) => (
+                  <NativeSelectOption key={stake.id} value={String(stake.id)}>
+                    {stake.name}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </Field>
+          </FieldGroup>
+        </CardContent>
+
+        <CardFooter className="flex-col gap-2 border-t sm:flex-row sm:justify-between">
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full sm:w-auto"
+            disabled={pending || !hasFilters}
+            onClick={clearFilters}
+          >
+            Limpiar filtros
+          </Button>
+          <a
+            href={exportHref}
+            download
+            aria-disabled={exportDisabled}
+            tabIndex={exportDisabled ? -1 : undefined}
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "w-full sm:w-auto",
+              exportDisabled && "pointer-events-none opacity-50",
+            )}
+          >
+            <HugeiconsIcon icon={Pdf02Icon} data-icon="inline-start" />
+            Exportar PDF
+          </a>
+        </CardFooter>
+      </Card>
     </form>
   );
 }
