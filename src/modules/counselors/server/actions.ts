@@ -9,7 +9,6 @@ import {
 } from "@/modules/auth/roles";
 import { requireSession } from "@/modules/auth/server/session";
 import { companies } from "@/modules/companies/server/schema";
-import { calculateAge } from "@/modules/counselors/age";
 import { normalizeGovernmentId } from "@/modules/participants/identity";
 import {
   lookupEcuadorianCitizen,
@@ -54,29 +53,6 @@ function requiredText(
   return value;
 }
 
-function optionalBirthDate(formData: FormData) {
-  const value = String(formData.get("birthDate") ?? "");
-
-  if (!value) {
-    return null;
-  }
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    throw new Error("La fecha de nacimiento no es válida.");
-  }
-
-  const date = new Date(`${value}T00:00:00Z`);
-  if (Number.isNaN(date.valueOf()) || date.toISOString().slice(0, 10) !== value) {
-    throw new Error("La fecha de nacimiento no es válida.");
-  }
-
-  if (calculateAge(value) === null) {
-    throw new Error("La fecha de nacimiento no es válida.");
-  }
-
-  return value;
-}
-
 function getCounselorData(formData: FormData) {
   const governmentId = normalizeGovernmentId(
     String(formData.get("governmentId") ?? ""),
@@ -98,7 +74,6 @@ function getCounselorData(formData: FormData) {
     governmentId,
     firstNames,
     lastNames,
-    birthDate: optionalBirthDate(formData),
     name,
   };
 }

@@ -1,6 +1,5 @@
 import { relations } from "drizzle-orm";
 import {
-  date,
   index,
   pgTable,
   timestamp,
@@ -18,7 +17,6 @@ export const counselors = pgTable(
     governmentId: varchar({ length: 32 }),
     firstNames: varchar({ length: 160 }),
     lastNames: varchar({ length: 160 }),
-    birthDate: date(),
     name: varchar({ length: 160 }).notNull(),
     companyId: uuid().references(() => companies.id, {
       onDelete: "set null",

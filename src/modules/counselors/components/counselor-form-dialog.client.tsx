@@ -26,7 +26,6 @@ import {
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import { Spinner } from "@/components/ui/spinner";
-import { calculateAge } from "@/modules/counselors/age";
 import {
   createCounselorAction,
   lookupCounselorGovernmentIdAction,
@@ -39,7 +38,6 @@ type EditableCounselor = {
   governmentId: string | null;
   firstNames: string | null;
   lastNames: string | null;
-  birthDate: string | null;
   companyId: string | null;
 };
 
@@ -57,8 +55,6 @@ export function CounselorFormDialog({
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [lookupPending, startLookupTransition] = useTransition();
-  const initialAge = calculateAge(counselor?.birthDate ?? null);
-  const [age, setAge] = useState<number | null>(initialAge);
   const editing = Boolean(counselor);
 
   function handleOpenChange(nextOpen: boolean) {
@@ -66,7 +62,6 @@ export function CounselorFormDialog({
 
     if (!nextOpen) {
       formRef.current?.reset();
-      setAge(initialAge);
     }
   }
 
@@ -96,7 +91,6 @@ export function CounselorFormDialog({
       const fieldValues = {
         firstNames: result.data.firstNames,
         lastNames: result.data.lastNames,
-        birthDate: result.data.birthDate,
       };
       let filledFields = 0;
 
@@ -111,8 +105,6 @@ export function CounselorFormDialog({
           filledFields += 1;
         }
       }
-
-      setAge(calculateAge(result.data.birthDate));
 
       if (filledFields === 0) {
         toast.info(
@@ -141,7 +133,6 @@ export function CounselorFormDialog({
 
       toast.success(result.message);
       formRef.current?.reset();
-      setAge(initialAge);
       setOpen(false);
       router.refresh();
     });
@@ -178,11 +169,6 @@ export function CounselorFormDialog({
         </DialogHeader>
 
         <form ref={formRef} onSubmit={handleSubmit}>
-          <input
-            type="hidden"
-            name="birthDate"
-            defaultValue={counselor?.birthDate ?? ""}
-          />
           <FieldGroup className="grid gap-5 sm:grid-cols-2">
             <Field className="sm:col-span-2">
               <FieldLabel
@@ -256,21 +242,7 @@ export function CounselorFormDialog({
                 required
               />
             </Field>
-            <Field>
-              <FieldLabel htmlFor={`counselor-age-${counselor?.id ?? "new"}`}>
-                Edad
-              </FieldLabel>
-              <Input
-                id={`counselor-age-${counselor?.id ?? "new"}`}
-                value={age ?? ""}
-                placeholder="Se completa con la cédula"
-                readOnly
-              />
-              <FieldDescription>
-                Calculada desde la fecha de nacimiento.
-              </FieldDescription>
-            </Field>
-            <Field>
+            <Field className="sm:col-span-2">
               <FieldLabel htmlFor={`counselor-company-${counselor?.id ?? "new"}`}>
                 Compañía
               </FieldLabel>

@@ -1,0 +1,1 @@
+ALTER TABLE "counselors" DROP COLUMN "birth_date";
