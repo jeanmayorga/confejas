@@ -1,10 +1,8 @@
 import UserGroup02Icon from "@hugeicons/core-free-icons/UserGroup02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
-import Link from "next/link";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -30,6 +28,7 @@ import { canDeleteParticipants } from "@/modules/auth/roles";
 import { requireParticipantManagementAccess } from "@/modules/auth/server/session";
 import { listCompanyOptions } from "@/modules/companies/server/queries";
 import { CounselorFormDialog } from "@/modules/counselors/components/counselor-form-dialog.client";
+import { CounselorSortSelect } from "@/modules/counselors/components/counselor-sort-select.client";
 import { DeleteCounselorButton } from "@/modules/counselors/components/delete-counselor-button.client";
 import {
   listCounselors,
@@ -101,36 +100,7 @@ export default async function CounselorsPage({
           <CardTitle>Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <nav
-            aria-label="Ordenar consejeros"
-            className="flex w-full flex-col gap-2 sm:flex-row sm:items-center"
-          >
-            <span className="text-xs text-muted-foreground">Ordenar por</span>
-            <div className="flex w-full items-center gap-1 sm:w-auto">
-              <Link
-                href="/dashboard/counselors?sort=company"
-                aria-current={sort === "company" ? "page" : undefined}
-                className={buttonVariants({
-                  variant: sort === "company" ? "secondary" : "ghost",
-                  size: "sm",
-                  className: "flex-1 sm:flex-none",
-                })}
-              >
-                Compañía
-              </Link>
-              <Link
-                href="/dashboard/counselors?sort=name"
-                aria-current={sort === "name" ? "page" : undefined}
-                className={buttonVariants({
-                  variant: sort === "name" ? "secondary" : "ghost",
-                  size: "sm",
-                  className: "flex-1 sm:flex-none",
-                })}
-              >
-                Nombre
-              </Link>
-            </div>
-          </nav>
+          <CounselorSortSelect sort={sort} />
         </CardContent>
       </Card>
 
@@ -156,15 +126,22 @@ export default async function CounselorsPage({
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Compañía</TableHead>
                   <TableHead>Consejero</TableHead>
                   <TableHead>Contacto</TableHead>
-                  <TableHead>Compañía</TableHead>
                   <TableHead className="w-28 text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {counselors.map((counselor) => (
                   <TableRow key={counselor.id}>
+                    <TableCell>
+                      {counselor.companyName ? (
+                        counselor.companyName
+                      ) : (
+                        <Badge variant="secondary">Sin asignar</Badge>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar aria-hidden="true">
@@ -196,13 +173,6 @@ export default async function CounselorsPage({
                           </span>
                         ) : null}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      {counselor.companyName ? (
-                        counselor.companyName
-                      ) : (
-                        <Badge variant="secondary">Sin asignar</Badge>
-                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
