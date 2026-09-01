@@ -16,6 +16,9 @@ export type ParticipantSort = "name" | "age_asc" | "age_desc";
 
 type ListParticipantsOptions = {
   page: number;
+} & ParticipantDirectoryOptions;
+
+type ParticipantDirectoryOptions = {
   search?: string;
   sort?: string;
   companyId?: string;
@@ -33,16 +36,13 @@ function getSafePositiveInteger(value: number | undefined) {
   return Number.isSafeInteger(value) && Number(value) > 0 ? Number(value) : null;
 }
 
-export async function listParticipants({
-  page,
+function getParticipantDirectoryState({
   search = "",
   sort = "name",
   companyId = "",
   wardId,
   stakeId,
-}: ListParticipantsOptions) {
-  const safePage = Number.isSafeInteger(page) && page > 0 ? page : 1;
-  const offset = (safePage - 1) * PARTICIPANTS_PAGE_SIZE;
+}: ParticipantDirectoryOptions) {
   const safeSearch = search.trim().slice(0, 100);
   const safeSort: ParticipantSort =
     sort === "age_asc" || sort === "age_desc" ? sort : "name";
@@ -97,6 +97,25 @@ export async function listParticipants({
             asc(participants.id),
           ];
 
+  return {
+    filters,
+    sortColumns,
+    search: safeSearch,
+    sort: safeSort,
+    companyId: safeCompanyId,
+    wardId: safeWardId,
+    stakeId: safeStakeId,
+  };
+}
+
+export async function listParticipants({
+  page,
+  ...options
+}: ListParticipantsOptions) {
+  const safePage = Number.isSafeInteger(page) && page > 0 ? page : 1;
+  const offset = (safePage - 1) * PARTICIPANTS_PAGE_SIZE;
+  const directory = getParticipantDirectoryState(options);
+
   const [rows, [totalRow]] = await Promise.all([
     db
       .select({
@@ -123,8 +142,8 @@ export async function listParticipants({
       .innerJoin(wards, eq(participants.wardId, wards.id))
       .innerJoin(stakes, eq(wards.stakeId, stakes.id))
       .leftJoin(companies, eq(participants.companyId, companies.id))
-      .where(filters)
-      .orderBy(...sortColumns)
+      .where(directory.filters)
+      .orderBy(...directory.sortColumns)
       .limit(PARTICIPANTS_PAGE_SIZE)
       .offset(offset),
     db
@@ -133,7 +152,7 @@ export async function listParticipants({
       .innerJoin(wards, eq(participants.wardId, wards.id))
       .innerJoin(stakes, eq(wards.stakeId, stakes.id))
       .leftJoin(companies, eq(participants.companyId, companies.id))
-      .where(filters),
+      .where(directory.filters),
   ]);
 
   const total = totalRow?.value ?? 0;
@@ -144,11 +163,42 @@ export async function listParticipants({
     pageSize: PARTICIPANTS_PAGE_SIZE,
     total,
     totalPages: Math.max(1, Math.ceil(total / PARTICIPANTS_PAGE_SIZE)),
-    search: safeSearch,
-    sort: safeSort,
-    companyId: safeCompanyId,
-    wardId: safeWardId,
-    stakeId: safeStakeId,
+    search: directory.search,
+    sort: directory.sort,
+    companyId: directory.companyId,
+    wardId: directory.wardId,
+    stakeId: directory.stakeId,
+  };
+}
+
+export async function listParticipantsForExport(
+  options: ParticipantDirectoryOptions,
+) {
+  const directory = getParticipantDirectoryState(options);
+  const rows = await db
+    .select({
+      id: participants.id,
+      firstNames: participants.firstNames,
+      lastNames: participants.lastNames,
+      age: sql<number | null>`extract(year from age(current_date, ${participants.birthDate}))::integer`,
+      companyName: companies.name,
+      wardName: wards.name,
+      stakeName: stakes.name,
+    })
+    .from(participants)
+    .innerJoin(wards, eq(participants.wardId, wards.id))
+    .innerJoin(stakes, eq(wards.stakeId, stakes.id))
+    .leftJoin(companies, eq(participants.companyId, companies.id))
+    .where(directory.filters)
+    .orderBy(...directory.sortColumns);
+
+  return {
+    rows,
+    search: directory.search,
+    sort: directory.sort,
+    companyId: directory.companyId,
+    wardId: directory.wardId,
+    stakeId: directory.stakeId,
   };
 }
 
