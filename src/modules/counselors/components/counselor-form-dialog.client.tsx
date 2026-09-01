@@ -21,6 +21,7 @@ import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui
 import { Input } from "@/components/ui/input";
 import {
   NativeSelect,
+  NativeSelectOptGroup,
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import { Spinner } from "@/components/ui/spinner";
@@ -127,11 +128,13 @@ export function CounselorFormDialog({
                 className="w-full"
               >
                 <NativeSelectOption value="">Sin asignar</NativeSelectOption>
-                {companies.map((company) => (
-                  <NativeSelectOption key={company.id} value={company.id}>
-                    {company.name}
-                  </NativeSelectOption>
-                ))}
+                <NativeSelectOptGroup label="Compañías">
+                  {companies.map((company) => (
+                    <NativeSelectOption key={company.id} value={company.id}>
+                      {company.name}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelectOptGroup>
               </NativeSelect>
               <FieldDescription>
                 La asignación puede cambiarse en cualquier momento.

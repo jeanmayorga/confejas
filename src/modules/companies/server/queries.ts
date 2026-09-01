@@ -8,6 +8,11 @@ import { db } from "@/server/db";
 
 import { companies } from "./schema";
 
+const companyNameCollator = new Intl.Collator("es", {
+  numeric: true,
+  sensitivity: "base",
+});
+
 export async function listCompanies() {
   const [companyRows, counselorRows] = await Promise.all([
     db
@@ -45,20 +50,28 @@ export async function listCompanies() {
     counselorsByCompany.set(counselor.companyId, assigned);
   }
 
-  return companyRows.map((company) => {
-    const assignedCounselors = counselorsByCompany.get(company.id) ?? [];
+  return companyRows
+    .map((company) => {
+      const assignedCounselors = counselorsByCompany.get(company.id) ?? [];
 
-    return {
-      ...company,
-      counselors: assignedCounselors,
-      counselorCount: assignedCounselors.length,
-    };
-  });
+      return {
+        ...company,
+        counselors: assignedCounselors,
+        counselorCount: assignedCounselors.length,
+      };
+    })
+    .sort((left, right) =>
+      companyNameCollator.compare(left.name, right.name),
+    );
 }
 
 export async function listCompanyOptions() {
-  return db
+  const companyRows = await db
     .select({ id: companies.id, name: companies.name })
     .from(companies)
     .orderBy(asc(companies.name));
+
+  return companyRows.sort((left, right) =>
+    companyNameCollator.compare(left.name, right.name),
+  );
 }
