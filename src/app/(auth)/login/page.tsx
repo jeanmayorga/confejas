@@ -36,7 +36,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   return (
-    <main className="grid min-h-svh place-items-center bg-background p-4 sm:p-6">
+    <main className="grid min-h-svh place-items-center bg-[#e8f8ff] p-4 sm:p-6">
       <div className="grid w-full max-w-3xl items-center gap-8 md:grid-cols-2 md:gap-12">
         <div className="flex justify-center">
           <Image

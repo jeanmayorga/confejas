@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/table";
 import { requireAdmin } from "@/modules/auth/server/session";
 import { canManageUsers, getRoleLabel } from "@/modules/auth/roles";
+import { UserDangerActions } from "@/modules/users/components/user-danger-actions.client";
+import { UserFormDialog } from "@/modules/users/components/user-form-dialog.client";
 import { listUsers } from "@/modules/users/server/queries";
 
 type UsersPageProps = {
@@ -30,7 +32,7 @@ const dateFormatter = new Intl.DateTimeFormat("es-EC", {
 });
 
 export default async function UsersPage({ searchParams }: UsersPageProps) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const params = await searchParams;
   const pageValue = Array.isArray(params.page) ? params.page[0] : params.page;
   const requestedPage = Number(pageValue ?? "1");
@@ -45,11 +47,14 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Usuarios</h1>
-        <p className="mt-1 text-muted-foreground">
-          Cuentas autorizadas para ingresar al panel de Confejas.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Usuarios</h1>
+          <p className="mt-1 text-muted-foreground">
+            Cuentas autorizadas para ingresar al panel de Confejas.
+          </p>
+        </div>
+        <UserFormDialog />
       </div>
 
       <Card>
@@ -68,6 +73,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                   <TableHead>Rol</TableHead>
                   <TableHead className="hidden md:table-cell">Estado</TableHead>
                   <TableHead className="hidden lg:table-cell">Creado</TableHead>
+                  <TableHead className="w-28 text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -95,6 +101,15 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       {dateFormatter.format(user.createdAt)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <UserFormDialog user={user} />
+                        <UserDangerActions
+                          user={user}
+                          isCurrentUser={session.user.id === user.id}
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -11,15 +11,30 @@ type DataPaginationProps = {
   basePath: string;
   page: number;
   totalPages: number;
+  query?: Record<string, string | undefined>;
 };
 
 export function DataPagination({
   basePath,
   page,
   totalPages,
+  query = {},
 }: DataPaginationProps) {
   if (totalPages <= 1) {
     return null;
+  }
+
+  function getHref(targetPage: number) {
+    const params = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(query)) {
+      if (value) {
+        params.set(key, value);
+      }
+    }
+
+    params.set("page", String(targetPage));
+    return `${basePath}?${params.toString()}`;
   }
 
   return (
@@ -28,14 +43,14 @@ export function DataPagination({
         {page > 1 ? (
           <PaginationItem>
             <PaginationPrevious
-              href={`${basePath}?page=${page - 1}`}
+              href={getHref(page - 1)}
               text="Anterior"
             />
           </PaginationItem>
         ) : null}
         <PaginationItem>
           <PaginationLink
-            href={`${basePath}?page=${page}`}
+            href={getHref(page)}
             isActive
             aria-label={`Página ${page} de ${totalPages}`}
           >
@@ -45,7 +60,7 @@ export function DataPagination({
         {page < totalPages ? (
           <PaginationItem>
             <PaginationNext
-              href={`${basePath}?page=${page + 1}`}
+              href={getHref(page + 1)}
               text="Siguiente"
             />
           </PaginationItem>

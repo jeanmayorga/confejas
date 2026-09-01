@@ -5,6 +5,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import {
+  canCheckInParticipants,
+  canManageParticipants,
   canManageUsers,
   canViewParticipantDirectory,
 } from "../roles";
@@ -40,6 +42,26 @@ export async function requireParticipantDirectoryAccess() {
   const session = await requireSession();
 
   if (!canViewParticipantDirectory(session.user.role)) {
+    redirect("/dashboard");
+  }
+
+  return session;
+}
+
+export async function requireParticipantManagementAccess() {
+  const session = await requireSession();
+
+  if (!canManageParticipants(session.user.role)) {
+    redirect("/dashboard/participants");
+  }
+
+  return session;
+}
+
+export async function requireCheckInAccess() {
+  const session = await requireSession();
+
+  if (!canCheckInParticipants(session.user.role)) {
     redirect("/dashboard");
   }
 

@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 
 import "./globals.css";
@@ -19,10 +20,23 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Confejas",
   description: "Plataforma de gestión de Confejas.",
+  applicationName: "Confejas Staff",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Confejas Staff",
+  },
+  formatDetection: {
+    telephone: false,
+  },
   icons: {
     icon: "/logo.png",
     apple: "/logo.png",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#046db0",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -37,6 +51,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         <TooltipProvider>{children}</TooltipProvider>
+        <Toaster position="top-right" />
       </body>
     </html>
   );

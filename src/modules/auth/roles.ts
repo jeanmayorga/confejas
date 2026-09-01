@@ -40,6 +40,18 @@ export function canViewParticipantDirectory(value: RoleValue) {
   );
 }
 
+export function canManageParticipants(value: RoleValue) {
+  return getUserRoles(value).some((role) => ["admin", "staff"].includes(role));
+}
+
+export function canDeleteParticipants(value: RoleValue) {
+  return hasRole(value, "admin");
+}
+
+export function canCheckInParticipants(value: RoleValue) {
+  return getUserRoles(value).some((role) => ["admin", "staff"].includes(role));
+}
+
 export function getRoleLabel(value: RoleValue) {
   const roles = getUserRoles(value);
 

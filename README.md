@@ -15,7 +15,8 @@ La aplicación estará disponible en [http://localhost:3000](http://localhost:30
 ## Base de datos
 
 Crea `.env.local` a partir de `.env.example` y configura `DATABASE_URL` con la
-cadena de conexión de Neon.
+cadena de conexión de Neon. Configura también `ECUADOR_API_KEY` para habilitar
+el autocompletado de participantes mediante una consulta de cédula.
 
 ```bash
 bun run db:check
