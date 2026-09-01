@@ -4,6 +4,10 @@ import { cache } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import {
+  canManageUsers,
+  canViewParticipantDirectory,
+} from "../roles";
 import { auth } from "./auth";
 
 export const getSession = cache(async () =>
@@ -25,7 +29,17 @@ export async function requireSession() {
 export async function requireAdmin() {
   const session = await requireSession();
 
-  if (session.user.role !== "admin") {
+  if (!canManageUsers(session.user.role)) {
+    redirect("/dashboard");
+  }
+
+  return session;
+}
+
+export async function requireParticipantDirectoryAccess() {
+  const session = await requireSession();
+
+  if (!canViewParticipantDirectory(session.user.role)) {
     redirect("/dashboard");
   }
 

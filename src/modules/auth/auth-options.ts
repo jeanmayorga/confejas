@@ -1,6 +1,8 @@
 import type { BetterAuthOptions } from "better-auth/minimal";
 import { admin } from "better-auth/plugins";
 
+import { accessControl, authRoles } from "./access-control";
+
 export const authOptions = {
   appName: "Confejas",
   emailAndPassword: {
@@ -11,7 +13,9 @@ export const authOptions = {
   },
   plugins: [
     admin({
-      defaultRole: "user",
+      ac: accessControl,
+      roles: authRoles,
+      defaultRole: "participant",
       adminRoles: ["admin"],
     }),
   ],

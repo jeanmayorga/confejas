@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { requireSession } from "@/modules/auth/server/session";
+import { requireParticipantDirectoryAccess } from "@/modules/auth/server/session";
 import { listParticipants } from "@/modules/participants/server/queries";
 
 type ParticipantsPageProps = {
@@ -39,7 +39,7 @@ type ParticipantsPageProps = {
 export default async function ParticipantsPage({
   searchParams,
 }: ParticipantsPageProps) {
-  await requireSession();
+  await requireParticipantDirectoryAccess();
   const params = await searchParams;
   const pageValue = Array.isArray(params.page) ? params.page[0] : params.page;
   const requestedPage = Number(pageValue ?? "1");

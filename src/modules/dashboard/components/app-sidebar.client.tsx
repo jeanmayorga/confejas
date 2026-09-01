@@ -10,6 +10,7 @@ import UserMultiple02Icon from "@hugeicons/core-free-icons/UserMultiple02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +35,11 @@ import {
 } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/modules/auth/client/auth-client";
+import {
+  canManageUsers,
+  canViewParticipantDirectory,
+  getRoleLabel,
+} from "@/modules/auth/roles";
 
 export type DashboardUser = {
   name: string;
@@ -66,13 +72,17 @@ export function AppSidebar({ user }: AppSidebarProps) {
       icon: DashboardSquare01Icon,
       exact: true,
     },
-    {
-      title: "Participantes",
-      href: "/dashboard/participants",
-      icon: UserMultiple02Icon,
-      exact: false,
-    },
-    ...(user.role === "admin"
+    ...(canViewParticipantDirectory(user.role)
+      ? [
+          {
+            title: "Participantes",
+            href: "/dashboard/participants",
+            icon: UserMultiple02Icon,
+            exact: false,
+          },
+        ]
+      : []),
+    ...(canManageUsers(user.role)
       ? [
           {
             title: "Usuarios",
@@ -165,12 +175,19 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="end" className="w-64">
-                <DropdownMenuLabel>
-                  <span className="block truncate font-medium text-foreground">
-                    {user.name}
-                  </span>
-                  <span className="block truncate font-normal">{user.email}</span>
-                </DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>
+                    <span className="block truncate font-medium text-foreground">
+                      {user.name}
+                    </span>
+                    <span className="block truncate font-normal">
+                      {user.email}
+                    </span>
+                    <Badge variant="secondary" className="mt-2">
+                      {getRoleLabel(user.role)}
+                    </Badge>
+                  </DropdownMenuLabel>
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem

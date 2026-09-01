@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { requireAdmin } from "@/modules/auth/server/session";
+import { canManageUsers, getRoleLabel } from "@/modules/auth/roles";
 import { listUsers } from "@/modules/users/server/queries";
 
 type UsersPageProps = {
@@ -79,8 +80,12 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={user.role === "admin" ? "default" : "secondary"}>
-                        {user.role === "admin" ? "Administrador" : "Usuario"}
+                      <Badge
+                        variant={
+                          canManageUsers(user.role) ? "default" : "secondary"
+                        }
+                      >
+                        {getRoleLabel(user.role)}
                       </Badge>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
