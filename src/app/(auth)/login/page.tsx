@@ -39,18 +39,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <main className="grid min-h-svh place-items-center bg-background p-4">
       <div className="w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center gap-4 text-center">
+        <div className="mb-8 flex justify-center">
           <Image
             src="/logo.png"
             alt="Confía en Cristo"
             width={160}
             height={160}
             priority
-            className="size-40 rounded-full object-cover shadow-sm"
+            className="size-40 rounded-full object-cover"
           />
-          <p className="text-sm text-muted-foreground">
-            Gestión de participantes
-          </p>
         </div>
         <Card>
           <CardHeader>
