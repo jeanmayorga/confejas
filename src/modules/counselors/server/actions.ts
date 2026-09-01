@@ -9,6 +9,12 @@ import {
 } from "@/modules/auth/roles";
 import { requireSession } from "@/modules/auth/server/session";
 import { companies } from "@/modules/companies/server/schema";
+import { calculateAge } from "@/modules/counselors/age";
+import { normalizeGovernmentId } from "@/modules/participants/identity";
+import {
+  lookupEcuadorianCitizen,
+  type EcuadorianCitizen,
+} from "@/modules/participants/server/ecuador-api";
 import { db } from "@/server/db";
 
 import { counselors } from "./schema";
@@ -17,26 +23,84 @@ export type CounselorActionResult =
   | { success: true; message: string }
   | { success: false; message: string };
 
+export type CounselorGovernmentIdLookupActionResult =
+  | { success: true; data: EcuadorianCitizen }
+  | { success: false; message: string };
+
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value,
   );
 }
 
-function getCounselorName(formData: FormData) {
-  const name = String(formData.get("name") ?? "")
+function requiredText(
+  formData: FormData,
+  field: string,
+  label: string,
+  maxLength: number,
+) {
+  const value = String(formData.get(field) ?? "")
     .trim()
     .replace(/\s+/g, " ");
 
-  if (!name) {
-    throw new Error("El nombre del consejero es obligatorio.");
+  if (!value) {
+    throw new Error(`${label} es obligatorio.`);
   }
+
+  if (value.length > maxLength) {
+    throw new Error(`${label} no puede superar ${maxLength} caracteres.`);
+  }
+
+  return value;
+}
+
+function optionalBirthDate(formData: FormData) {
+  const value = String(formData.get("birthDate") ?? "");
+
+  if (!value) {
+    return null;
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new Error("La fecha de nacimiento no es válida.");
+  }
+
+  const date = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(date.valueOf()) || date.toISOString().slice(0, 10) !== value) {
+    throw new Error("La fecha de nacimiento no es válida.");
+  }
+
+  if (calculateAge(value) === null) {
+    throw new Error("La fecha de nacimiento no es válida.");
+  }
+
+  return value;
+}
+
+function getCounselorData(formData: FormData) {
+  const governmentId = normalizeGovernmentId(
+    String(formData.get("governmentId") ?? ""),
+  );
+
+  if (!governmentId || !/^\d{10}$/.test(governmentId)) {
+    throw new Error("Ingresa una cédula ecuatoriana válida de 10 dígitos.");
+  }
+
+  const firstNames = requiredText(formData, "firstNames", "Los nombres", 160);
+  const lastNames = requiredText(formData, "lastNames", "Los apellidos", 160);
+  const name = `${firstNames} ${lastNames}`;
 
   if (name.length > 160) {
-    throw new Error("El nombre no puede superar 160 caracteres.");
+    throw new Error("El nombre completo no puede superar 160 caracteres.");
   }
 
-  return name;
+  return {
+    governmentId,
+    firstNames,
+    lastNames,
+    birthDate: optionalBirthDate(formData),
+    name,
+  };
 }
 
 async function getCompanyId(formData: FormData) {
@@ -64,11 +128,22 @@ async function getCompanyId(formData: FormData) {
 }
 
 function getSafeError(error: unknown) {
+  const databaseError = error as {
+    constraint?: unknown;
+    cause?: { constraint?: unknown };
+  };
+  const constraint =
+    databaseError.constraint ?? databaseError.cause?.constraint ?? "";
+
+  if (constraint === "counselors_government_id_uidx") {
+    return "Ya existe un consejero con esa cédula.";
+  }
+
   if (error instanceof Error) {
     if (
       error.message.includes("obligatorio") ||
       error.message.includes("superar") ||
-      error.message.includes("válida") ||
+      error.message.includes("válid") ||
       error.message.includes("ya no existe")
     ) {
       return error.message;
@@ -83,6 +158,37 @@ function revalidateCounselorPaths() {
   revalidatePath("/dashboard/companies");
 }
 
+export async function lookupCounselorGovernmentIdAction(
+  value: string,
+): Promise<CounselorGovernmentIdLookupActionResult> {
+  try {
+    const session = await requireSession();
+
+    if (!canManageParticipants(session.user.role)) {
+      return {
+        success: false,
+        message: "No tienes permiso para consultar datos de consejeros.",
+      };
+    }
+
+    const governmentId = normalizeGovernmentId(value);
+
+    if (!governmentId || !/^\d{10}$/.test(governmentId)) {
+      return {
+        success: false,
+        message: "Ingresa una cédula ecuatoriana de 10 dígitos.",
+      };
+    }
+
+    return await lookupEcuadorianCitizen(governmentId);
+  } catch {
+    return {
+      success: false,
+      message: "No se pudo consultar la cédula. Inténtalo nuevamente.",
+    };
+  }
+}
+
 export async function createCounselorAction(
   formData: FormData,
 ): Promise<CounselorActionResult> {
@@ -92,10 +198,10 @@ export async function createCounselorAction(
       return { success: false, message: "No tienes permiso para crear consejeros." };
     }
 
-    const name = getCounselorName(formData);
+    const counselorData = getCounselorData(formData);
     const companyId = await getCompanyId(formData);
 
-    await db.insert(counselors).values({ name, companyId });
+    await db.insert(counselors).values({ ...counselorData, companyId });
     revalidateCounselorPaths();
     return { success: true, message: "Consejero creado correctamente." };
   } catch (error) {
@@ -117,11 +223,11 @@ export async function updateCounselorAction(
       return { success: false, message: "El consejero no es válido." };
     }
 
-    const name = getCounselorName(formData);
+    const counselorData = getCounselorData(formData);
     const companyId = await getCompanyId(formData);
     const [updated] = await db
       .update(counselors)
-      .set({ name, companyId, updatedAt: new Date() })
+      .set({ ...counselorData, companyId, updatedAt: new Date() })
       .where(eq(counselors.id, counselorId))
       .returning({ id: counselors.id });
 

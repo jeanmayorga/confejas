@@ -1,5 +1,13 @@
 import { relations } from "drizzle-orm";
-import { index, pgTable, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import {
+  date,
+  index,
+  pgTable,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  varchar,
+} from "drizzle-orm/pg-core";
 
 import { companies } from "@/modules/companies/server/schema";
 
@@ -7,6 +15,10 @@ export const counselors = pgTable(
   "counselors",
   {
     id: uuid().defaultRandom().primaryKey(),
+    governmentId: varchar({ length: 32 }),
+    firstNames: varchar({ length: 160 }),
+    lastNames: varchar({ length: 160 }),
+    birthDate: date(),
     name: varchar({ length: 160 }).notNull(),
     companyId: uuid().references(() => companies.id, {
       onDelete: "set null",
@@ -19,6 +31,7 @@ export const counselors = pgTable(
       .notNull(),
   },
   (table) => [
+    uniqueIndex("counselors_government_id_uidx").on(table.governmentId),
     index("counselors_company_id_idx").on(table.companyId),
     index("counselors_name_idx").on(table.name, table.id),
   ],

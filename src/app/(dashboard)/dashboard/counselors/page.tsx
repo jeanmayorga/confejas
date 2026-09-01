@@ -27,6 +27,7 @@ import {
 import { canDeleteParticipants } from "@/modules/auth/roles";
 import { requireParticipantManagementAccess } from "@/modules/auth/server/session";
 import { listCompanyOptions } from "@/modules/companies/server/queries";
+import { calculateAge } from "@/modules/counselors/age";
 import { CounselorFormDialog } from "@/modules/counselors/components/counselor-form-dialog.client";
 import { DeleteCounselorButton } from "@/modules/counselors/components/delete-counselor-button.client";
 import { listCounselors } from "@/modules/counselors/server/queries";
@@ -85,6 +86,8 @@ export default async function CounselorsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Consejero</TableHead>
+                  <TableHead>Cédula</TableHead>
+                  <TableHead>Edad</TableHead>
                   <TableHead>Compañía</TableHead>
                   <TableHead className="w-28 text-right">Acciones</TableHead>
                 </TableRow>
@@ -94,6 +97,12 @@ export default async function CounselorsPage() {
                   <TableRow key={counselor.id}>
                     <TableCell className="font-medium">
                       {counselor.name}
+                    </TableCell>
+                    <TableCell>
+                      {counselor.governmentId ?? "Sin registrar"}
+                    </TableCell>
+                    <TableCell>
+                      {calculateAge(counselor.birthDate) ?? "Sin registrar"}
                     </TableCell>
                     <TableCell>
                       {counselor.companyName ? (

@@ -57,6 +57,13 @@
       "when": 1788230317426,
       "tag": "0007_complex_starfox",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788234215892,
+      "tag": "0008_curious_morlocks",
+      "breakpoints": true
     }
   ]
 }

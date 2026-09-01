@@ -12,6 +12,10 @@ export async function listCounselors() {
     .select({
       id: counselors.id,
       name: counselors.name,
+      governmentId: counselors.governmentId,
+      firstNames: counselors.firstNames,
+      lastNames: counselors.lastNames,
+      birthDate: counselors.birthDate,
       companyId: counselors.companyId,
       companyName: companies.name,
     })
