@@ -1,11 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import UserMultiple02Icon from "@hugeicons/core-free-icons/UserMultiple02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { DataPagination } from "@/components/data-pagination";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -15,7 +13,6 @@ import {
 } from "@/components/ui/card";
 import {
   Empty,
-  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -75,7 +72,7 @@ export default async function ParticipantsPage({
         </CardHeader>
         <CardContent>
           {result.rows.length === 0 ? (
-            <Empty className="min-h-80 border">
+            <Empty className="min-h-80">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <HugeiconsIcon icon={UserMultiple02Icon} strokeWidth={2} />
@@ -86,15 +83,6 @@ export default async function ParticipantsPage({
                   listado definitivo y normalizar sus barrios.
                 </EmptyDescription>
               </EmptyHeader>
-              <EmptyContent>
-                <Button
-                  variant="outline"
-                  nativeButton={false}
-                  render={<Link href="/dashboard" />}
-                >
-                  Volver al resumen
-                </Button>
-              </EmptyContent>
             </Empty>
           ) : (
             <div className="flex flex-col gap-4">

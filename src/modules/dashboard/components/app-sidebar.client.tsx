@@ -4,7 +4,6 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import DashboardSquare01Icon from "@hugeicons/core-free-icons/DashboardSquare01Icon";
 import Logout01Icon from "@hugeicons/core-free-icons/Logout01Icon";
 import UserGroupIcon from "@hugeicons/core-free-icons/UserGroupIcon";
 import UserMultiple02Icon from "@hugeicons/core-free-icons/UserMultiple02Icon";
@@ -66,13 +65,10 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const homeHref = canViewParticipantDirectory(user.role)
+    ? "/dashboard/participants"
+    : "/dashboard";
   const navigation = [
-    {
-      title: "Resumen",
-      href: "/dashboard",
-      icon: DashboardSquare01Icon,
-      exact: true,
-    },
     ...(canViewParticipantDirectory(user.role)
       ? [
           {
@@ -108,14 +104,14 @@ export function AppSidebar({ user }: AppSidebarProps) {
   }
 
   return (
-    <Sidebar variant="inset" collapsible="icon">
+    <Sidebar collapsible="icon">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
               tooltip="Confejas"
-              render={<Link href="/dashboard" />}
+              render={<Link href={homeHref} />}
             >
               <Image
                 src="/logo.png"
