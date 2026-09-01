@@ -1,14 +1,13 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import QrCodeScanIcon from "@hugeicons/core-free-icons/QrCodeScanIcon";
-import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import UserAdd01Icon from "@hugeicons/core-free-icons/UserAdd01Icon";
 import UserMultiple02Icon from "@hugeicons/core-free-icons/UserMultiple02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { DataPagination } from "@/components/data-pagination";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Empty,
   EmptyDescription,
@@ -16,7 +15,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { listStakes, listWards } from "@/modules/church-units/server/queries";
 import { listCompanyOptions } from "@/modules/companies/server/queries";
@@ -115,10 +113,6 @@ export default async function ParticipantsPage({
     );
   }
 
-  const clearSearchHref = getParticipantsHref({
-    ...directoryQuery,
-    q: undefined,
-  });
   const hasActiveCriteria = Boolean(
     result.search || result.companyId || result.wardId || result.stakeId,
   );
@@ -167,56 +161,11 @@ export default async function ParticipantsPage({
 
       <div className="flex min-h-[calc(100svh-12rem)] flex-1 flex-col overflow-hidden rounded-2xl border bg-card">
         <div className="flex flex-col gap-4 p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <form
-              action="/dashboard/participants"
-              className="flex w-full gap-2 sm:max-w-md"
-            >
-              {directoryQuery.sort ? (
-                <input type="hidden" name="sort" value={directoryQuery.sort} />
-              ) : null}
-              {directoryQuery.company ? (
-                <input
-                  type="hidden"
-                  name="company"
-                  value={directoryQuery.company}
-                />
-              ) : null}
-              {directoryQuery.ward ? (
-                <input type="hidden" name="ward" value={directoryQuery.ward} />
-              ) : null}
-              {directoryQuery.stake ? (
-                <input
-                  type="hidden"
-                  name="stake"
-                  value={directoryQuery.stake}
-                />
-              ) : null}
-              <Input
-                name="q"
-                defaultValue={result.search}
-                placeholder="Buscar por nombre, cédula, compañía o unidad"
-                aria-label="Buscar participantes"
-              />
-              <Button type="submit" variant="secondary">
-                <HugeiconsIcon icon={Search01Icon} data-icon="inline-start" />
-                Buscar
-              </Button>
-            </form>
-            {result.search ? (
-              <Link
-                href={clearSearchHref}
-                className={buttonVariants({ variant: "ghost", size: "sm" })}
-              >
-                Limpiar búsqueda
-              </Link>
-            ) : null}
-          </div>
-
           <ParticipantDirectoryFilters
-            search={result.search}
+            key={result.search}
             canExport={result.total > 0}
             filters={{
+              search: result.search,
               sort: result.sort,
               companyId: result.companyId,
               wardId: result.wardId ? String(result.wardId) : "",

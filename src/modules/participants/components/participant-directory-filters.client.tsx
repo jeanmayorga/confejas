@@ -1,12 +1,19 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
+import {
+  type FormEvent,
+  useOptimistic,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import Pdf02Icon from "@hugeicons/core-free-icons/Pdf02Icon";
+import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import {
   NativeSelect,
   NativeSelectOption,
@@ -16,6 +23,7 @@ import { cn } from "@/lib/utils";
 type ParticipantSort = "name" | "age_asc" | "age_desc";
 
 type ParticipantDirectoryFilterValues = {
+  search: string;
   sort: ParticipantSort;
   companyId: string;
   wardId: string;
@@ -24,21 +32,17 @@ type ParticipantDirectoryFilterValues = {
 
 type ParticipantDirectoryFiltersProps = {
   filters: ParticipantDirectoryFilterValues;
-  search: string;
   canExport: boolean;
   companies: { id: string; name: string }[];
   wards: { id: number; name: string }[];
   stakes: { id: number; name: string }[];
 };
 
-function getDirectoryParams(
-  search: string,
-  filters: ParticipantDirectoryFilterValues,
-) {
+function getDirectoryParams(filters: ParticipantDirectoryFilterValues) {
   const params = new URLSearchParams();
 
-  if (search) {
-    params.set("q", search);
+  if (filters.search) {
+    params.set("q", filters.search);
   }
 
   if (filters.sort !== "name") {
@@ -62,7 +66,6 @@ function getDirectoryParams(
 
 export function ParticipantDirectoryFilters({
   filters,
-  search,
   canExport,
   companies,
   wards,
@@ -70,10 +73,11 @@ export function ParticipantDirectoryFilters({
 }: ParticipantDirectoryFiltersProps) {
   const router = useRouter();
   const [selectedFilters, setSelectedFilters] = useOptimistic(filters);
+  const [searchDraft, setSearchDraft] = useState(filters.search);
   const [pending, startTransition] = useTransition();
 
   function navigate(nextFilters: ParticipantDirectoryFilterValues) {
-    const query = getDirectoryParams(search, nextFilters).toString();
+    const query = getDirectoryParams(nextFilters).toString();
 
     startTransition(() => {
       setSelectedFilters(nextFilters);
@@ -85,27 +89,76 @@ export function ParticipantDirectoryFilters({
   }
 
   function updateFilter(
-    field: keyof ParticipantDirectoryFilterValues,
+    field: Exclude<keyof ParticipantDirectoryFilterValues, "search">,
     value: string,
   ) {
-    navigate({ ...selectedFilters, [field]: value });
+    navigate({
+      ...selectedFilters,
+      search: searchDraft.trim(),
+      [field]: value,
+    });
+  }
+
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    navigate({ ...selectedFilters, search: searchDraft.trim() });
+  }
+
+  function clearFilters() {
+    setSearchDraft("");
+    navigate({
+      search: "",
+      sort: "name",
+      companyId: "",
+      wardId: "",
+      stakeId: "",
+    });
   }
 
   const hasFilters =
+    Boolean(selectedFilters.search) ||
     selectedFilters.sort !== "name" ||
     Boolean(selectedFilters.companyId) ||
     Boolean(selectedFilters.wardId) ||
     Boolean(selectedFilters.stakeId);
-  const exportQuery = getDirectoryParams(search, selectedFilters).toString();
+  const exportQuery = getDirectoryParams(selectedFilters).toString();
   const exportHref = exportQuery
     ? `/api/participants/export?${exportQuery}`
     : "/api/participants/export";
   const exportDisabled = pending || !canExport;
 
   return (
-    <div className="flex flex-col gap-3">
+    <form className="flex flex-col gap-4" onSubmit={submitSearch}>
       <FieldGroup className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Field>
+        <Field
+          className="md:col-span-2 xl:col-span-2"
+          data-disabled={pending || undefined}
+        >
+          <FieldLabel htmlFor="participant-search">Buscar</FieldLabel>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              id="participant-search"
+              name="q"
+              value={searchDraft}
+              disabled={pending}
+              className="min-w-0 flex-1"
+              placeholder="Nombre, cédula, compañía o unidad"
+              aria-label="Buscar participantes"
+              onChange={(event) => setSearchDraft(event.currentTarget.value)}
+            />
+            <Button
+              type="submit"
+              variant="secondary"
+              className="w-full sm:w-auto"
+              disabled={pending}
+            >
+              <HugeiconsIcon icon={Search01Icon} data-icon="inline-start" />
+              Buscar
+            </Button>
+          </div>
+        </Field>
+
+        <Field data-disabled={pending || undefined}>
           <FieldLabel htmlFor="participant-sort">Ordenar por</FieldLabel>
           <NativeSelect
             id="participant-sort"
@@ -124,7 +177,7 @@ export function ParticipantDirectoryFilters({
           </NativeSelect>
         </Field>
 
-        <Field>
+        <Field data-disabled={pending || undefined}>
           <FieldLabel htmlFor="participant-company-filter">Compañía</FieldLabel>
           <NativeSelect
             id="participant-company-filter"
@@ -145,7 +198,7 @@ export function ParticipantDirectoryFilters({
           </NativeSelect>
         </Field>
 
-        <Field>
+        <Field data-disabled={pending || undefined}>
           <FieldLabel htmlFor="participant-ward-filter">Barrio</FieldLabel>
           <NativeSelect
             id="participant-ward-filter"
@@ -165,7 +218,7 @@ export function ParticipantDirectoryFilters({
           </NativeSelect>
         </Field>
 
-        <Field>
+        <Field data-disabled={pending || undefined}>
           <FieldLabel htmlFor="participant-stake-filter">Estaca</FieldLabel>
           <NativeSelect
             id="participant-stake-filter"
@@ -184,37 +237,42 @@ export function ParticipantDirectoryFilters({
             ))}
           </NativeSelect>
         </Field>
-      </FieldGroup>
 
-      <div className="flex flex-wrap items-center gap-2">
-        {hasFilters ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={pending}
-            onClick={() =>
-              navigate({ sort: "name", companyId: "", wardId: "", stakeId: "" })
-            }
-          >
-            Limpiar filtros
-          </Button>
-        ) : null}
-        <a
-          href={exportHref}
-          download
-          aria-disabled={exportDisabled}
-          tabIndex={exportDisabled ? -1 : undefined}
-          className={cn(
-            buttonVariants({ variant: "outline" }),
-            "ml-auto",
-            exportDisabled && "pointer-events-none opacity-50",
-          )}
+        <Field
+          aria-label="Acciones de filtros"
+          className="justify-end md:col-span-2 xl:col-span-2"
+          data-disabled={pending || undefined}
         >
-          <HugeiconsIcon icon={Pdf02Icon} data-icon="inline-start" />
-          Exportar PDF
-        </a>
-      </div>
-    </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            {hasFilters ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full sm:w-auto"
+                disabled={pending}
+                onClick={clearFilters}
+              >
+                Limpiar filtros
+              </Button>
+            ) : null}
+            <a
+              href={exportHref}
+              download
+              aria-disabled={exportDisabled}
+              tabIndex={exportDisabled ? -1 : undefined}
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "w-full sm:ml-auto sm:w-auto",
+                exportDisabled && "pointer-events-none opacity-50",
+              )}
+            >
+              <HugeiconsIcon icon={Pdf02Icon} data-icon="inline-start" />
+              Exportar PDF
+            </a>
+          </div>
+        </Field>
+      </FieldGroup>
+    </form>
   );
 }
