@@ -50,6 +50,7 @@ export type ParticipantTableRow = {
   preferredName: string | null;
   governmentId: string | null;
   birthDate: string | null;
+  age: number | null;
   sex: string | null;
   email: string | null;
   phone: string | null;
@@ -203,10 +204,11 @@ export function ParticipantsTable({
 
   return (
     <>
-      <Table className="min-w-[1040px]">
+      <Table className="min-w-[1120px]">
         <TableHeader className="bg-muted/50">
           <TableRow>
             <TableHead className="min-w-56">Nombres</TableHead>
+            <TableHead className="min-w-20">Edad</TableHead>
             <TableHead className="min-w-32">Cédula</TableHead>
             <TableHead className="min-w-28">Barrio</TableHead>
             <TableHead className="min-w-32">Estaca</TableHead>
@@ -250,6 +252,11 @@ export function ParticipantsTable({
                       ) : null}
                     </div>
                   </div>
+                </TableCell>
+                <TableCell>
+                  {participant.age === null
+                    ? "Sin registrar"
+                    : `${participant.age} años`}
                 </TableCell>
                 <TableCell>
                   {present(participant.governmentId, "Sin registrar")}

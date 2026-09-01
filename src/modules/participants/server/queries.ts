@@ -1,6 +1,6 @@
 import "server-only";
 
-import { asc, count, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, count, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
 import { stakes, wards } from "@/modules/church-units/server/schema";
 import { companies } from "@/modules/companies/server/schema";
@@ -12,10 +12,44 @@ import { isParticipantId } from "../qr";
 
 export const PARTICIPANTS_PAGE_SIZE = 25;
 
-export async function listParticipants(page: number, search = "") {
+export type ParticipantSort = "name" | "age_asc" | "age_desc";
+
+type ListParticipantsOptions = {
+  page: number;
+  search?: string;
+  sort?: string;
+  companyId?: string;
+  wardId?: number;
+  stakeId?: number;
+};
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
+function getSafePositiveInteger(value: number | undefined) {
+  return Number.isSafeInteger(value) && Number(value) > 0 ? Number(value) : null;
+}
+
+export async function listParticipants({
+  page,
+  search = "",
+  sort = "name",
+  companyId = "",
+  wardId,
+  stakeId,
+}: ListParticipantsOptions) {
   const safePage = Number.isSafeInteger(page) && page > 0 ? page : 1;
   const offset = (safePage - 1) * PARTICIPANTS_PAGE_SIZE;
   const safeSearch = search.trim().slice(0, 100);
+  const safeSort: ParticipantSort =
+    sort === "age_asc" || sort === "age_desc" ? sort : "name";
+  const safeCompanyId =
+    companyId === "unassigned" || isUuid(companyId) ? companyId : "";
+  const safeWardId = getSafePositiveInteger(wardId);
+  const safeStakeId = getSafePositiveInteger(stakeId);
   const searchPattern = `%${safeSearch}%`;
   const searchFilter = safeSearch
     ? or(
@@ -31,6 +65,37 @@ export async function listParticipants(page: number, search = "") {
         ilike(companies.name, searchPattern),
       )
     : undefined;
+  const companyFilter =
+    safeCompanyId === "unassigned"
+      ? isNull(participants.companyId)
+      : safeCompanyId
+        ? eq(participants.companyId, safeCompanyId)
+        : undefined;
+  const wardFilter = safeWardId
+    ? eq(participants.wardId, safeWardId)
+    : undefined;
+  const stakeFilter = safeStakeId ? eq(stakes.id, safeStakeId) : undefined;
+  const filters = and(searchFilter, companyFilter, wardFilter, stakeFilter);
+  const sortColumns =
+    safeSort === "age_asc"
+      ? [
+          sql`${participants.birthDate} desc nulls last`,
+          asc(participants.firstNames),
+          asc(participants.lastNames),
+          asc(participants.id),
+        ]
+      : safeSort === "age_desc"
+        ? [
+            sql`${participants.birthDate} asc nulls last`,
+            asc(participants.firstNames),
+            asc(participants.lastNames),
+            asc(participants.id),
+          ]
+        : [
+            asc(participants.firstNames),
+            asc(participants.lastNames),
+            asc(participants.id),
+          ];
 
   const [rows, [totalRow]] = await Promise.all([
     db
@@ -41,6 +106,7 @@ export async function listParticipants(page: number, search = "") {
         preferredName: participants.preferredName,
         governmentId: participants.governmentId,
         birthDate: participants.birthDate,
+        age: sql<number | null>`extract(year from age(current_date, ${participants.birthDate}))::integer`,
         sex: participants.sex,
         email: participants.email,
         phone: participants.phone,
@@ -57,12 +123,8 @@ export async function listParticipants(page: number, search = "") {
       .innerJoin(wards, eq(participants.wardId, wards.id))
       .innerJoin(stakes, eq(wards.stakeId, stakes.id))
       .leftJoin(companies, eq(participants.companyId, companies.id))
-      .where(searchFilter)
-      .orderBy(
-        asc(participants.lastNames),
-        asc(participants.firstNames),
-        asc(participants.id),
-      )
+      .where(filters)
+      .orderBy(...sortColumns)
       .limit(PARTICIPANTS_PAGE_SIZE)
       .offset(offset),
     db
@@ -71,7 +133,7 @@ export async function listParticipants(page: number, search = "") {
       .innerJoin(wards, eq(participants.wardId, wards.id))
       .innerJoin(stakes, eq(wards.stakeId, stakes.id))
       .leftJoin(companies, eq(participants.companyId, companies.id))
-      .where(searchFilter),
+      .where(filters),
   ]);
 
   const total = totalRow?.value ?? 0;
@@ -83,6 +145,10 @@ export async function listParticipants(page: number, search = "") {
     total,
     totalPages: Math.max(1, Math.ceil(total / PARTICIPANTS_PAGE_SIZE)),
     search: safeSearch,
+    sort: safeSort,
+    companyId: safeCompanyId,
+    wardId: safeWardId,
+    stakeId: safeStakeId,
   };
 }
 
