@@ -1,6 +1,7 @@
 import UserGroup02Icon from "@hugeicons/core-free-icons/UserGroup02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -30,6 +31,28 @@ import { listCompanyOptions } from "@/modules/companies/server/queries";
 import { CounselorFormDialog } from "@/modules/counselors/components/counselor-form-dialog.client";
 import { DeleteCounselorButton } from "@/modules/counselors/components/delete-counselor-button.client";
 import { listCounselors } from "@/modules/counselors/server/queries";
+
+function getCounselorInitials({
+  firstNames,
+  lastNames,
+  name,
+}: {
+  firstNames: string | null;
+  lastNames: string | null;
+  name: string;
+}) {
+  if (firstNames || lastNames) {
+    return `${firstNames?.trim().charAt(0) ?? ""}${
+      lastNames?.trim().charAt(0) ?? ""
+    }`.toLocaleUpperCase("es");
+  }
+
+  const nameParts = name.trim().split(/\s+/);
+
+  return `${nameParts[0]?.charAt(0) ?? "C"}${
+    nameParts.length > 1 ? (nameParts.at(-1)?.charAt(0) ?? "") : ""
+  }`.toLocaleUpperCase("es");
+}
 
 export default async function CounselorsPage() {
   const session = await requireParticipantManagementAccess();
@@ -93,8 +116,15 @@ export default async function CounselorsPage() {
               <TableBody>
                 {counselors.map((counselor) => (
                   <TableRow key={counselor.id}>
-                    <TableCell className="font-medium">
-                      {counselor.name}
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar aria-hidden="true">
+                          <AvatarFallback className="font-medium">
+                            {getCounselorInitials(counselor)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{counselor.name}</span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       {counselor.governmentId ?? "Sin registrar"}
