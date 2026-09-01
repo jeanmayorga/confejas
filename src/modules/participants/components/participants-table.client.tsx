@@ -204,12 +204,11 @@ export function ParticipantsTable({
 
   return (
     <>
-      <Table className="min-w-[1120px]">
+      <Table className="min-w-[980px]">
         <TableHeader className="bg-muted/50">
           <TableRow>
             <TableHead className="min-w-56">Nombres</TableHead>
             <TableHead className="min-w-20">Edad</TableHead>
-            <TableHead className="min-w-32">Cédula</TableHead>
             <TableHead className="min-w-28">Barrio</TableHead>
             <TableHead className="min-w-32">Estaca</TableHead>
             <TableHead className="min-w-28">Estado</TableHead>
@@ -232,8 +231,8 @@ export function ParticipantsTable({
                 onKeyDown={(event) => handleRowKeyDown(event, participant)}
               >
                 <TableCell className="min-w-56">
-                  <div className="flex items-center gap-3">
-                    <Avatar aria-hidden="true">
+                  <div className="flex items-center gap-2">
+                    <Avatar size="sm" aria-hidden="true">
                       <AvatarFallback className="font-medium">
                         {getParticipantInitials(
                           participant.firstNames,
@@ -241,15 +240,8 @@ export function ParticipantsTable({
                         )}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="min-w-0">
-                      <div className="font-medium whitespace-normal">
-                        {participantName}
-                      </div>
-                      {participant.email ? (
-                        <div className="break-all text-xs text-muted-foreground">
-                          {participant.email}
-                        </div>
-                      ) : null}
+                    <div className="min-w-0 font-medium whitespace-normal">
+                      {participantName}
                     </div>
                   </div>
                 </TableCell>
@@ -257,9 +249,6 @@ export function ParticipantsTable({
                   {participant.age === null
                     ? "Sin registrar"
                     : `${participant.age} años`}
-                </TableCell>
-                <TableCell>
-                  {present(participant.governmentId, "Sin registrar")}
                 </TableCell>
                 <TableCell>{participant.wardName}</TableCell>
                 <TableCell>{participant.stakeName}</TableCell>
