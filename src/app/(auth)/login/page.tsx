@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -37,24 +36,22 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   return (
-    <main className="grid min-h-svh place-items-center bg-background p-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 flex justify-center">
+    <main className="grid min-h-svh place-items-center bg-background p-4 sm:p-6">
+      <div className="grid w-full max-w-3xl items-center gap-8 md:grid-cols-2 md:gap-12">
+        <div className="flex justify-center">
           <Image
             src="/logo.png"
             alt="Confía en Cristo"
-            width={160}
-            height={160}
+            width={224}
+            height={224}
+            sizes="(min-width: 768px) 224px, 160px"
             priority
-            className="size-40 rounded-full object-cover"
+            className="size-40 rounded-full object-cover md:size-56"
           />
         </div>
         <Card>
           <CardHeader>
             <CardTitle>Bienvenido</CardTitle>
-            <CardDescription>
-              Ingresa con la cuenta asignada por el administrador.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <LoginForm callbackUrl={safeCallbackUrl} />
