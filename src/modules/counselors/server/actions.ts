@@ -16,6 +16,7 @@ import {
 } from "@/modules/participants/server/ecuador-api";
 import { db } from "@/server/db";
 
+import { formatCounselorName } from "../name";
 import { counselors } from "./schema";
 
 export type CounselorActionResult =
@@ -62,8 +63,12 @@ function getCounselorData(formData: FormData) {
     throw new Error("Ingresa una cédula ecuatoriana válida de 10 dígitos.");
   }
 
-  const firstNames = requiredText(formData, "firstNames", "Los nombres", 160);
-  const lastNames = requiredText(formData, "lastNames", "Los apellidos", 160);
+  const firstNames = formatCounselorName(
+    requiredText(formData, "firstNames", "Los nombres", 160),
+  );
+  const lastNames = formatCounselorName(
+    requiredText(formData, "lastNames", "Los apellidos", 160),
+  );
   const name = `${firstNames} ${lastNames}`;
 
   if (name.length > 160) {
@@ -155,7 +160,24 @@ export async function lookupCounselorGovernmentIdAction(
       };
     }
 
-    return await lookupEcuadorianCitizen(governmentId);
+    const result = await lookupEcuadorianCitizen(governmentId);
+
+    if (!result.success) {
+      return result;
+    }
+
+    return {
+      success: true,
+      data: {
+        ...result.data,
+        firstNames: result.data.firstNames
+          ? formatCounselorName(result.data.firstNames)
+          : null,
+        lastNames: result.data.lastNames
+          ? formatCounselorName(result.data.lastNames)
+          : null,
+      },
+    };
   } catch {
     return {
       success: false,
