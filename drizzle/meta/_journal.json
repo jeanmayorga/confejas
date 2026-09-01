@@ -15,6 +15,13 @@
       "when": 1788219647717,
       "tag": "0001_seed_samborondon_church_units",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788220381129,
+      "tag": "0002_flat_blacklash",
+      "breakpoints": true
     }
   ]
 }

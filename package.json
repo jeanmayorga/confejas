@@ -10,14 +10,18 @@
     "db:check": "bun run scripts/check-database.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "auth:generate": "bunx --bun auth@latest generate --config ./better-auth.config.ts --output ./src/modules/auth/server/schema.ts -y",
+    "auth:create-admin": "bunx --bun auth@latest create-admin --config ./better-auth.config.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
+    "@better-auth/drizzle-adapter": "^1.7.2",
     "@hugeicons/core-free-icons": "^4.3.0",
     "@hugeicons/react": "^1.1.10",
     "@neondatabase/serverless": "^1.1.0",
     "@next/env": "^16.3.4",
+    "better-auth": "^1.7.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
