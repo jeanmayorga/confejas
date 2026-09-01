@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 
 import {
@@ -36,18 +37,20 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   return (
-    <main className="grid min-h-svh place-items-center bg-muted/40 p-4">
+    <main className="grid min-h-svh place-items-center bg-background p-4">
       <div className="w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center gap-3 text-center">
-          <div className="grid size-12 place-items-center rounded-2xl bg-primary text-lg font-semibold text-primary-foreground shadow-sm">
-            C
-          </div>
-          <div>
-            <p className="text-xl font-semibold tracking-tight">Confejas</p>
-            <p className="text-sm text-muted-foreground">
-              Gestión de participantes
-            </p>
-          </div>
+        <div className="mb-8 flex flex-col items-center gap-4 text-center">
+          <Image
+            src="/logo.png"
+            alt="Confía en Cristo"
+            width={160}
+            height={160}
+            priority
+            className="size-40 rounded-full object-cover shadow-sm"
+          />
+          <p className="text-sm text-muted-foreground">
+            Gestión de participantes
+          </p>
         </div>
         <Card>
           <CardHeader>

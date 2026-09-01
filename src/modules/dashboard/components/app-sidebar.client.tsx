@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import DashboardSquare01Icon from "@hugeicons/core-free-icons/DashboardSquare01Icon";
@@ -116,11 +117,15 @@ export function AppSidebar({ user }: AppSidebarProps) {
               tooltip="Confejas"
               render={<Link href="/dashboard" />}
             >
-              <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-sidebar-primary font-semibold text-sidebar-primary-foreground">
-                C
-              </div>
+              <Image
+                src="/logo.png"
+                alt="Confía en Cristo"
+                width={40}
+                height={40}
+                className="size-10 shrink-0 rounded-full object-cover group-data-[collapsible=icon]:size-8"
+              />
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">Confejas</span>
+                <span className="truncate font-semibold">Confía en Cristo</span>
                 <span className="truncate text-xs text-muted-foreground">
                   Administración
                 </span>
