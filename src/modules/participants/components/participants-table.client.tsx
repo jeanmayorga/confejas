@@ -283,7 +283,7 @@ export function ParticipantsTable({
                         type="button"
                         aria-label={`Editar ${participantName}`}
                         variant="ghost"
-                        size="icon-sm"
+                        size="icon-xs"
                         onClick={() => openParticipantEdit(participant)}
                       >
                         <HugeiconsIcon icon={UserEdit01Icon} strokeWidth={2} />

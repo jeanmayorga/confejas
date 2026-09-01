@@ -54,7 +54,7 @@ export function DeleteParticipantButton({
         render={
           <Button
             variant="ghost"
-            size="icon-sm"
+            size="icon-xs"
             className="text-destructive"
             aria-label={`Eliminar ${participantName}`}
           />
