@@ -75,3 +75,36 @@ export async function listCompanyOptions() {
     companyNameCollator.compare(left.name, right.name),
   );
 }
+
+export type CompanyParticipant = {
+  id: string;
+  firstNames: string;
+  lastNames: string;
+  checkedInAt: string | null;
+};
+
+export async function listCompanyParticipants(
+  companyId: string,
+): Promise<CompanyParticipant[]> {
+  const rows = await db
+    .select({
+      id: participants.id,
+      firstNames: participants.firstNames,
+      lastNames: participants.lastNames,
+      checkedInAt: participants.checkedInAt,
+    })
+    .from(participants)
+    .where(eq(participants.companyId, companyId));
+
+  return rows
+    .map((row) => ({
+      ...row,
+      checkedInAt: row.checkedInAt?.toISOString() ?? null,
+    }))
+    .sort((left, right) =>
+      companyNameCollator.compare(
+        `${left.firstNames} ${left.lastNames}`,
+        `${right.firstNames} ${right.lastNames}`,
+      ),
+    );
+}

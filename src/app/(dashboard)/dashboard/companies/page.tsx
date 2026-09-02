@@ -16,18 +16,10 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { canDeleteParticipants } from "@/modules/auth/roles";
 import { requireParticipantManagementAccess } from "@/modules/auth/server/session";
+import { CompaniesTable } from "@/modules/companies/components/companies-table.client";
 import { CompanyFormDialog } from "@/modules/companies/components/company-form-dialog.client";
-import { DeleteCompanyButton } from "@/modules/companies/components/delete-company-button.client";
 import { listCompanies } from "@/modules/companies/server/queries";
 
 export default async function CompaniesPage() {
@@ -77,54 +69,7 @@ export default async function CompaniesPage() {
               </EmptyHeader>
             </Empty>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Compañía</TableHead>
-                  <TableHead>Consejeros</TableHead>
-                  <TableHead>Participantes</TableHead>
-                  <TableHead className="w-28 text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {companies.map((company) => (
-                  <TableRow key={company.id}>
-                    <TableCell className="font-medium">{company.name}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col items-start gap-1">
-                        <Badge
-                          variant={
-                            company.counselorCount === 2 ? "default" : "secondary"
-                          }
-                        >
-                          {company.counselorCount} de 2 habituales
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {company.counselors.length > 0
-                            ? company.counselors
-                                .map((counselor) => counselor.name)
-                                .join(", ")
-                            : "Sin asignar"}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={company.participantCount > 0 ? "default" : "secondary"}
-                      >
-                        {company.participantCount.toLocaleString("es-EC")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <CompanyFormDialog company={company} />
-                        {canDelete ? <DeleteCompanyButton company={company} /> : null}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <CompaniesTable companies={companies} canDelete={canDelete} />
           )}
         </CardContent>
       </Card>

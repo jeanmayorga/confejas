@@ -12,6 +12,7 @@ import { participants } from "@/modules/participants/server/schema";
 import { counselors } from "@/modules/counselors/server/schema";
 import { db } from "@/server/db";
 
+import { listCompanyParticipants, type CompanyParticipant } from "./queries";
 import { companies } from "./schema";
 
 export type CompanyActionResult =
@@ -193,5 +194,29 @@ export async function deleteCompanyAction(
     return { success: true, message: "Compañía eliminada correctamente." };
   } catch (error) {
     return { success: false, message: getSafeError(error) };
+  }
+}
+
+export type CompanyRosterActionResult =
+  | { success: true; participants: CompanyParticipant[] }
+  | { success: false; message: string };
+
+export async function getCompanyRosterAction(
+  companyId: string,
+): Promise<CompanyRosterActionResult> {
+  try {
+    await requireSession();
+
+    if (!isCompanyId(companyId)) {
+      return { success: false, message: "La compañía no es válida." };
+    }
+
+    const participantRows = await listCompanyParticipants(companyId);
+    return { success: true, participants: participantRows };
+  } catch {
+    return {
+      success: false,
+      message: "No se pudo cargar la lista de participantes.",
+    };
   }
 }
