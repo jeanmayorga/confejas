@@ -2,13 +2,7 @@ import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Empty,
   EmptyDescription,
@@ -16,54 +10,58 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { canDeleteParticipants } from "@/modules/auth/roles";
 import { requireParticipantManagementAccess } from "@/modules/auth/server/session";
+import { CompaniesDirectory } from "@/modules/companies/components/companies-directory.client";
+import { CompanyDistributionDialog } from "@/modules/companies/components/company-distribution-dialog.client";
 import { CompanyFormDialog } from "@/modules/companies/components/company-form-dialog.client";
-import { DeleteCompanyButton } from "@/modules/companies/components/delete-company-button.client";
-import { listCompanies } from "@/modules/companies/server/queries";
+import {
+  countUnassignedParticipants,
+  listCompanies,
+} from "@/modules/companies/server/queries";
 
 export default async function CompaniesPage() {
   const session = await requireParticipantManagementAccess();
-  const companies = await listCompanies();
+  const [companies, unassignedCount] = await Promise.all([
+    listCompanies(),
+    countUnassignedParticipants(),
+  ]);
   const canDelete = canDeleteParticipants(session.user.role);
-  const assignedParticipants = companies.reduce(
+  const assignedCount = companies.reduce(
     (total, company) => total + company.participantCount,
     0,
   );
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight">Compañías</h1>
             <Badge variant="secondary">{companies.length}</Badge>
           </div>
           <p className="mt-1 text-muted-foreground">
-            Crea compañías y revisa cuántos participantes pertenecen a cada una.
+            Revisa cada compañía, sus consejeros y todos sus participantes.
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {assignedCount.toLocaleString("es-EC")} asignados ·{" "}
+            {unassignedCount.toLocaleString("es-EC")} sin compañía · máximo 20
+            por compañía
           </p>
         </div>
-        <CompanyFormDialog />
+
+        <div className="flex flex-wrap items-center gap-2">
+          <CompanyDistributionDialog
+            companyCount={companies.length}
+            unassignedCount={unassignedCount}
+          />
+          <CompanyFormDialog />
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Compañías del evento</CardTitle>
-          <CardDescription>
-            {assignedParticipants.toLocaleString("es-EC")} participantes asignados
-            en total.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {companies.length === 0 ? (
+      {companies.length === 0 ? (
+        <Card>
+          <CardContent>
             <Empty className="min-h-80">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
@@ -76,58 +74,11 @@ export default async function CompaniesPage() {
                 <CompanyFormDialog />
               </EmptyHeader>
             </Empty>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Compañía</TableHead>
-                  <TableHead>Consejeros</TableHead>
-                  <TableHead>Participantes</TableHead>
-                  <TableHead className="w-28 text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {companies.map((company) => (
-                  <TableRow key={company.id}>
-                    <TableCell className="font-medium">{company.name}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col items-start gap-1">
-                        <Badge
-                          variant={
-                            company.counselorCount === 2 ? "default" : "secondary"
-                          }
-                        >
-                          {company.counselorCount} de 2 habituales
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {company.counselors.length > 0
-                            ? company.counselors
-                                .map((counselor) => counselor.name)
-                                .join(", ")
-                            : "Sin asignar"}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={company.participantCount > 0 ? "default" : "secondary"}
-                      >
-                        {company.participantCount.toLocaleString("es-EC")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <CompanyFormDialog company={company} />
-                        {canDelete ? <DeleteCompanyButton company={company} /> : null}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ) : (
+        <CompaniesDirectory companies={companies} canDelete={canDelete} />
+      )}
     </div>
   );
 }

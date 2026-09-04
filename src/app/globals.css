@@ -39,6 +39,11 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-participant-registered: var(--muted-foreground);
+  --color-participant-confirmed: var(--primary);
+  --color-participant-arrived: var(--participant-arrived);
+  --color-participant-pending: var(--participant-pending);
+  --color-participant-cancelled: var(--destructive);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -81,11 +86,15 @@
   --sidebar-ring: oklch(0.708 0 0);
   --background: oklch(0.985 0 0);
   --foreground: oklch(0.145 0 0);
+  --participant-arrived: oklch(0.52 0.15 151);
+  --participant-pending: oklch(0.62 0.15 75);
 }
 
 .dark {
   --background: oklch(0.205 0 0);
   --foreground: oklch(0.985 0 0);
+  --participant-arrived: oklch(0.72 0.16 151);
+  --participant-pending: oklch(0.78 0.15 75);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);

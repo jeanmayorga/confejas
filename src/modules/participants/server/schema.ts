@@ -4,6 +4,7 @@ import {
   date,
   index,
   integer,
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -15,6 +16,12 @@ import {
 import { wards } from "@/modules/church-units/server/schema";
 import { user } from "@/modules/auth/server/schema";
 import { companies } from "@/modules/companies/server/schema";
+import { PARTICIPANT_STATUS_VALUES } from "@/modules/participants/status";
+
+export const participantStatusEnum = pgEnum(
+  "participant_status",
+  PARTICIPANT_STATUS_VALUES,
+);
 
 export const participants = pgTable(
   "participants",
@@ -31,6 +38,7 @@ export const participants = pgTable(
     email: varchar({ length: 254 }),
     shirtSize: varchar({ length: 16 }),
     isChurchMember: boolean(),
+    status: participantStatusEnum().default("registered").notNull(),
     wardId: integer()
       .notNull()
       .references(() => wards.id, {

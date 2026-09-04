@@ -1,7 +1,8 @@
 import "server-only";
 
-import { and, asc, count, eq, isNotNull, ne } from "drizzle-orm";
+import { and, asc, count, eq, ne } from "drizzle-orm";
 
+import { wards } from "@/modules/church-units/server/schema";
 import { participants } from "@/modules/participants/server/schema";
 import { db } from "@/server/db";
 
@@ -16,6 +17,16 @@ export type LodgingRoomOverview = {
   totalCapacity: number;
   assignedParticipants: number;
   availableParticipantCapacity: number;
+  occupants: LodgingParticipantSummary[];
+};
+
+export type LodgingParticipantSummary = {
+  id: string;
+  firstNames: string;
+  lastNames: string;
+  preferredName: string | null;
+  sex: string | null;
+  wardName: string;
 };
 
 export type LodgingBuildingOverview = {
@@ -30,12 +41,15 @@ export type LodgingBuildingOverview = {
   availableParticipantCapacity: number;
 };
 
-function getRoomName(buildingName: string, roomNumber: number) {
+export function getLodgingRoomName(
+  buildingName: string,
+  roomNumber: number,
+) {
   return `${buildingName} · Dormitorio ${roomNumber}`;
 }
 
 export async function getLodgingOverview() {
-  const [rows, assignmentRows, [registeredRow]] = await Promise.all([
+  const [rows, participantRows] = await Promise.all([
     db
       .select({
         buildingId: lodgingBuildings.id,
@@ -50,15 +64,34 @@ export async function getLodgingOverview() {
       .leftJoin(lodgingRooms, eq(lodgingRooms.buildingId, lodgingBuildings.id))
       .orderBy(asc(lodgingBuildings.position), asc(lodgingRooms.number)),
     db
-      .select({ roomName: participants.roomName, value: count() })
+      .select({
+        id: participants.id,
+        firstNames: participants.firstNames,
+        lastNames: participants.lastNames,
+        preferredName: participants.preferredName,
+        sex: participants.sex,
+        wardName: wards.name,
+        roomName: participants.roomName,
+      })
       .from(participants)
-      .where(isNotNull(participants.roomName))
-      .groupBy(participants.roomName),
-    db.select({ value: count() }).from(participants),
+      .innerJoin(wards, eq(participants.wardId, wards.id))
+      .orderBy(
+        asc(participants.firstNames),
+        asc(participants.lastNames),
+        asc(participants.id),
+      ),
   ]);
-  const assignmentCounts = new Map(
-    assignmentRows.map((row) => [row.roomName, row.value]),
-  );
+  const assignmentsByRoom = new Map<string, LodgingParticipantSummary[]>();
+
+  for (const { roomName, ...participant } of participantRows) {
+    if (!roomName) {
+      continue;
+    }
+
+    const occupants = assignmentsByRoom.get(roomName) ?? [];
+    occupants.push(participant);
+    assignmentsByRoom.set(roomName, occupants);
+  }
 
   const buildingMap = new Map<number, LodgingBuildingOverview>();
 
@@ -89,8 +122,9 @@ export async function getLodgingOverview() {
       continue;
     }
 
-    const name = getRoomName(row.buildingName, row.roomNumber);
-    const assignedParticipants = assignmentCounts.get(name) ?? 0;
+    const name = getLodgingRoomName(row.buildingName, row.roomNumber);
+    const occupants = assignmentsByRoom.get(name) ?? [];
+    const assignedParticipants = occupants.length;
     const availableParticipantCapacity = Math.max(
       0,
       row.participantCapacity - assignedParticipants,
@@ -106,6 +140,7 @@ export async function getLodgingOverview() {
       totalCapacity,
       assignedParticipants,
       availableParticipantCapacity,
+      occupants,
     });
     building.participantCapacity += row.participantCapacity;
     building.coordinatorCapacity += row.coordinatorCapacity;
@@ -115,6 +150,22 @@ export async function getLodgingOverview() {
   }
 
   const buildings = Array.from(buildingMap.values());
+  const validRoomNames = new Set(
+    buildings.flatMap((building) => building.rooms.map((room) => room.name)),
+  );
+  const unassignedParticipants = participantRows
+    .filter(
+      (participant) =>
+        !participant.roomName || !validRoomNames.has(participant.roomName),
+    )
+    .map((participant) => ({
+      id: participant.id,
+      firstNames: participant.firstNames,
+      lastNames: participant.lastNames,
+      preferredName: participant.preferredName,
+      sex: participant.sex,
+      wardName: participant.wardName,
+    }));
   const totals = buildings.reduce(
     (result, building) => {
       result.rooms += building.rooms.length;
@@ -143,7 +194,7 @@ export async function getLodgingOverview() {
       participants: 0,
       coordinators: 0,
       total: 0,
-      registeredParticipants: registeredRow?.value ?? 0,
+      registeredParticipants: participantRows.length,
       assignedParticipants: 0,
       availableParticipantCapacity: 0,
       bySex: {
@@ -171,6 +222,7 @@ export async function getLodgingOverview() {
 
   return {
     buildings,
+    unassignedParticipants,
     totals: {
       ...totals,
       unassignedParticipants: Math.max(
@@ -211,7 +263,8 @@ export async function validateLodgingRoomAssignment({
     .orderBy(asc(lodgingBuildings.position), asc(lodgingRooms.number));
   const room = roomRows.find(
     (candidate) =>
-      getRoomName(candidate.buildingName, candidate.roomNumber) === roomName,
+      getLodgingRoomName(candidate.buildingName, candidate.roomNumber) ===
+      roomName,
   );
 
   if (!room) {

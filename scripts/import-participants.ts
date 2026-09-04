@@ -223,7 +223,10 @@ async function main() {
         lastNames: sql.raw('excluded."last_names"'),
         preferredName: sql.raw('excluded."preferred_name"'),
         birthDate: sql.raw('excluded."birth_date"'),
-        sex: sql.raw('excluded."sex"'),
+        sex: sql`case
+          when ${participants.companyId} is null then excluded."sex"
+          else ${participants.sex}
+        end`,
         phone: sql.raw('excluded."phone"'),
         email: sql.raw('excluded."email"'),
         shirtSize: sql.raw('excluded."shirt_size"'),

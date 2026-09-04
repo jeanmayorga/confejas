@@ -2,10 +2,16 @@ import "server-only";
 
 import PDFDocument from "pdfkit";
 
+import {
+  getParticipantStatusLabel,
+  type ParticipantStatus,
+} from "@/modules/participants/status";
+
 export type ParticipantPdfRow = {
   id: string;
   firstNames: string;
   lastNames: string;
+  status: ParticipantStatus;
   age: number | null;
   companyName: string | null;
   wardName: string;
@@ -20,7 +26,7 @@ type ParticipantsPdfOptions = {
 };
 
 type PdfColumn = {
-  key: "number" | "name" | "age" | "company" | "ward" | "stake";
+  key: "number" | "name" | "status" | "age" | "company" | "ward" | "stake";
   label: string;
   width: number;
   align?: "left" | "center" | "right";
@@ -40,11 +46,12 @@ const ACCENT_COLOR = "#f97316";
 
 const columns: PdfColumn[] = [
   { key: "number", label: "#", width: 28, align: "center" },
-  { key: "name", label: "Nombres y apellidos", width: 220 },
+  { key: "name", label: "Nombres y apellidos", width: 190 },
+  { key: "status", label: "Estado", width: 75 },
   { key: "age", label: "Edad", width: 42, align: "center" },
-  { key: "company", label: "Compañía", width: 120 },
-  { key: "ward", label: "Barrio", width: 165 },
-  { key: "stake", label: "Estaca", width: 175 },
+  { key: "company", label: "Compañía", width: 110 },
+  { key: "ward", label: "Barrio", width: 140 },
+  { key: "stake", label: "Estaca", width: 165 },
 ];
 
 function getParticipantName(participant: ParticipantPdfRow) {
@@ -63,6 +70,8 @@ function getCellValue(
       return String(index + 1);
     case "name":
       return getParticipantName(participant);
+    case "status":
+      return getParticipantStatusLabel(participant.status);
     case "age":
       return participant.age === null ? "-" : String(participant.age);
     case "company":

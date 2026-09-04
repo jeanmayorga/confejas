@@ -2,7 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import {
@@ -12,7 +12,15 @@ import {
 } from "@/modules/auth/roles";
 import { requireSession } from "@/modules/auth/server/session";
 import { listWards } from "@/modules/church-units/server/queries";
-import { listCompanyOptions } from "@/modules/companies/server/queries";
+import {
+  getCompanyCapacityGuardQuery,
+  getCompanyCapacityLockQuery,
+  isCompanyCapacityGuardError,
+} from "@/modules/companies/server/capacity";
+import {
+  listCompanyOptions,
+  validateCompanyParticipantAssignment,
+} from "@/modules/companies/server/queries";
 import {
   getLodgingOverview,
   validateLodgingRoomAssignment,
@@ -21,11 +29,13 @@ import { db } from "@/server/db";
 
 import { normalizeGovernmentId } from "../identity";
 import { isParticipantId } from "../qr";
+import { isParticipantStatus } from "../status";
 import {
   lookupEcuadorianCitizen,
   type EcuadorianCitizen,
 } from "./ecuador-api";
 import {
+  findParticipantForQrCheckIn,
   findParticipantIdByGovernmentId,
   getParticipantById,
 } from "./queries";
@@ -37,6 +47,19 @@ export type ParticipantActionResult =
 
 export type ParticipantLookupActionResult =
   | { success: true; participantId: string }
+  | { success: false; message: string };
+
+export type QrCheckInParticipant = {
+  id: string;
+  firstNames: string;
+  lastNames: string;
+  companyName: string | null;
+  roomName: string | null;
+  checkedInAt: string | null;
+};
+
+export type ParticipantQrLookupActionResult =
+  | { success: true; participant: QrCheckInParticipant }
   | { success: false; message: string };
 
 export type EcuadorianCitizenLookupActionResult =
@@ -205,6 +228,10 @@ function parseParticipantForm(formData: FormData) {
 }
 
 function safeError(error: unknown) {
+  if (isCompanyCapacityGuardError(error)) {
+    return "La compañía alcanzó el máximo de 20 participantes o de 10 por sexo. Actualiza la página e inténtalo nuevamente.";
+  }
+
   const databaseError = error as {
     constraint?: unknown;
     cause?: { constraint?: unknown };
@@ -272,6 +299,49 @@ export async function findParticipantForCheckInAction(
   }
 
   return { success: true, participantId: participant.id };
+}
+
+export async function findParticipantForQrCheckInAction(
+  value: string,
+): Promise<ParticipantQrLookupActionResult> {
+  const session = await requireSession();
+
+  if (!canCheckInParticipants(session.user.role)) {
+    return { success: false, message: "No tienes permiso para hacer check-in." };
+  }
+
+  if (!value.trim() || value.length > 2_048) {
+    return {
+      success: false,
+      message: "Este código QR no corresponde a un participante.",
+    };
+  }
+
+  let participant: Awaited<ReturnType<typeof findParticipantForQrCheckIn>>;
+
+  try {
+    participant = await findParticipantForQrCheckIn(value);
+  } catch {
+    return {
+      success: false,
+      message: "No pudimos buscar al participante. Inténtalo nuevamente.",
+    };
+  }
+
+  if (!participant) {
+    return {
+      success: false,
+      message: "No encontramos un participante para este código QR.",
+    };
+  }
+
+  return {
+    success: true,
+    participant: {
+      ...participant,
+      checkedInAt: participant.checkedInAt?.toISOString() ?? null,
+    },
+  };
 }
 
 export async function getParticipantEditDataAction(participantId: string) {
@@ -362,6 +432,17 @@ export async function createParticipantAction(
     }
 
     const data = parseParticipantForm(formData);
+    if (data.participant.companyId) {
+      const companyValidation = await validateCompanyParticipantAssignment({
+        companyId: data.participant.companyId,
+        sex: data.participant.sex,
+      });
+
+      if (!companyValidation.success) {
+        return { success: false, message: companyValidation.message };
+      }
+    }
+
     const roomValidation = await validateLodgingRoomAssignment({
       participantSex: data.participant.sex,
       roomName: data.participant.roomName,
@@ -373,13 +454,26 @@ export async function createParticipantAction(
 
     const participantId = randomUUID();
 
-    await db.batch([
-      db.insert(participants).values({ id: participantId, ...data.participant }),
-      db.insert(participantMedicalProfiles).values({
-        participantId,
-        ...data.medical,
-      }),
-    ]);
+    const participantInsert = db
+      .insert(participants)
+      .values({ id: participantId, ...data.participant });
+    const medicalProfileInsert = db
+      .insert(participantMedicalProfiles)
+      .values({ participantId, ...data.medical });
+
+    if (data.participant.companyId) {
+      await db.batch([
+        getCompanyCapacityLockQuery(),
+        getCompanyCapacityGuardQuery({
+          companyId: data.participant.companyId,
+          sex: data.participant.sex,
+        }),
+        participantInsert,
+        medicalProfileInsert,
+      ]);
+    } else {
+      await db.batch([participantInsert, medicalProfileInsert]);
+    }
 
     revalidatePath("/dashboard/participants");
     revalidatePath("/dashboard/companies");
@@ -409,6 +503,18 @@ export async function updateParticipantAction(
     }
 
     const data = parseParticipantForm(formData);
+    if (data.participant.companyId) {
+      const companyValidation = await validateCompanyParticipantAssignment({
+        companyId: data.participant.companyId,
+        sex: data.participant.sex,
+        excludedParticipantId: participantId,
+      });
+
+      if (!companyValidation.success) {
+        return { success: false, message: companyValidation.message };
+      }
+    }
+
     const roomValidation = await validateLodgingRoomAssignment({
       participantId,
       participantSex: data.participant.sex,
@@ -421,19 +527,32 @@ export async function updateParticipantAction(
 
     const now = new Date();
 
-    await db.batch([
-      db
-        .update(participants)
-        .set({ ...data.participant, updatedAt: now })
-        .where(eq(participants.id, participantId)),
-      db
-        .insert(participantMedicalProfiles)
-        .values({ participantId, ...data.medical })
-        .onConflictDoUpdate({
-          target: participantMedicalProfiles.participantId,
-          set: { ...data.medical, updatedAt: now },
+    const participantUpdate = db
+      .update(participants)
+      .set({ ...data.participant, updatedAt: now })
+      .where(eq(participants.id, participantId));
+    const medicalProfileUpsert = db
+      .insert(participantMedicalProfiles)
+      .values({ participantId, ...data.medical })
+      .onConflictDoUpdate({
+        target: participantMedicalProfiles.participantId,
+        set: { ...data.medical, updatedAt: now },
+      });
+
+    if (data.participant.companyId) {
+      await db.batch([
+        getCompanyCapacityLockQuery(),
+        getCompanyCapacityGuardQuery({
+          companyId: data.participant.companyId,
+          sex: data.participant.sex,
+          excludedParticipantId: participantId,
         }),
-    ]);
+        participantUpdate,
+        medicalProfileUpsert,
+      ]);
+    } else {
+      await db.batch([participantUpdate, medicalProfileUpsert]);
+    }
 
     revalidatePath("/dashboard/participants");
     revalidatePath("/dashboard/companies");
@@ -442,6 +561,62 @@ export async function updateParticipantAction(
     return { success: true, message: "Participante actualizado correctamente." };
   } catch (error) {
     return { success: false, message: safeError(error) };
+  }
+}
+
+export async function updateParticipantStatusAction(
+  participantId: string,
+  statusValue: string,
+): Promise<ParticipantActionResult> {
+  try {
+    const session = await requireSession();
+
+    if (!canManageParticipants(session.user.role)) {
+      return {
+        success: false,
+        message: "No tienes permiso para editar participantes.",
+      };
+    }
+
+    if (!isParticipantId(participantId) || !isParticipantStatus(statusValue)) {
+      return { success: false, message: "El estado seleccionado no es válido." };
+    }
+
+    const arrivalFields =
+      statusValue === "arrived"
+        ? {
+            checkedInAt: sql`coalesce(${participants.checkedInAt}, now())`,
+            checkedInById: sql`coalesce(${participants.checkedInById}, ${session.user.id})`,
+          }
+        : {
+            checkedInAt: null,
+            checkedInById: null,
+          };
+    const [updatedParticipant] = await db
+      .update(participants)
+      .set({
+        status: statusValue,
+        ...arrivalFields,
+        updatedAt: new Date(),
+      })
+      .where(eq(participants.id, participantId))
+      .returning({ id: participants.id });
+
+    if (!updatedParticipant) {
+      return { success: false, message: "El participante ya no existe." };
+    }
+
+    revalidatePath("/dashboard/participants");
+
+    return {
+      success: true,
+      message: "Estado actualizado correctamente.",
+    };
+  } catch {
+    return {
+      success: false,
+      message: "No se pudo actualizar el estado. Inténtalo nuevamente.",
+    };
   }
 }
 

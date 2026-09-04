@@ -5,31 +5,14 @@ import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Button } from "@/components/ui/button";
 import { requireCheckInAccess } from "@/modules/auth/server/session";
-import { ParticipantCheckInSheetLoader } from "@/modules/participants/components/participant-check-in-sheet-loader";
 import { QrCameraScanner } from "@/modules/participants/components/qr-camera-scanner.client";
 
 export const metadata: Metadata = {
   title: "Escanear QR | Confejas",
 };
 
-type ScanCheckInPageProps = {
-  searchParams: Promise<{
-    error?: string | string[];
-    participantId?: string | string[];
-    saved?: string | string[];
-  }>;
-};
-
-export default async function ScanCheckInPage({
-  searchParams,
-}: ScanCheckInPageProps) {
+export default async function ScanCheckInPage() {
   await requireCheckInAccess();
-  const query = await searchParams;
-  const participantId = Array.isArray(query.participantId)
-    ? query.participantId[0]
-    : query.participantId;
-  const savedValue = Array.isArray(query.saved) ? query.saved[0] : query.saved;
-  const errorValue = Array.isArray(query.error) ? query.error[0] : query.error;
 
   return (
     <div className="flex flex-col gap-6">
@@ -40,7 +23,7 @@ export default async function ScanCheckInPage({
             Escanear por código QR
           </h1>
           <p className="mt-1 text-muted-foreground">
-            Escanea el QR que contiene la cédula del participante.
+            Escanea el QR de la credencial del participante.
           </p>
         </div>
         <Button
@@ -53,13 +36,7 @@ export default async function ScanCheckInPage({
         </Button>
       </div>
 
-      <QrCameraScanner key={participantId ?? "scanner"} />
-      <ParticipantCheckInSheetLoader
-        assignmentError={errorValue === "assignment"}
-        participantId={participantId}
-        returnPath="/dashboard/check-in/scan"
-        saved={savedValue === "1"}
-      />
+      <QrCameraScanner />
     </div>
   );
 }

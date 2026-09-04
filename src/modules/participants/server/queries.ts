@@ -8,7 +8,7 @@ import { db } from "@/server/db";
 
 import { participantMedicalProfiles, participants } from "./schema";
 import { normalizeGovernmentId } from "../identity";
-import { isParticipantId } from "../qr";
+import { isParticipantId, parseParticipantQrValue } from "../qr";
 
 export const PARTICIPANTS_PAGE_SIZE = 25;
 
@@ -131,6 +131,7 @@ export async function listParticipants({
         phone: participants.phone,
         shirtSize: participants.shirtSize,
         isChurchMember: participants.isChurchMember,
+        status: participants.status,
         wardName: wards.name,
         stakeName: stakes.name,
         companyId: participants.companyId,
@@ -180,6 +181,7 @@ export async function listParticipantsForExport(
       id: participants.id,
       firstNames: participants.firstNames,
       lastNames: participants.lastNames,
+      status: participants.status,
       age: sql<number | null>`extract(year from age(current_date, ${participants.birthDate}))::integer`,
       companyName: companies.name,
       wardName: wards.name,
@@ -289,4 +291,68 @@ export async function findParticipantIdByGovernmentId(value: string) {
     .limit(1);
 
   return participant ?? null;
+}
+
+export async function findParticipantForQrCheckIn(value: string) {
+  const lookup = parseParticipantQrValue(value);
+
+  if (!lookup) {
+    return null;
+  }
+
+  const matches = await db
+    .select({
+      id: participants.id,
+      firstNames: participants.firstNames,
+      lastNames: participants.lastNames,
+      companyName: companies.name,
+      roomName: participants.roomName,
+      checkedInAt: participants.checkedInAt,
+      qrToken: participants.qrToken,
+      governmentId: participants.governmentId,
+      sourceRecordId: participants.sourceRecordId,
+    })
+    .from(participants)
+    .leftJoin(companies, eq(participants.companyId, companies.id))
+    .where(
+      or(
+        lookup.uuid ? eq(participants.qrToken, lookup.uuid) : undefined,
+        lookup.uuid ? eq(participants.id, lookup.uuid) : undefined,
+        lookup.governmentId
+          ? eq(participants.governmentId, lookup.governmentId)
+          : undefined,
+        lookup.sourceRecordId
+          ? eq(participants.sourceRecordId, lookup.sourceRecordId)
+          : undefined,
+      ),
+    )
+    .limit(4);
+  const participant =
+    (lookup.uuid
+      ? matches.find((candidate) => candidate.qrToken === lookup.uuid) ??
+        matches.find((candidate) => candidate.id === lookup.uuid)
+      : undefined) ??
+    (lookup.governmentId
+      ? matches.find(
+          (candidate) => candidate.governmentId === lookup.governmentId,
+        )
+      : undefined) ??
+    (lookup.sourceRecordId
+      ? matches.find(
+          (candidate) => candidate.sourceRecordId === lookup.sourceRecordId,
+        )
+      : undefined);
+
+  if (!participant) {
+    return null;
+  }
+
+  return {
+    id: participant.id,
+    firstNames: participant.firstNames,
+    lastNames: participant.lastNames,
+    companyName: participant.companyName,
+    roomName: participant.roomName,
+    checkedInAt: participant.checkedInAt,
+  };
 }

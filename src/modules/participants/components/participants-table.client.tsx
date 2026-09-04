@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useOptimistic,
   useRef,
   useState,
   useTransition,
@@ -9,6 +10,7 @@ import {
 } from "react";
 import UserEdit01Icon from "@hugeicons/core-free-icons/UserEdit01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { toast } from "sonner";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +23,15 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -40,7 +51,15 @@ import {
 } from "@/components/ui/table";
 import { DeleteParticipantButton } from "@/modules/participants/components/delete-participant-button.client";
 import { ParticipantForm } from "@/modules/participants/components/participant-form.client";
-import { getParticipantEditDataAction } from "@/modules/participants/server/actions";
+import {
+  getParticipantEditDataAction,
+  updateParticipantStatusAction,
+} from "@/modules/participants/server/actions";
+import {
+  getParticipantStatusLabel,
+  PARTICIPANT_STATUS_OPTIONS,
+  type ParticipantStatus,
+} from "@/modules/participants/status";
 import { cn } from "@/lib/utils";
 
 export type ParticipantTableRow = {
@@ -56,6 +75,7 @@ export type ParticipantTableRow = {
   phone: string | null;
   shirtSize: string | null;
   isChurchMember: boolean | null;
+  status: ParticipantStatus;
   wardName: string;
   stakeName: string;
   companyName: string | null;
@@ -86,6 +106,30 @@ const checkInDateFormatter = new Intl.DateTimeFormat("es-EC", {
   timeStyle: "short",
   timeZone: "America/Guayaquil",
 });
+
+const participantStatusClassNames = {
+  registered: "bg-muted text-foreground",
+  confirmed: "bg-participant-confirmed/10 text-participant-confirmed",
+  arrived: "bg-participant-arrived/10 text-participant-arrived",
+  cancelled: "bg-participant-cancelled/10 text-participant-cancelled",
+  pending: "bg-participant-pending/10 text-participant-pending",
+} satisfies Record<ParticipantStatus, string>;
+
+const participantStatusDotClassNames = {
+  registered: "bg-participant-registered",
+  confirmed: "bg-participant-confirmed",
+  arrived: "bg-participant-arrived",
+  cancelled: "bg-participant-cancelled",
+  pending: "bg-participant-pending",
+} satisfies Record<ParticipantStatus, string>;
+
+const participantRowClassNames = {
+  registered: "",
+  confirmed: "",
+  arrived: "",
+  cancelled: "bg-participant-cancelled/10 hover:bg-participant-cancelled/20",
+  pending: "bg-participant-pending/10 hover:bg-participant-pending/20",
+} satisfies Record<ParticipantStatus, string>;
 
 function present(value: string | null, fallback = "No registrado") {
   return value?.trim() || fallback;
@@ -122,6 +166,94 @@ function DetailItem({ label, value }: { label: string; value: string }) {
   );
 }
 
+function ParticipantStatusControl({
+  participantId,
+  participantName,
+  status,
+  canManage,
+  disabled,
+  onStatusChange,
+}: {
+  participantId: string;
+  participantName: string;
+  status: ParticipantStatus;
+  canManage: boolean;
+  disabled: boolean;
+  onStatusChange: (
+    participantId: string,
+    currentStatus: ParticipantStatus,
+    nextStatus: ParticipantStatus,
+  ) => void;
+}) {
+  if (!canManage) {
+    return (
+      <Badge
+        variant="outline"
+        className={cn(
+          "border-transparent",
+          participantStatusClassNames[status],
+        )}
+      >
+        {getParticipantStatusLabel(status)}
+      </Badge>
+    );
+  }
+
+  return (
+    <Select
+      items={PARTICIPANT_STATUS_OPTIONS}
+      value={status}
+      disabled={disabled}
+      onValueChange={(nextStatus) => {
+        if (nextStatus) {
+          onStatusChange(participantId, status, nextStatus);
+        }
+      }}
+    >
+      <SelectTrigger
+        size="sm"
+        aria-label={`Estado de ${participantName}`}
+        className={cn(
+          "w-32 px-2.5 shadow-none",
+          participantStatusClassNames[status],
+        )}
+      >
+        <span
+          aria-hidden="true"
+          className={cn(
+            "size-2 shrink-0 rounded-full",
+            participantStatusDotClassNames[status],
+          )}
+        />
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent
+        align="start"
+        alignItemWithTrigger={false}
+        className="min-w-52"
+      >
+        <SelectGroup>
+          <SelectLabel className="font-medium text-foreground">
+            Cambiar estado
+          </SelectLabel>
+          {PARTICIPANT_STATUS_OPTIONS.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "size-2 rounded-full",
+                  participantStatusDotClassNames[option.value],
+                )}
+              />
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+  );
+}
+
 export function ParticipantsTable({
   participants,
   canManage,
@@ -133,7 +265,62 @@ export function ParticipantsTable({
   const [editData, setEditData] = useState<ParticipantEditData | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [isLoadingEdit, startLoadingEdit] = useTransition();
+  const [, startUpdatingStatus] = useTransition();
+  const [updatingStatusIds, setUpdatingStatusIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [optimisticParticipants, setOptimisticStatus] = useOptimistic(
+    participants,
+    (
+      currentParticipants,
+      update: { participantId: string; status: ParticipantStatus },
+    ) =>
+      currentParticipants.map((participant) =>
+        participant.id === update.participantId
+          ? { ...participant, status: update.status }
+          : participant,
+      ),
+  );
   const editRequestId = useRef(0);
+
+  function changeParticipantStatus(
+    participantId: string,
+    currentStatus: ParticipantStatus,
+    nextStatus: ParticipantStatus,
+  ) {
+    if (currentStatus === nextStatus) {
+      return;
+    }
+
+    setUpdatingStatusIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+      nextIds.add(participantId);
+      return nextIds;
+    });
+
+    startUpdatingStatus(async () => {
+      try {
+        setOptimisticStatus({ participantId, status: nextStatus });
+        const result = await updateParticipantStatusAction(
+          participantId,
+          nextStatus,
+        );
+
+        if (!result.success) {
+          toast.error(result.message);
+          return;
+        }
+
+        toast.success(result.message);
+      } finally {
+        setUpdatingStatusIds((currentIds) => {
+          const nextIds = new Set(currentIds);
+          nextIds.delete(participantId);
+          return nextIds;
+        });
+      }
+    });
+  }
 
   function openParticipant(participant: ParticipantTableRow) {
     editRequestId.current += 1;
@@ -208,17 +395,17 @@ export function ParticipantsTable({
         <TableHeader className="bg-muted/50">
           <TableRow>
             <TableHead className="min-w-56">Nombres</TableHead>
+            <TableHead className="min-w-28">Estado</TableHead>
             <TableHead className="min-w-20">Edad</TableHead>
             <TableHead className="min-w-28">Barrio</TableHead>
             <TableHead className="min-w-32">Estaca</TableHead>
-            <TableHead className="min-w-28">Estado</TableHead>
             <TableHead className="min-w-36">Compañía asignada</TableHead>
             <TableHead className="min-w-28">Cama asignada</TableHead>
             <TableHead className="w-24 text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {participants.map((participant) => {
+          {optimisticParticipants.map((participant) => {
             const participantName = `${participant.firstNames} ${participant.lastNames}`;
 
             return (
@@ -226,7 +413,10 @@ export function ParticipantsTable({
                 key={participant.id}
                 tabIndex={0}
                 aria-label={`Ver a ${participantName}`}
-                className="cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                className={cn(
+                  "cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                  participantRowClassNames[participant.status],
+                )}
                 onClick={() => openParticipant(participant)}
                 onKeyDown={(event) => handleRowKeyDown(event, participant)}
               >
@@ -245,6 +435,19 @@ export function ParticipantsTable({
                     </div>
                   </div>
                 </TableCell>
+                <TableCell
+                  onClick={keepRowClosed}
+                  onKeyDown={(event) => event.stopPropagation()}
+                >
+                  <ParticipantStatusControl
+                    participantId={participant.id}
+                    participantName={participantName}
+                    status={participant.status}
+                    canManage={canManage}
+                    disabled={updatingStatusIds.has(participant.id)}
+                    onStatusChange={changeParticipantStatus}
+                  />
+                </TableCell>
                 <TableCell>
                   {participant.age === null
                     ? "Sin registrar"
@@ -252,13 +455,6 @@ export function ParticipantsTable({
                 </TableCell>
                 <TableCell>{participant.wardName}</TableCell>
                 <TableCell>{participant.stakeName}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant={participant.checkedInAt ? "default" : "secondary"}
-                  >
-                    {participant.checkedInAt ? "Llegó" : "Registrado"}
-                  </Badge>
-                </TableCell>
                 <TableCell>
                   {participant.companyName ? (
                     participant.companyName
@@ -340,7 +536,8 @@ export function ParticipantsTable({
                       {selectedParticipant?.preferredName
                         ? `Prefiere ${selectedParticipant.preferredName} · `
                         : null}
-                      Cédula: {present(selectedParticipant?.governmentId ?? null)}
+                      Cédula:{" "}
+                      {present(selectedParticipant?.governmentId ?? null)}
                     </SheetDescription>
                   </div>
                 </div>
@@ -422,7 +619,9 @@ export function ParticipantsTable({
                       />
                       <DetailItem
                         label="Miembro de la Iglesia"
-                        value={membershipLabel(selectedParticipant.isChurchMember)}
+                        value={membershipLabel(
+                          selectedParticipant.isChurchMember,
+                        )}
                       />
                       <DetailItem
                         label="Talla de camiseta"
