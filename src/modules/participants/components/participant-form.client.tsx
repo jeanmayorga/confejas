@@ -65,7 +65,7 @@ type ParticipantFormProps = {
   participant?: ParticipantFormValue;
   lodgingBuildings: LodgingBuildingOverview[];
   companies: { id: string; name: string }[];
-  wards: { id: number; name: string }[];
+  wards: { id: number; name: string; stakeName: string }[];
   presentation?: "page" | "sheet";
   onCancel?: () => void;
   onSuccess?: () => void;
@@ -308,7 +308,7 @@ export function ParticipantForm({
               >
                 {wards.map((ward) => (
                   <NativeSelectOption key={ward.id} value={ward.id}>
-                    {ward.name}
+                    {ward.name} · {ward.stakeName}
                   </NativeSelectOption>
                 ))}
               </NativeSelect>

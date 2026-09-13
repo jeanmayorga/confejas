@@ -12,6 +12,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "participants:import": "bun run scripts/import-participants.ts",
+    "participants:replace": "bun run scripts/replace-participants.ts",
     "auth:generate": "bunx --bun auth@latest generate --config ./better-auth.config.ts --output ./src/modules/auth/server/schema.ts -y",
     "auth:create-admin": "bunx --bun auth@latest create-admin --config ./better-auth.config.ts"
   },
