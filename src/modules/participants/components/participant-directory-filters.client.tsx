@@ -49,7 +49,7 @@ type ParticipantDirectoryFiltersProps = {
   filters: ParticipantDirectoryFilterValues;
   canExport: boolean;
   companies: { id: string; name: string }[];
-  wards: { id: number; name: string }[];
+  wards: { id: number; name: string; stakeName: string }[];
   stakes: { id: number; name: string }[];
 };
 
@@ -174,9 +174,12 @@ export function ParticipantDirectoryFilters({
       ? "Sin asignar"
       : companies.find((company) => company.id === selectedFilters.companyId)
           ?.name;
-  const wardName = wards.find(
+  const selectedWard = wards.find(
     (ward) => String(ward.id) === selectedFilters.wardId,
-  )?.name;
+  );
+  const wardName = selectedWard
+    ? `${selectedWard.name} · ${selectedWard.stakeName}`
+    : undefined;
   const stakeName = stakes.find(
     (stake) => String(stake.id) === selectedFilters.stakeId,
   )?.name;
@@ -291,7 +294,7 @@ export function ParticipantDirectoryFilters({
                       </NativeSelectOption>
                       {wards.map((ward) => (
                         <NativeSelectOption key={ward.id} value={String(ward.id)}>
-                          {ward.name}
+                          {ward.name} · {ward.stakeName}
                         </NativeSelectOption>
                       ))}
                     </NativeSelect>

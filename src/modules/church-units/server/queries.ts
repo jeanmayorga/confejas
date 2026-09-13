@@ -1,6 +1,6 @@
 import "server-only";
 
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 import { db } from "@/server/db";
 
@@ -15,7 +15,8 @@ export async function listStakes() {
 
 export async function listWards() {
   return db
-    .select({ id: wards.id, name: wards.name })
+    .select({ id: wards.id, name: wards.name, stakeName: stakes.name })
     .from(wards)
-    .orderBy(asc(wards.name));
+    .innerJoin(stakes, eq(wards.stakeId, stakes.id))
+    .orderBy(asc(stakes.name), asc(wards.name));
 }

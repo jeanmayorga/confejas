@@ -1,5 +1,11 @@
 import { relations } from "drizzle-orm";
-import { index, integer, pgTable, varchar } from "drizzle-orm/pg-core";
+import {
+  index,
+  integer,
+  pgTable,
+  uniqueIndex,
+  varchar,
+} from "drizzle-orm/pg-core";
 
 export const stakes = pgTable("stakes", {
   id: integer().primaryKey(),
@@ -17,10 +23,14 @@ export const wards = pgTable(
         onDelete: "restrict",
         onUpdate: "cascade",
       }),
-    name: varchar({ length: 120 }).notNull().unique("wards_name_unique"),
-    slug: varchar({ length: 120 }).notNull().unique("wards_slug_unique"),
+    name: varchar({ length: 120 }).notNull(),
+    slug: varchar({ length: 120 }).notNull(),
   },
-  (table) => [index("wards_stake_id_idx").on(table.stakeId)],
+  (table) => [
+    uniqueIndex("wards_stake_id_name_uidx").on(table.stakeId, table.name),
+    uniqueIndex("wards_stake_id_slug_uidx").on(table.stakeId, table.slug),
+    index("wards_stake_id_idx").on(table.stakeId),
+  ],
 );
 
 export const stakesRelations = relations(stakes, ({ many }) => ({
