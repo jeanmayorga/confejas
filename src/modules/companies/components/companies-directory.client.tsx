@@ -11,8 +11,10 @@ import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
 import FemaleSymbolIcon from "@hugeicons/core-free-icons/FemaleSymbolIcon";
 import MaleSymbolIcon from "@hugeicons/core-free-icons/MaleSymbolIcon";
 import UserAdd01Icon from "@hugeicons/core-free-icons/UserAdd01Icon";
+import UserEdit01Icon from "@hugeicons/core-free-icons/UserEdit01Icon";
 import UserGroupIcon from "@hugeicons/core-free-icons/UserGroupIcon";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -68,6 +70,7 @@ import {
 } from "@/components/ui/table";
 import { CompanyFormDialog } from "@/modules/companies/components/company-form-dialog.client";
 import { DeleteCompanyButton } from "@/modules/companies/components/delete-company-button.client";
+import { DeleteParticipantButton } from "@/modules/participants/components/delete-participant-button.client";
 import {
   COMPANY_PARTICIPANT_LIMIT as COMPANY_CAPACITY,
   COMPANY_PARTICIPANT_SEX_LIMIT as COMPANY_SEX_CAPACITY,
@@ -650,29 +653,29 @@ function CompanyCard({
           </div>
 
           {company.participants.length > 0 ? (
-            <Table className="mt-3 min-w-[620px]">
+            <Table className="mt-3 min-w-[800px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Participante</TableHead>
+                  <TableHead>Nombres</TableHead>
                   <TableHead>Edad</TableHead>
                   <TableHead>Sexo</TableHead>
                   <TableHead>Barrio</TableHead>
+                  <TableHead>Estaca</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {company.participants.map((participant) => (
                   <TableRow key={participant.id}>
                     <TableCell className="whitespace-normal">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-medium">
-                          {getParticipantName(participant)}
-                        </span>
+                      <span className="font-medium">
+                        {getParticipantName(participant)}
+                      </span>
                         {participant.preferredName ? (
-                          <span className="text-xs text-muted-foreground">
-                            Prefiere {participant.preferredName}
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            ({participant.preferredName})
                           </span>
                         ) : null}
-                      </div>
                     </TableCell>
                     <TableCell>{getParticipantAge(participant.age)}</TableCell>
                     <TableCell>
@@ -680,12 +683,28 @@ function CompanyCard({
                         {getParticipantSexLabel(participant.sex)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="whitespace-normal">
-                      <div className="flex flex-col gap-0.5">
-                        <span>{participant.wardName}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {participant.stakeName}
-                        </span>
+                    <TableCell>{participant.wardName}</TableCell>
+                    <TableCell>{participant.stakeName}</TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          render={
+                            <Link
+                              href={`/dashboard/participants/${participant.id}/edit`}
+                            />
+                          }
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label={`Editar ${getParticipantName(participant)}`}
+                        >
+                          <HugeiconsIcon icon={UserEdit01Icon} strokeWidth={2} />
+                        </Button>
+                        {canDelete ? (
+                          <DeleteParticipantButton
+                            participantId={participant.id}
+                            participantName={getParticipantName(participant)}
+                          />
+                        ) : null}
                       </div>
                     </TableCell>
                   </TableRow>
