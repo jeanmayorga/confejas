@@ -166,13 +166,12 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 height={80}
                 sizes="80px"
                 priority
-                className="size-20 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-sidebar-border group-data-[collapsible=icon]:size-8"
+                className="size-20 shrink-0 rounded-full object-cover group-data-[collapsible=icon]:size-8"
               />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarSeparator />
       <SidebarContent>
         {navigationSections.map((section) => (
           <SidebarGroup
