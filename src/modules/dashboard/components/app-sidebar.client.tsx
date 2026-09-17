@@ -156,17 +156,17 @@ export function AppSidebar({ user }: AppSidebarProps) {
             <SidebarMenuButton
               size="lg"
               tooltip="Confejas"
-              className="h-16 justify-center px-2 group-data-[collapsible=icon]:px-0"
+              className="h-20 justify-center bg-transparent px-2 hover:bg-transparent active:bg-transparent focus-visible:bg-transparent data-active:bg-transparent data-active:text-sidebar-foreground group-data-[collapsible=icon]:px-0"
               render={<Link href={homeHref} />}
             >
               <Image
                 src="/logo.png"
                 alt=""
-                width={64}
-                height={64}
-                sizes="64px"
+                width={80}
+                height={80}
+                sizes="80px"
                 priority
-                className="size-16 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-sidebar-border group-data-[collapsible=icon]:size-8"
+                className="size-20 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-sidebar-border group-data-[collapsible=icon]:size-8"
               />
             </SidebarMenuButton>
           </SidebarMenuItem>
