@@ -7,12 +7,16 @@ import {
   useState,
   useTransition,
 } from "react";
+import ArrowDataTransferHorizontalIcon from "@hugeicons/core-free-icons/ArrowDataTransferHorizontalIcon";
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
+import Delete02Icon from "@hugeicons/core-free-icons/Delete02Icon";
+import DragDropVerticalIcon from "@hugeicons/core-free-icons/DragDropVerticalIcon";
 import FemaleSymbolIcon from "@hugeicons/core-free-icons/FemaleSymbolIcon";
 import MaleSymbolIcon from "@hugeicons/core-free-icons/MaleSymbolIcon";
 import UserAdd01Icon from "@hugeicons/core-free-icons/UserAdd01Icon";
 import UserEdit01Icon from "@hugeicons/core-free-icons/UserEdit01Icon";
 import UserGroupIcon from "@hugeicons/core-free-icons/UserGroupIcon";
+import UserRemove01Icon from "@hugeicons/core-free-icons/UserRemove01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -68,9 +72,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import { CompanyFormDialog } from "@/modules/companies/components/company-form-dialog.client";
+import {
+  CompanyParticipantManagement,
+  useCompanyParticipantManagement,
+} from "@/modules/companies/components/company-participant-management.client";
 import { DeleteCompanyButton } from "@/modules/companies/components/delete-company-button.client";
-import { DeleteParticipantButton } from "@/modules/participants/components/delete-participant-button.client";
 import {
   COMPANY_PARTICIPANT_LIMIT as COMPANY_CAPACITY,
   COMPANY_PARTICIPANT_SEX_LIMIT as COMPANY_SEX_CAPACITY,
@@ -422,17 +430,19 @@ export function CompaniesDirectory({
 
   return (
     <>
-      <div className="flex flex-col gap-5">
-        {companies.map((company, index) => (
-          <CompanyCard
-            key={company.id}
-            company={company}
-            position={index + 1}
-            canDelete={canDelete}
-            onAddParticipants={() => openAssignment(company)}
-          />
-        ))}
-      </div>
+      <CompanyParticipantManagement companies={companies} canDelete={canDelete}>
+        <div className="flex flex-col gap-5">
+          {companies.map((company, index) => (
+            <CompanyCard
+              key={company.id}
+              company={company}
+              position={index + 1}
+              canDelete={canDelete}
+              onAddParticipants={() => openAssignment(company)}
+            />
+          ))}
+        </div>
+      </CompanyParticipantManagement>
 
       <Sheet
         open={selectedCompany !== null}
@@ -553,6 +563,16 @@ function CompanyCard({
   canDelete: boolean;
   onAddParticipants: () => void;
 }) {
+  const management = useCompanyParticipantManagement();
+  const [isDragOver, setIsDragOver] = useState(false);
+  const selectedCount = company.participants.filter((participant) =>
+    management.selectedIds.has(participant.id),
+  ).length;
+  const allSelected =
+    company.participants.length > 0 &&
+    selectedCount === company.participants.length;
+  const canReceiveDrop = management.canDrop(company.id);
+  const isDragging = management.draggedIds.length > 0;
   const canAddParticipants =
     company.participantCount <= COMPANY_CAPACITY &&
     company.femaleCount <= COMPANY_SEX_CAPACITY &&
@@ -563,7 +583,33 @@ function CompanyCard({
   const titleId = `company-${company.id}-title`;
 
   return (
-    <Card aria-labelledby={titleId}>
+    <Card
+      aria-labelledby={titleId}
+      aria-busy={management.busy}
+      className={cn(
+        "transition-shadow",
+        isDragging && canReceiveDrop && "ring-2 ring-primary/40",
+        isDragging && isDragOver && canReceiveDrop && "ring-2 ring-primary",
+      )}
+      onDragOver={(event) => {
+        if (!canReceiveDrop) {
+          return;
+        }
+
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        setIsDragOver(true);
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setIsDragOver(false);
+        }
+      }}
+      onDrop={(event) => {
+        setIsDragOver(false);
+        management.drop(event, company.id);
+      }}
+    >
       <CardHeader className="has-data-[slot=card-action]:grid-cols-1 border-b sm:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
         <CardTitle id={titleId} className="text-lg">
           {position}. {company.name}
@@ -577,7 +623,7 @@ function CompanyCard({
             type="button"
             variant="outline"
             size="sm"
-            disabled={!canAddParticipants}
+            disabled={management.busy || !canAddParticipants}
             title={
               canAddParticipants
                 ? undefined
@@ -592,8 +638,10 @@ function CompanyCard({
             />
             Agregar participantes
           </Button>
-          <CompanyFormDialog company={company} />
-          {canDelete ? <DeleteCompanyButton company={company} /> : null}
+          <CompanyFormDialog company={company} disabled={management.busy} />
+          {canDelete ? (
+            <DeleteCompanyButton company={company} disabled={management.busy} />
+          ) : null}
         </CardAction>
       </CardHeader>
 
@@ -645,17 +693,39 @@ function CompanyCard({
             <h3 id={`${titleId}-participants`} className="text-sm font-semibold">
               Participantes
             </h3>
-            <Badge
-              variant={company.participantCount > 0 ? "default" : "secondary"}
-            >
-              {company.participantCount.toLocaleString("es-EC")}
-            </Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              {selectedCount > 0 ? (
+                <Badge variant="outline">{selectedCount} seleccionados</Badge>
+              ) : null}
+              {isDragging && canReceiveDrop ? (
+                <Badge>Suelta aquí para mover</Badge>
+              ) : null}
+              <Badge
+                variant={company.participantCount > 0 ? "default" : "secondary"}
+              >
+                {company.participantCount.toLocaleString("es-EC")}
+              </Badge>
+            </div>
           </div>
 
           {company.participants.length > 0 ? (
             <Table className="mt-3 min-w-[800px]">
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={allSelected}
+                      indeterminate={selectedCount > 0 && !allSelected}
+                      disabled={management.busy}
+                      aria-label={`Seleccionar todos los participantes de ${company.name}`}
+                      onCheckedChange={(checked) =>
+                        management.toggleCompany(company.id, checked)
+                      }
+                    />
+                  </TableHead>
+                  <TableHead className="w-10">
+                    <span className="sr-only">Arrastrar</span>
+                  </TableHead>
                   <TableHead>Nombres</TableHead>
                   <TableHead>Edad</TableHead>
                   <TableHead>Sexo</TableHead>
@@ -666,16 +736,60 @@ function CompanyCard({
               </TableHeader>
               <TableBody>
                 {company.participants.map((participant) => (
-                  <TableRow key={participant.id}>
+                  <TableRow
+                    key={participant.id}
+                    data-state={
+                      management.selectedIds.has(participant.id)
+                        ? "selected"
+                        : undefined
+                    }
+                    className={cn(
+                      management.draggedIds.includes(participant.id) &&
+                        "opacity-50",
+                    )}
+                    draggable={!management.busy}
+                    onDragStart={(event) =>
+                      management.startDrag(event, participant.id)
+                    }
+                    onDragEnd={management.endDrag}
+                  >
+                    <TableCell>
+                      <Checkbox
+                        checked={management.selectedIds.has(participant.id)}
+                        disabled={management.busy}
+                        aria-label={`Seleccionar ${getParticipantName(participant)}`}
+                        onCheckedChange={(checked) =>
+                          management.toggleParticipant(participant.id, checked)
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={cn(
+                          "inline-flex text-muted-foreground",
+                          management.busy
+                            ? "cursor-wait"
+                            : "cursor-grab active:cursor-grabbing",
+                        )}
+                        title="Arrastra para mover. También puedes usar el botón Mover."
+                        aria-hidden="true"
+                      >
+                        <HugeiconsIcon
+                          icon={DragDropVerticalIcon}
+                          strokeWidth={2}
+                          className="size-4"
+                        />
+                      </span>
+                    </TableCell>
                     <TableCell className="whitespace-normal">
                       <span className="font-medium">
                         {getParticipantName(participant)}
                       </span>
-                        {participant.preferredName ? (
-                          <span className="ml-1 text-xs text-muted-foreground">
-                            ({participant.preferredName})
-                          </span>
-                        ) : null}
+                      {participant.preferredName ? (
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          ({participant.preferredName})
+                        </span>
+                      ) : null}
                     </TableCell>
                     <TableCell>{getParticipantAge(participant.age)}</TableCell>
                     <TableCell>
@@ -688,22 +802,57 @@ function CompanyCard({
                     <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={management.busy}
+                          aria-label={`Mover ${getParticipantName(participant)} a otra compañía`}
+                          onClick={() => management.openMove([participant.id])}
+                        >
+                          <HugeiconsIcon
+                            icon={ArrowDataTransferHorizontalIcon}
+                            strokeWidth={2}
+                            data-icon="inline-start"
+                          />
+                          Mover
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          disabled={management.busy}
+                          title="Quitar de la compañía"
+                          aria-label={`Quitar a ${getParticipantName(participant)} de ${company.name}`}
+                          onClick={() => management.openRemove([participant.id])}
+                        >
+                          <HugeiconsIcon icon={UserRemove01Icon} strokeWidth={2} />
+                        </Button>
+                        <Button
                           render={
                             <Link
                               href={`/dashboard/participants/${participant.id}/edit`}
                             />
                           }
                           variant="ghost"
-                          size="icon-xs"
+                          size="icon-sm"
+                          disabled={management.busy}
+                          title="Editar participante"
                           aria-label={`Editar ${getParticipantName(participant)}`}
                         >
                           <HugeiconsIcon icon={UserEdit01Icon} strokeWidth={2} />
                         </Button>
                         {canDelete ? (
-                          <DeleteParticipantButton
-                            participantId={participant.id}
-                            participantName={getParticipantName(participant)}
-                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon-sm"
+                            disabled={management.busy}
+                            title="Eliminar participante permanentemente"
+                            aria-label={`Eliminar permanentemente a ${getParticipantName(participant)}`}
+                            onClick={() => management.openDelete([participant.id])}
+                          >
+                            <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+                          </Button>
                         ) : null}
                       </div>
                     </TableCell>
@@ -716,7 +865,8 @@ function CompanyCard({
               <EmptyHeader>
                 <EmptyTitle>Sin participantes</EmptyTitle>
                 <EmptyDescription>
-                  Agrégalos manualmente o prepara una propuesta de distribución.
+                  Arrastra participantes aquí, agrégalos manualmente o prepara
+                  una propuesta de distribución.
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>

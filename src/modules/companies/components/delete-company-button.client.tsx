@@ -22,6 +22,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { deleteCompanyAction } from "@/modules/companies/server/actions";
 
 type DeleteCompanyButtonProps = {
+  disabled?: boolean;
   company: {
     id: string;
     name: string;
@@ -30,7 +31,10 @@ type DeleteCompanyButtonProps = {
   };
 };
 
-export function DeleteCompanyButton({ company }: DeleteCompanyButtonProps) {
+export function DeleteCompanyButton({
+  company,
+  disabled = false,
+}: DeleteCompanyButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -76,6 +80,7 @@ export function DeleteCompanyButton({ company }: DeleteCompanyButtonProps) {
             variant="ghost"
             size="icon-sm"
             className="text-destructive"
+            disabled={disabled}
             aria-label={`Eliminar ${company.name}`}
           />
         }
