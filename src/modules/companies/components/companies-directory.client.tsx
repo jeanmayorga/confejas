@@ -233,21 +233,21 @@ function getCandidateDisabledReason({
   }
 
   if (selectedCounts.total >= company.remainingCapacity) {
-    return "La compañía ya alcanza su máximo de 20 participantes.";
+    return `La compañía ya alcanza su máximo de ${COMPANY_CAPACITY} participantes.`;
   }
 
   if (
     group === "female" &&
     selectedCounts.female >= company.remainingFemaleCapacity
   ) {
-    return "La compañía ya alcanza su máximo de 10 mujeres.";
+    return `La compañía ya alcanza su máximo de ${COMPANY_SEX_CAPACITY} mujeres.`;
   }
 
   if (
     group === "male" &&
     selectedCounts.male >= company.remainingMaleCapacity
   ) {
-    return "La compañía ya alcanza su máximo de 10 hombres.";
+    return `La compañía ya alcanza su máximo de ${COMPANY_SEX_CAPACITY} hombres.`;
   }
 
   return null;
@@ -566,7 +566,8 @@ function CompanyCard({
           {position}. {company.name}
         </CardTitle>
         <CardDescription>
-          Cupo máximo: 20 participantes, hasta 10 mujeres y 10 hombres.
+          Cupo máximo: {COMPANY_CAPACITY} participantes, hasta {" "}
+          {COMPANY_SEX_CAPACITY} mujeres y {COMPANY_SEX_CAPACITY} hombres.
         </CardDescription>
         <CardAction className="col-start-1 row-start-3 row-span-1 mt-2 flex flex-wrap items-center justify-start gap-1 sm:col-start-2 sm:row-start-1 sm:row-span-2 sm:mt-0 sm:justify-end sm:justify-self-end">
           <Button

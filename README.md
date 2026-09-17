@@ -12,6 +12,12 @@ bun dev
 
 La aplicación estará disponible en [http://localhost:3000](http://localhost:3000).
 
+## Cuenta administrativa
+
+La cuenta administrativa se crea con `bun run auth:create-admin`. Conserva sus
+credenciales fuera del repositorio y cámbialas después del primer inicio de
+sesión.
+
 ## Base de datos
 
 Crea `.env.local` a partir de `.env.example` y configura `DATABASE_URL` con la

@@ -78,17 +78,17 @@ export function AppSidebar({ user }: AppSidebarProps) {
     ? "/dashboard/participants"
     : "/dashboard";
   const roleLabel = getRoleLabel(user.role);
-  const navigation = [
-    ...(canCheckInParticipants(user.role)
-      ? [
-          {
-            title: "Check-in",
-            href: "/dashboard/check-in",
-            icon: QrCodeScanIcon,
-            exact: false,
-          },
-        ]
-      : []),
+  const actionNavigation = canCheckInParticipants(user.role)
+    ? [
+        {
+          title: "Check-in",
+          href: "/dashboard/check-in",
+          icon: QrCodeScanIcon,
+          exact: false,
+        },
+      ]
+    : [];
+  const managementNavigation = [
     ...(canViewParticipantDirectory(user.role)
       ? [
           {
@@ -132,6 +132,10 @@ export function AppSidebar({ user }: AppSidebarProps) {
         ]
       : []),
   ];
+  const navigationSections = [
+    { label: "Acciones", items: actionNavigation },
+    { label: "Gestión", items: managementNavigation },
+  ].filter((section) => section.items.length > 0);
 
   async function handleSignOut() {
     setIsSigningOut(true);
@@ -146,68 +150,82 @@ export function AppSidebar({ user }: AppSidebarProps) {
   }
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="relative px-3 pb-6 pt-4 group-data-[collapsible=icon]:p-2">
+    <Sidebar variant="inset" collapsible="icon">
+      <SidebarHeader className="relative p-3 group-data-[collapsible=icon]:p-2">
         <SidebarMenu className="group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:invisible">
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
               tooltip="Confejas"
-              className="h-auto flex-col gap-3 px-3 py-4"
+              className="h-14 gap-3 px-2 pr-10"
               render={<Link href={homeHref} />}
             >
               <Image
                 src="/logo.png"
-                alt="Confía en Cristo"
-                width={128}
-                height={128}
-                className="size-32 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-sidebar-border group-data-[collapsible=icon]:size-8"
+                alt=""
+                width={44}
+                height={44}
+                sizes="44px"
+                priority
+                className="size-11 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-sidebar-border group-data-[collapsible=icon]:size-8"
               />
-              <Badge variant="secondary">Administración</Badge>
+              <div className="grid min-w-0 flex-1 text-left leading-tight">
+                <span className="truncate font-semibold">Confejas</span>
+                <span className="truncate text-xs text-sidebar-foreground/60">
+                  Administración
+                </span>
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
         <SidebarTrigger
-          className="absolute right-3 top-3 group-data-[collapsible=icon]:right-2 group-data-[collapsible=icon]:top-2"
+          className="absolute right-4 top-1/2 -translate-y-1/2 group-data-[collapsible=icon]:right-2"
           aria-label="Alternar barra lateral"
         />
       </SidebarHeader>
+      <SidebarSeparator />
       <SidebarContent>
-        <SidebarGroup className="px-3 py-2">
-          <SidebarGroupLabel className="px-2">Navegación</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-1.5">
-              {navigation.map((item) => {
-                const isActive = item.exact
-                  ? pathname === item.href
-                  : pathname.startsWith(item.href);
+        {navigationSections.map((section) => (
+          <SidebarGroup
+            key={section.label}
+            className="px-3 py-2 first:pt-4 last:pb-4 group-data-[collapsible=icon]:px-2"
+          >
+            <SidebarGroupLabel className="px-2">
+              {section.label}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1">
+                {section.items.map((item) => {
+                  const isActive = item.exact
+                    ? pathname === item.href
+                    : pathname.startsWith(item.href);
 
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      tooltip={item.title}
-                      className="h-11 gap-3 px-3"
-                      render={<Link href={item.href} />}
-                    >
-                      {isActive ? (
-                        <span
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        tooltip={item.title}
+                        aria-current={isActive ? "page" : undefined}
+                        className="h-10 gap-3 px-3"
+                        render={<Link href={item.href} />}
+                      >
+                        <HugeiconsIcon
+                          icon={item.icon}
+                          strokeWidth={2}
                           aria-hidden="true"
-                          className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-sidebar-primary group-data-[collapsible=icon]:hidden"
                         />
-                      ) : null}
-                      <HugeiconsIcon icon={item.icon} strokeWidth={2} />
-                      <span>{item.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                        <span>{item.title}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
       <SidebarSeparator />
-      <SidebarFooter className="p-3">
+      <SidebarFooter className="p-3 group-data-[collapsible=icon]:p-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
@@ -215,7 +233,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 render={
                   <SidebarMenuButton
                     size="lg"
-                    variant="outline"
+                    className="h-14 gap-3 px-2"
                     aria-label={`Cuenta de ${user.name}`}
                   />
                 }
@@ -235,10 +253,16 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 <HugeiconsIcon
                   icon={UnfoldMoreIcon}
                   strokeWidth={2}
+                  aria-hidden="true"
                   className="ml-auto group-data-[collapsible=icon]:hidden"
                 />
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="end" className="w-64">
+              <DropdownMenuContent
+                side="top"
+                align="end"
+                sideOffset={8}
+                className="w-64"
+              >
                 <DropdownMenuGroup>
                   <DropdownMenuLabel>
                     <span className="block truncate font-medium text-foreground">
@@ -257,11 +281,16 @@ export function AppSidebar({ user }: AppSidebarProps) {
                   <DropdownMenuItem
                     onClick={handleSignOut}
                     disabled={isSigningOut}
+                    variant="destructive"
                   >
                     {isSigningOut ? (
                       <Spinner />
                     ) : (
-                      <HugeiconsIcon icon={Logout01Icon} strokeWidth={2} />
+                      <HugeiconsIcon
+                        icon={Logout01Icon}
+                        strokeWidth={2}
+                        aria-hidden="true"
+                      />
                     )}
                     Cerrar sesión
                   </DropdownMenuItem>

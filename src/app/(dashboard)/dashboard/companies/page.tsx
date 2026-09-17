@@ -15,16 +15,17 @@ import { requireParticipantManagementAccess } from "@/modules/auth/server/sessio
 import { CompaniesDirectory } from "@/modules/companies/components/companies-directory.client";
 import { CompanyDistributionDialog } from "@/modules/companies/components/company-distribution-dialog.client";
 import { CompanyFormDialog } from "@/modules/companies/components/company-form-dialog.client";
+import { COMPANY_PARTICIPANT_LIMIT } from "@/modules/companies/distribution";
 import {
-  countUnassignedParticipants,
+  getCompanyDistributionOverview,
   listCompanies,
 } from "@/modules/companies/server/queries";
 
 export default async function CompaniesPage() {
   const session = await requireParticipantManagementAccess();
-  const [companies, unassignedCount] = await Promise.all([
+  const [companies, distributionOverview] = await Promise.all([
     listCompanies(),
-    countUnassignedParticipants(),
+    getCompanyDistributionOverview(),
   ]);
   const canDelete = canDeleteParticipants(session.user.role);
   const assignedCount = companies.reduce(
@@ -45,15 +46,15 @@ export default async function CompaniesPage() {
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             {assignedCount.toLocaleString("es-EC")} asignados ·{" "}
-            {unassignedCount.toLocaleString("es-EC")} sin compañía · máximo 20
-            por compañía
+            {distributionOverview.unassigned.total.toLocaleString("es-EC")} sin compañía · hasta {" "}
+            {COMPANY_PARTICIPANT_LIMIT} por compañía
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <CompanyDistributionDialog
             companyCount={companies.length}
-            unassignedCount={unassignedCount}
+            overview={distributionOverview}
           />
           <CompanyFormDialog />
         </div>
