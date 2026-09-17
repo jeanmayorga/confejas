@@ -38,7 +38,6 @@ import {
   SidebarMenuItem,
   SidebarRail,
   SidebarSeparator,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/modules/auth/client/auth-client";
@@ -157,25 +156,21 @@ export function AppSidebar({ user }: AppSidebarProps) {
             <SidebarMenuButton
               size="lg"
               tooltip="Confejas"
-              className="h-14 justify-center px-2 group-data-[collapsible=icon]:px-0"
+              className="h-16 justify-center px-2 group-data-[collapsible=icon]:px-0"
               render={<Link href={homeHref} />}
             >
               <Image
                 src="/logo.png"
                 alt=""
-                width={44}
-                height={44}
-                sizes="44px"
+                width={64}
+                height={64}
+                sizes="64px"
                 priority
-                className="size-11 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-sidebar-border group-data-[collapsible=icon]:size-8"
+                className="size-16 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-sidebar-border group-data-[collapsible=icon]:size-8"
               />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <SidebarTrigger
-          className="absolute right-4 top-1/2 -translate-y-1/2 group-data-[collapsible=icon]:right-2"
-          aria-label="Alternar barra lateral"
-        />
       </SidebarHeader>
       <SidebarSeparator />
       <SidebarContent>
