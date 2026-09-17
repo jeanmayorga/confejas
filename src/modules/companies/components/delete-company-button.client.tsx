@@ -19,6 +19,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { deleteCompanyAction } from "@/modules/companies/server/actions";
 
 type DeleteCompanyButtonProps = {
@@ -37,6 +42,7 @@ export function DeleteCompanyButton({
 }: DeleteCompanyButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [confirmationStep, setConfirmationStep] = useState<1 | 2>(1);
   const [pending, startTransition] = useTransition();
   const hasAssignments =
     company.participantCount > 0 || company.counselorCount > 0;
@@ -58,41 +64,63 @@ export function DeleteCompanyButton({
 
   if (hasAssignments) {
     return (
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        disabled
-        title="Primero debes reasignar sus participantes y consejeros"
-        aria-label={`No se puede eliminar ${company.name} porque tiene asignaciones`}
-      >
-        <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              disabled
+              aria-label={`No se puede eliminar ${company.name} porque tiene asignaciones`}
+            >
+              <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+            </Button>
+          }
+        />
+        <TooltipContent>Primero reasigna sus participantes y consejeros</TooltipContent>
+      </Tooltip>
     );
   }
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="text-destructive"
-            disabled={disabled}
-            aria-label={`Eliminar ${company.name}`}
-          />
-        }
-      >
-        <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
-      </AlertDialogTrigger>
+    <AlertDialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        setConfirmationStep(1);
+      }}
+    >
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <AlertDialogTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-destructive"
+                  disabled={disabled}
+                  aria-label={`Eliminar ${company.name}`}
+                >
+                  <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+                </Button>
+              }
+            />
+          }
+        />
+        <TooltipContent>Eliminar compañía</TooltipContent>
+      </Tooltip>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>¿Eliminar compañía?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {confirmationStep === 1 ? "¿Eliminar compañía?" : "Última confirmación"}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            {company.name} se eliminará permanentemente. Esta acción no se puede
-            deshacer.
+            {confirmationStep === 1
+              ? `${company.name} se eliminará permanentemente. Selecciona continuar para revisar la confirmación final.`
+              : `Esta es la última confirmación. ${company.name} se eliminará permanentemente. Esta acción no se puede deshacer.`}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -100,10 +128,20 @@ export function DeleteCompanyButton({
           <AlertDialogAction
             variant="destructive"
             disabled={pending}
-            onClick={handleDelete}
+            onClick={() => {
+              if (confirmationStep === 1) {
+                setConfirmationStep(2);
+                return;
+              }
+              handleDelete();
+            }}
           >
             {pending ? <Spinner data-icon="inline-start" /> : null}
-            {pending ? "Eliminando…" : "Eliminar"}
+            {pending
+              ? "Eliminando…"
+              : confirmationStep === 1
+                ? "Continuar"
+                : "Eliminar definitivamente"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

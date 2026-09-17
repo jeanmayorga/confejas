@@ -139,6 +139,7 @@ export function CompanyParticipantManagement({
   const submittingRef = useRef(false);
   const [selection, setSelection] = useState<Map<string, string | null>>(() => new Map());
   const [prompt, setPrompt] = useState<ManagementPrompt | null>(null);
+  const [deleteConfirmed, setDeleteConfirmed] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [draggedParticipants, setDraggedParticipants] = useState<CapturedCompanyParticipant[]>([]);
   const draggedRef = useRef<CapturedCompanyParticipant[]>([]);
@@ -205,6 +206,7 @@ export function CompanyParticipantManagement({
 
     if (participants) {
       setFailure(null);
+      setDeleteConfirmed(false);
       setPrompt({ kind, participants, targetCompanyId: "" });
     }
   }
@@ -358,6 +360,7 @@ export function CompanyParticipantManagement({
   function closePrompt(open: boolean) {
     if (!open && !pending && !submittingRef.current) {
       setPrompt(null);
+      setDeleteConfirmed(false);
       setFailure(null);
     }
   }
@@ -521,10 +524,18 @@ export function CompanyParticipantManagement({
       <AlertDialog open={prompt?.kind === "remove" || prompt?.kind === "delete"} onOpenChange={closePrompt}>
         <AlertDialogContent className="max-h-[90dvh] overflow-y-auto">
           <AlertDialogHeader>
-            <AlertDialogTitle>{prompt?.kind === "delete" ? "¿Eliminar participantes definitivamente?" : "¿Quitar participantes de sus compañías?"}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {prompt?.kind === "delete"
+                ? deleteConfirmed
+                  ? "Última confirmación"
+                  : "¿Eliminar participantes definitivamente?"
+                : "¿Quitar participantes de sus compañías?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {prompt?.kind === "delete"
-                ? "Se eliminarán permanentemente los registros de estas personas, incluida su información médica. Esta acción no se puede deshacer."
+                ? deleteConfirmed
+                  ? "Esta es la última confirmación. Se eliminarán permanentemente los registros de estas personas, incluida su información médica. Esta acción no se puede deshacer."
+                  : "Esta acción eliminará permanentemente los registros de estas personas, incluida su información médica. Selecciona continuar para revisar la confirmación final."
                 : "Los participantes quedarán sin compañía. Sus registros se conservarán y podrás asignarlos nuevamente desde Agregar participantes."}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -536,10 +547,23 @@ export function CompanyParticipantManagement({
             <AlertDialogAction
               variant={prompt?.kind === "delete" ? "destructive" : "default"}
               disabled={pending || promptIsStale || (prompt?.kind === "delete" && !canDelete)}
-              onClick={() => { if (prompt) executeAction(prompt); }}
+              onClick={() => {
+                if (!prompt) return;
+                if (prompt.kind === "delete" && !deleteConfirmed) {
+                  setDeleteConfirmed(true);
+                  return;
+                }
+                executeAction(prompt);
+              }}
             >
               {pending ? <Spinner data-icon="inline-start" /> : null}
-              {pending ? "Guardando…" : prompt?.kind === "delete" ? "Eliminar definitivamente" : "Quitar de compañía"}
+              {pending
+                ? "Guardando…"
+                : prompt?.kind === "delete"
+                  ? deleteConfirmed
+                    ? "Eliminar definitivamente"
+                    : "Continuar"
+                  : "Quitar de compañía"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -72,6 +72,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { CompanyFormDialog } from "@/modules/companies/components/company-form-dialog.client";
 import {
@@ -801,58 +806,83 @@ function CompanyCard({
                     <TableCell>{participant.stakeName}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={management.busy}
-                          aria-label={`Mover ${getParticipantName(participant)} a otra compañía`}
-                          onClick={() => management.openMove([participant.id])}
-                        >
-                          <HugeiconsIcon
-                            icon={ArrowDataTransferHorizontalIcon}
-                            strokeWidth={2}
-                            data-icon="inline-start"
-                          />
-                          Mover
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          disabled={management.busy}
-                          title="Quitar de la compañía"
-                          aria-label={`Quitar a ${getParticipantName(participant)} de ${company.name}`}
-                          onClick={() => management.openRemove([participant.id])}
-                        >
-                          <HugeiconsIcon icon={UserRemove01Icon} strokeWidth={2} />
-                        </Button>
-                        <Button
-                          render={
-                            <Link
-                              href={`/dashboard/participants/${participant.id}/edit`}
-                            />
-                          }
-                          variant="ghost"
-                          size="icon-sm"
-                          disabled={management.busy}
-                          title="Editar participante"
-                          aria-label={`Editar ${getParticipantName(participant)}`}
-                        >
-                          <HugeiconsIcon icon={UserEdit01Icon} strokeWidth={2} />
-                        </Button>
-                        {canDelete ? (
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon-sm"
-                            disabled={management.busy}
-                            title="Eliminar participante permanentemente"
-                            aria-label={`Eliminar permanentemente a ${getParticipantName(participant)}`}
-                            onClick={() => management.openDelete([participant.id])}
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={management.busy}
+                                aria-label={`Mover ${getParticipantName(participant)} a otra compañía`}
+                                onClick={() => management.openMove([participant.id])}
+                              />
+                            }
                           >
-                            <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
-                          </Button>
+                            <HugeiconsIcon
+                              icon={ArrowDataTransferHorizontalIcon}
+                              strokeWidth={2}
+                              data-icon="inline-start"
+                            />
+                            Mover
+                          </TooltipTrigger>
+                          <TooltipContent>Mover a otra compañía</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                disabled={management.busy}
+                                aria-label={`Quitar a ${getParticipantName(participant)} de ${company.name}`}
+                                onClick={() => management.openRemove([participant.id])}
+                              />
+                            }
+                          >
+                            <HugeiconsIcon icon={UserRemove01Icon} strokeWidth={2} />
+                          </TooltipTrigger>
+                          <TooltipContent>Quitar de la compañía</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <Button
+                                render={
+                                  <Link
+                                    href={`/dashboard/participants/${participant.id}/edit`}
+                                  />
+                                }
+                                variant="ghost"
+                                size="icon-sm"
+                                disabled={management.busy}
+                                aria-label={`Editar ${getParticipantName(participant)}`}
+                              />
+                            }
+                          >
+                            <HugeiconsIcon icon={UserEdit01Icon} strokeWidth={2} />
+                          </TooltipTrigger>
+                          <TooltipContent>Editar participante</TooltipContent>
+                        </Tooltip>
+                        {canDelete ? (
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="icon-sm"
+                                  disabled={management.busy}
+                                  aria-label={`Eliminar permanentemente a ${getParticipantName(participant)}`}
+                                  onClick={() => management.openDelete([participant.id])}
+                                />
+                              }
+                            >
+                              <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+                            </TooltipTrigger>
+                            <TooltipContent>Eliminar permanentemente</TooltipContent>
+                          </Tooltip>
                         ) : null}
                       </div>
                     </TableCell>
