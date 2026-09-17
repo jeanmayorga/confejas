@@ -19,6 +19,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { deleteCounselorAction } from "@/modules/counselors/server/actions";
 
 type DeleteCounselorButtonProps = {
@@ -30,6 +35,7 @@ export function DeleteCounselorButton({
 }: DeleteCounselorButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [confirmationStep, setConfirmationStep] = useState<1 | 2>(1);
   const [pending, startTransition] = useTransition();
 
   function handleDelete() {
@@ -48,26 +54,42 @@ export function DeleteCounselorButton({
   }
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="text-destructive"
-            aria-label={`Eliminar ${counselor.name}`}
-          />
-        }
-      >
-        <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
-      </AlertDialogTrigger>
+    <AlertDialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        setConfirmationStep(1);
+      }}
+    >
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <AlertDialogTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-destructive"
+                  aria-label={`Eliminar ${counselor.name}`}
+                >
+                  <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+                </Button>
+              }
+            />
+          }
+        />
+        <TooltipContent>Eliminar consejero</TooltipContent>
+      </Tooltip>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>¿Eliminar consejero?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {confirmationStep === 1 ? "¿Eliminar consejero?" : "Última confirmación"}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            {counselor.name} se eliminará permanentemente. Esta acción no se
-            puede deshacer.
+            {confirmationStep === 1
+              ? `${counselor.name} se eliminará permanentemente. Selecciona continuar para revisar la confirmación final.`
+              : `Esta es la última confirmación. ${counselor.name} se eliminará permanentemente. Esta acción no se puede deshacer.`}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -75,10 +97,20 @@ export function DeleteCounselorButton({
           <AlertDialogAction
             variant="destructive"
             disabled={pending}
-            onClick={handleDelete}
+            onClick={() => {
+              if (confirmationStep === 1) {
+                setConfirmationStep(2);
+                return;
+              }
+              handleDelete();
+            }}
           >
             {pending ? <Spinner data-icon="inline-start" /> : null}
-            {pending ? "Eliminando…" : "Eliminar"}
+            {pending
+              ? "Eliminando…"
+              : confirmationStep === 1
+                ? "Continuar"
+                : "Eliminar definitivamente"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

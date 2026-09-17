@@ -49,7 +49,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         geistMono.variable,
       )}
     >
-      <body className="flex min-h-full flex-col">
+      <body className="flex min-h-full flex-col bg-sidebar">
         <TooltipProvider>{children}</TooltipProvider>
         <Toaster position="top-right" />
       </body>

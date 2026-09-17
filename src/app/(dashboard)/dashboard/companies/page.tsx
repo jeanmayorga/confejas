@@ -42,7 +42,8 @@ export default async function CompaniesPage() {
             <Badge variant="secondary">{companies.length}</Badge>
           </div>
           <p className="mt-1 text-muted-foreground">
-            Revisa cada compañía, sus consejeros y todos sus participantes.
+            Edita tus compañías y mueve, quita o elimina participantes, uno a uno
+            o en grupo.
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             {assignedCount.toLocaleString("es-EC")} asignados ·{" "}

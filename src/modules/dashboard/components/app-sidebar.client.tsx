@@ -28,7 +28,6 @@ import {
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -37,8 +36,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  SidebarSeparator,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/modules/auth/client/auth-client";
@@ -152,80 +149,26 @@ export function AppSidebar({ user }: AppSidebarProps) {
   return (
     <Sidebar variant="inset" collapsible="icon">
       <SidebarHeader className="relative p-3 group-data-[collapsible=icon]:p-2">
-        <SidebarMenu className="group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:invisible">
+        <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
               tooltip="Confejas"
-              className="h-14 gap-3 px-2 pr-10"
+              className="h-[88px] justify-center bg-transparent px-2 hover:bg-transparent active:bg-transparent focus-visible:bg-transparent data-active:bg-transparent data-active:text-sidebar-foreground group-data-[collapsible=icon]:px-0"
               render={<Link href={homeHref} />}
             >
               <Image
                 src="/logo.png"
                 alt=""
-                width={44}
-                height={44}
-                sizes="44px"
+                width={88}
+                height={88}
+                sizes="88px"
                 priority
-                className="size-11 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-sidebar-border group-data-[collapsible=icon]:size-8"
+                className="size-[88px] shrink-0 rounded-full object-cover group-data-[collapsible=icon]:size-8"
               />
-              <div className="grid min-w-0 flex-1 text-left leading-tight">
-                <span className="truncate font-semibold">Confejas</span>
-                <span className="truncate text-xs text-sidebar-foreground/60">
-                  Administración
-                </span>
-              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <SidebarTrigger
-          className="absolute right-4 top-1/2 -translate-y-1/2 group-data-[collapsible=icon]:right-2"
-          aria-label="Alternar barra lateral"
-        />
-      </SidebarHeader>
-      <SidebarSeparator />
-      <SidebarContent>
-        {navigationSections.map((section) => (
-          <SidebarGroup
-            key={section.label}
-            className="px-3 py-2 first:pt-4 last:pb-4 group-data-[collapsible=icon]:px-2"
-          >
-            <SidebarGroupLabel className="px-2">
-              {section.label}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-1">
-                {section.items.map((item) => {
-                  const isActive = item.exact
-                    ? pathname === item.href
-                    : pathname.startsWith(item.href);
-
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        isActive={isActive}
-                        tooltip={item.title}
-                        aria-current={isActive ? "page" : undefined}
-                        className="h-10 gap-3 px-3"
-                        render={<Link href={item.href} />}
-                      >
-                        <HugeiconsIcon
-                          icon={item.icon}
-                          strokeWidth={2}
-                          aria-hidden="true"
-                        />
-                        <span>{item.title}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
-      </SidebarContent>
-      <SidebarSeparator />
-      <SidebarFooter className="p-3 group-data-[collapsible=icon]:p-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
@@ -233,7 +176,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 render={
                   <SidebarMenuButton
                     size="lg"
-                    className="h-14 gap-3 px-2"
+                    className="h-14 gap-3 border border-border bg-white px-2 hover:bg-white data-open:hover:bg-white"
                     aria-label={`Cuenta de ${user.name}`}
                   />
                 }
@@ -258,7 +201,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 />
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                side="top"
+                side="bottom"
                 align="end"
                 sideOffset={8}
                 className="w-64"
@@ -299,7 +242,47 @@ export function AppSidebar({ user }: AppSidebarProps) {
             </DropdownMenu>
           </SidebarMenuItem>
         </SidebarMenu>
-      </SidebarFooter>
+      </SidebarHeader>
+      <SidebarContent>
+        {navigationSections.map((section) => (
+          <SidebarGroup
+            key={section.label}
+            className="px-3 py-2 first:pt-4 last:pb-4 group-data-[collapsible=icon]:px-2"
+          >
+            <SidebarGroupLabel className="px-2">
+              {section.label}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1">
+                {section.items.map((item) => {
+                  const isActive = item.exact
+                    ? pathname === item.href
+                    : pathname.startsWith(item.href);
+
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        tooltip={item.title}
+                        aria-current={isActive ? "page" : undefined}
+                        className="h-10 gap-3 px-3 hover:bg-primary hover:text-primary-foreground data-active:bg-primary data-active:text-primary-foreground data-active:hover:bg-primary data-active:hover:text-primary-foreground"
+                        render={<Link href={item.href} />}
+                      >
+                        <HugeiconsIcon
+                          icon={item.icon}
+                          strokeWidth={2}
+                          aria-hidden="true"
+                        />
+                        <span>{item.title}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
       <SidebarRail />
     </Sidebar>
   );

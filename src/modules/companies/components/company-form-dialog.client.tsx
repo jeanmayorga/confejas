@@ -32,9 +32,13 @@ type EditableCompany = {
 
 type CompanyFormDialogProps = {
   company?: EditableCompany;
+  disabled?: boolean;
 };
 
-export function CompanyFormDialog({ company }: CompanyFormDialogProps) {
+export function CompanyFormDialog({
+  company,
+  disabled = false,
+}: CompanyFormDialogProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [open, setOpen] = useState(false);
@@ -63,12 +67,20 @@ export function CompanyFormDialog({ company }: CompanyFormDialogProps) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!pending) {
+          setOpen(nextOpen);
+        }
+      }}
+    >
       <DialogTrigger
         render={
           <Button
-            variant={editing ? "ghost" : "default"}
-            size={editing ? "icon-sm" : "default"}
+            variant={editing ? "outline" : "default"}
+            size={editing ? "sm" : "default"}
+            disabled={disabled}
             aria-label={editing ? `Editar ${company?.name}` : undefined}
           />
         }
@@ -78,7 +90,7 @@ export function CompanyFormDialog({ company }: CompanyFormDialogProps) {
           strokeWidth={2}
           data-icon="inline-start"
         />
-        {editing ? <span className="sr-only">Editar compañía</span> : "Nueva compañía"}
+        {editing ? "Editar compañía" : "Nueva compañía"}
       </DialogTrigger>
 
       <DialogContent>
@@ -105,6 +117,7 @@ export function CompanyFormDialog({ company }: CompanyFormDialogProps) {
                 defaultValue={company?.name}
                 placeholder="Ej. Compañía Nefi"
                 maxLength={120}
+                disabled={pending}
                 autoFocus
                 required
               />
