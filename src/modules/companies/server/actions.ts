@@ -18,12 +18,19 @@ import { db } from "@/server/db";
 import {
   COMPANY_PARTICIPANT_LIMIT,
   COMPANY_PARTICIPANT_SEX_LIMIT,
+  DEFAULT_DISTRIBUTION_CAPACITY,
+  DEFAULT_DISTRIBUTION_STRATEGY,
   FEMALE_PARTICIPANT_SEX,
+  getRequiredAdditionalCompanyCount,
+  isDistributionCapacity,
   isDistributionDirection,
+  isDistributionStrategy,
   isSupportedParticipantSex,
   MALE_PARTICIPANT_SEX,
   planParticipantDistribution,
   type DistributionDirection,
+  type DistributionCapacity,
+  type DistributionStrategy,
   type ParticipantCompanyAssignment,
   type ParticipantSexCounts,
 } from "../distribution";
@@ -54,11 +61,13 @@ export type DistributionAgeRange = {
   lastAge: number | null;
   firstBirthDate: string | null;
   lastBirthDate: string | null;
+  missingAgeCount: number;
 };
 
 export type DistributionProposalCompany = {
   companyId: string;
   companyName: string;
+  isNew: boolean;
   status: "ready" | "full" | "blocked_over_capacity";
   current: ParticipantSexCounts;
   proposed: ParticipantSexCounts;
@@ -71,16 +80,23 @@ export type DistributionProposalCompany = {
 };
 
 export type DistributionProposal = {
-  version: 1;
+  version: 4;
   previewKey: string;
   generatedAt: string;
   direction: DistributionDirection;
+  strategy: DistributionStrategy;
+  stakeDiversity: boolean;
   limits: {
-    perCompany: typeof COMPANY_PARTICIPANT_LIMIT;
-    perSex: typeof COMPANY_PARTICIPANT_SEX_LIMIT;
+    perCompany: number;
+    femalePerCompany: number;
+    malePerCompany: number;
   };
   assignments: ParticipantCompanyAssignment[];
   companies: DistributionProposalCompany[];
+  creation: {
+    count: number;
+    names: string[];
+  };
   pending: {
     female: CompanyParticipant[];
     male: CompanyParticipant[];
@@ -100,6 +116,9 @@ export type DistributionProposal = {
 
 export type DistributionProposalInput = {
   direction: DistributionDirection;
+  strategy: DistributionStrategy;
+  stakeDiversity: boolean;
+  capacity: DistributionCapacity;
   previewKey: string;
 };
 
@@ -112,6 +131,7 @@ export type DistributionSaveActionResult =
       success: true;
       message: string;
       assignedCount: number;
+      createdCompanyCount: number;
     }
   | {
       success: false;
@@ -186,6 +206,31 @@ function getCompanyName(formData: FormData) {
   }
 
   return name;
+}
+
+function getGeneratedCompanyNames(
+  existingNames: readonly string[],
+  count: number,
+) {
+  const existing = new Set(
+    existingNames.map((name) => name.trim().toLocaleLowerCase("es-EC")),
+  );
+  const names: string[] = [];
+  let position = 1;
+
+  while (names.length < count) {
+    const name = `Compañía ${position}`;
+    const normalized = name.toLocaleLowerCase("es-EC");
+
+    if (!existing.has(normalized)) {
+      names.push(name);
+      existing.add(normalized);
+    }
+
+    position += 1;
+  }
+
+  return names;
 }
 
 async function companyNameExists(name: string, excludedId?: string) {
@@ -440,32 +485,61 @@ function getAgeRange(
   participantIds: readonly string[],
   participantsById: ReadonlyMap<string, CompanyParticipant>,
 ): DistributionAgeRange | null {
-  const first = participantIds[0]
-    ? participantsById.get(participantIds[0])
-    : null;
-  const last = participantIds.at(-1)
-    ? participantsById.get(participantIds.at(-1) as string)
-    : null;
+  const assignedParticipants = participantIds.flatMap((participantId) => {
+    const participant = participantsById.get(participantId);
+    return participant ? [participant] : [];
+  });
 
-  if (!first || !last) {
+  if (assignedParticipants.length === 0) {
     return null;
   }
 
+  const participantsWithRegisteredAge = assignedParticipants.filter(
+    (participant): participant is CompanyParticipant & { age: number } =>
+      participant.age !== null,
+  );
+  const youngest = participantsWithRegisteredAge.reduce<
+    (CompanyParticipant & { age: number }) | null
+  >(
+    (currentYoungest, participant) =>
+      !currentYoungest || participant.age < currentYoungest.age
+        ? participant
+        : currentYoungest,
+    null,
+  );
+  const oldest = participantsWithRegisteredAge.reduce<
+    (CompanyParticipant & { age: number }) | null
+  >(
+    (currentOldest, participant) =>
+      !currentOldest || participant.age > currentOldest.age
+        ? participant
+        : currentOldest,
+    null,
+  );
+
   return {
-    firstAge: first.age,
-    lastAge: last.age,
-    firstBirthDate: first.birthDate,
-    lastBirthDate: last.birthDate,
+    firstAge: youngest?.age ?? null,
+    lastAge: oldest?.age ?? null,
+    firstBirthDate: youngest?.birthDate ?? null,
+    lastBirthDate: oldest?.birthDate ?? null,
+    missingAgeCount:
+      assignedParticipants.length - participantsWithRegisteredAge.length,
   };
 }
 
 function createDistributionPreviewKey(
   direction: DistributionDirection,
+  strategy: DistributionStrategy,
+  stakeDiversity: boolean,
+  capacity: DistributionCapacity,
   plan: ReturnType<typeof planParticipantDistribution>,
 ) {
   const canonicalProposal = JSON.stringify({
-    version: 1,
+    version: 4,
     direction,
+    strategy,
+    stakeDiversity,
+    capacity,
     assignments: plan.assignments,
     companies: plan.companies.map((company) => ({
       companyId: company.companyId,
@@ -481,21 +555,52 @@ function createDistributionPreviewKey(
   return createHash("sha256").update(canonicalProposal).digest("hex");
 }
 
-async function buildDistributionProposal(direction: DistributionDirection) {
+async function buildDistributionProposal(
+  direction: DistributionDirection,
+  capacity: DistributionCapacity,
+  strategy: DistributionStrategy,
+  stakeDiversity: boolean,
+) {
   const [companyRows, unassignedParticipants] = await Promise.all([
     listCompaniesForDistribution(),
     listUnassignedParticipants(),
   ]);
 
-  if (companyRows.length === 0) {
-    return null;
-  }
-
-  const plan = planParticipantDistribution({
+  const initialPlan = planParticipantDistribution({
     companies: companyRows,
     participants: unassignedParticipants,
     direction,
+    capacity,
+    strategy,
+    stakeDiversity,
   });
+  const generatedCompanyNames = getGeneratedCompanyNames(
+    companyRows.map((company) => company.name),
+    getRequiredAdditionalCompanyCount(initialPlan, capacity),
+  );
+  const plan =
+    generatedCompanyNames.length === 0
+      ? initialPlan
+      : planParticipantDistribution({
+          companies: [
+            ...companyRows,
+            ...generatedCompanyNames.map((name, index) => ({
+              id: `new-company-${index + 1}`,
+              name,
+              counts: {
+                total: 0,
+                female: 0,
+                male: 0,
+                unsupportedSex: 0,
+              },
+            })),
+          ],
+          participants: unassignedParticipants,
+          direction,
+          capacity,
+          strategy,
+          stakeDiversity,
+        });
   const participantsById = new Map(
     unassignedParticipants.map((participant) => [participant.id, participant]),
   );
@@ -510,21 +615,31 @@ async function buildDistributionProposal(direction: DistributionDirection) {
     plan.pending.unsupportedSexParticipantIds,
   );
   const proposal: DistributionProposal = {
-    version: 1,
-    previewKey: createDistributionPreviewKey(direction, plan),
+    version: 4,
+    previewKey: createDistributionPreviewKey(
+      direction,
+      strategy,
+      stakeDiversity,
+      capacity,
+      plan,
+    ),
     generatedAt: new Date().toISOString(),
     direction,
+    strategy,
+    stakeDiversity,
     limits: {
-      perCompany: COMPANY_PARTICIPANT_LIMIT,
-      perSex: COMPANY_PARTICIPANT_SEX_LIMIT,
+      perCompany: capacity.female + capacity.male,
+      femalePerCompany: capacity.female,
+      malePerCompany: capacity.male,
     },
     assignments: plan.assignments,
     companies: plan.companies.map((company) => ({
       companyId: company.companyId,
       companyName: company.companyName,
+      isNew: generatedCompanyNames.includes(company.companyName),
       status: company.blockedByExistingCapacity
         ? "blocked_over_capacity"
-        : company.final.total >= COMPANY_PARTICIPANT_LIMIT
+        : company.final.total >= capacity.female + capacity.male
           ? "full"
           : "ready",
       current: company.current,
@@ -539,6 +654,10 @@ async function buildDistributionProposal(direction: DistributionDirection) {
         male: getAgeRange(company.maleParticipantIds, participantsById),
       },
     })),
+    creation: {
+      count: generatedCompanyNames.length,
+      names: generatedCompanyNames,
+    },
     pending: {
       female: femalePending,
       male: malePending,
@@ -627,6 +746,9 @@ export async function getUnassignedParticipantsAction(): Promise<
 
 export async function previewParticipantDistributionAction(
   direction: DistributionDirection,
+  capacity: DistributionCapacity = DEFAULT_DISTRIBUTION_CAPACITY,
+  strategy: DistributionStrategy = DEFAULT_DISTRIBUTION_STRATEGY,
+  stakeDiversity = false,
 ): Promise<DistributionPreviewActionResult> {
   try {
     const session = await requireSession();
@@ -641,18 +763,37 @@ export async function previewParticipantDistributionAction(
     if (!isDistributionDirection(direction)) {
       return {
         success: false,
-        message: "Selecciona un orden de edades válido.",
+        message: "Selecciona un orden de edad válido.",
       };
     }
 
-    const proposal = await buildDistributionProposal(direction);
-
-    if (!proposal) {
+    if (!isDistributionStrategy(strategy)) {
       return {
         success: false,
-        message: "Crea al menos una compañía antes de distribuir participantes.",
+        message: "Selecciona un algoritmo de reparto válido.",
       };
     }
+
+    if (typeof stakeDiversity !== "boolean") {
+      return {
+        success: false,
+        message: "La regla de diversidad por estaca no es válida.",
+      };
+    }
+
+    if (!isDistributionCapacity(capacity)) {
+      return {
+        success: false,
+        message: `Indica entre 1 y ${COMPANY_PARTICIPANT_SEX_LIMIT} participantes por sexo en cada compañía.`,
+      };
+    }
+
+    const proposal = await buildDistributionProposal(
+      direction,
+      capacity,
+      strategy,
+      stakeDiversity,
+    );
 
     return { success: true, proposal };
   } catch {
@@ -681,6 +822,9 @@ export async function saveParticipantDistributionAction(
       typeof input !== "object" ||
       input === null ||
       !isDistributionDirection(input.direction) ||
+      !isDistributionStrategy(input.strategy) ||
+      typeof input.stakeDiversity !== "boolean" ||
+      !isDistributionCapacity(input.capacity) ||
       typeof input.previewKey !== "string" ||
       !/^[0-9a-f]{64}$/i.test(input.previewKey)
     ) {
@@ -691,7 +835,12 @@ export async function saveParticipantDistributionAction(
       };
     }
 
-    const currentProposal = await buildDistributionProposal(input.direction);
+    let currentProposal = await buildDistributionProposal(
+      input.direction,
+      input.capacity,
+      input.strategy,
+      input.stakeDiversity,
+    );
 
     if (!currentProposal || currentProposal.previewKey !== input.previewKey) {
       return {
@@ -707,6 +856,40 @@ export async function saveParticipantDistributionAction(
         success: false,
         code: "invalid_proposal",
         message: "No hay participantes elegibles por guardar.",
+      };
+    }
+
+    let createdCompanyCount = 0;
+
+    if (currentProposal.creation.names.length > 0) {
+      const createdCompanies = await db
+        .insert(companies)
+        .values(currentProposal.creation.names.map((name) => ({ name })))
+        .returning({ id: companies.id });
+
+      if (createdCompanies.length !== currentProposal.creation.names.length) {
+        return {
+          success: false,
+          code: "server_error",
+          message: "No se pudieron crear todas las compañías necesarias.",
+        };
+      }
+
+      createdCompanyCount = createdCompanies.length;
+      currentProposal = await buildDistributionProposal(
+        input.direction,
+        input.capacity,
+        input.strategy,
+        input.stakeDiversity,
+      );
+    }
+
+    if (!currentProposal || currentProposal.creation.count > 0) {
+      return {
+        success: false,
+        code: "stale_proposal",
+        message:
+          "La distribución cambió mientras se creaban las compañías. Vuelve a generar la propuesta.",
       };
     }
 
@@ -773,8 +956,12 @@ export async function saveParticipantDistributionAction(
 
     return {
       success: true,
-      message: `Se asignaron ${assignedParticipantIds.size} participantes correctamente.`,
+      message:
+        createdCompanyCount > 0
+          ? `Se crearon ${createdCompanyCount} compañías y se asignaron ${assignedParticipantIds.size} participantes correctamente.`
+          : `Se asignaron ${assignedParticipantIds.size} participantes correctamente.`,
       assignedCount: assignedParticipantIds.size,
+      createdCompanyCount,
     };
   } catch {
     return {
@@ -911,8 +1098,7 @@ export async function assignParticipantsToCompanyAction(
       return {
         success: false,
         code: "capacity",
-        message:
-          "La selección supera el máximo de 20 participantes o de 10 por sexo para esta compañía.",
+        message: `La selección supera el máximo de ${COMPANY_PARTICIPANT_LIMIT} participantes o de ${COMPANY_PARTICIPANT_SEX_LIMIT} por sexo para esta compañía.`,
       };
     }
 

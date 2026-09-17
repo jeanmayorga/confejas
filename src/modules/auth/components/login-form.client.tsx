@@ -54,8 +54,8 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <FieldGroup>
-        <Field>
+      <FieldGroup className="gap-5">
+        <Field data-disabled={isPending || undefined}>
           <FieldLabel htmlFor="email">Correo electrónico</FieldLabel>
           <Input
             id="email"
@@ -65,27 +65,35 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
             placeholder="nombre@ejemplo.com"
             required
             disabled={isPending}
+            className="h-11 px-4"
           />
         </Field>
-        <Field>
+        <Field data-disabled={isPending || undefined}>
           <FieldLabel htmlFor="password">Contraseña</FieldLabel>
           <Input
             id="password"
             name="password"
             type="password"
             autoComplete="current-password"
+            placeholder="Ingresa tu contraseña"
             required
             disabled={isPending}
+            className="h-11 px-4"
           />
         </Field>
         {error ? (
           <Field data-invalid="true">
-            <FieldError>{error}</FieldError>
+            <FieldError id="login-error">{error}</FieldError>
           </Field>
         ) : null}
-        <Field>
-          <Button type="submit" className="w-full" disabled={isPending}>
-            {isPending ? <Spinner /> : null}
+        <Field data-disabled={isPending || undefined}>
+          <Button
+            type="submit"
+            size="xl"
+            className="w-full"
+            disabled={isPending}
+          >
+            {isPending ? <Spinner data-icon="inline-start" /> : null}
             {isPending ? "Ingresando..." : "Ingresar"}
           </Button>
         </Field>

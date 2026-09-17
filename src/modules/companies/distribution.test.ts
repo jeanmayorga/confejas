@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test";
 
 import {
   COMPANY_PARTICIPANT_LIMIT,
-  COMPANY_PARTICIPANT_SEX_LIMIT,
+  DEFAULT_DISTRIBUTION_CAPACITY,
+  getBalancedDistributionCapacity,
+  getRequiredAdditionalCompanyCount,
   planParticipantDistribution,
   type DistributionCompany,
   type DistributionParticipant,
@@ -20,16 +22,34 @@ function participants(
   prefix: string,
   sex: string | null,
   count: number,
+  stakeId = 1,
 ): DistributionParticipant[] {
   return Array.from({ length: count }, (_, index) => ({
     id: `${prefix}-${String(index + 1).padStart(2, "0")}`,
     birthDate: `${2000 + index}-01-01`,
     sex,
+    stakeId,
   }));
 }
 
 describe("planParticipantDistribution", () => {
-  test("fills companies sequentially in natural order up to 10 per sex", () => {
+  test("calculates the additional companies needed for the pending capacity", () => {
+    const plan = planParticipantDistribution({
+      companies: [],
+      participants: [
+        ...participants("f", "Femenino", 12),
+        ...participants("m", "Masculino", 31),
+      ],
+      direction: "youngest_to_oldest",
+    });
+
+    expect(getRequiredAdditionalCompanyCount(plan)).toBe(4);
+    expect(
+      getRequiredAdditionalCompanyCount(plan, { female: 5, male: 4 }),
+    ).toBe(8);
+  });
+
+  test("fills companies sequentially in natural order up to the default capacity", () => {
     const plan = planParticipantDistribution({
       companies: [
         company("company-10", "Compañía 10"),
@@ -47,9 +67,11 @@ describe("planParticipantDistribution", () => {
       "company-10",
     ]);
     expect(plan.companies[0].proposed).toEqual({
-      total: COMPANY_PARTICIPANT_LIMIT,
-      female: COMPANY_PARTICIPANT_SEX_LIMIT,
-      male: COMPANY_PARTICIPANT_SEX_LIMIT,
+      total:
+        DEFAULT_DISTRIBUTION_CAPACITY.female +
+        DEFAULT_DISTRIBUTION_CAPACITY.male,
+      female: DEFAULT_DISTRIBUTION_CAPACITY.female,
+      male: DEFAULT_DISTRIBUTION_CAPACITY.male,
       unsupportedSex: 0,
     });
     expect(plan.companies[1].proposed).toEqual({
@@ -165,9 +187,24 @@ describe("planParticipantDistribution", () => {
     const plan = planParticipantDistribution({
       companies: [company("company-1", "Compañía 1")],
       participants: [
-        { id: "other", birthDate: "2005-01-01", sex: "Otro" },
-        { id: "missing", birthDate: "2006-01-01", sex: null },
-        { id: "unexpected", birthDate: "2007-01-01", sex: "Mujer" },
+        {
+          id: "other",
+          birthDate: "2005-01-01",
+          sex: "Otro",
+          stakeId: 1,
+        },
+        {
+          id: "missing",
+          birthDate: "2006-01-01",
+          sex: null,
+          stakeId: 1,
+        },
+        {
+          id: "unexpected",
+          birthDate: "2007-01-01",
+          sex: "Mujer",
+          stakeId: 1,
+        },
       ],
       direction: "youngest_to_oldest",
     });
@@ -182,10 +219,25 @@ describe("planParticipantDistribution", () => {
 
   test("places missing birth dates at the end in both directions", () => {
     const people: DistributionParticipant[] = [
-      { id: "middle", birthDate: "2005-01-01", sex: "Femenino" },
-      { id: "unknown", birthDate: null, sex: "Femenino" },
-      { id: "young", birthDate: "2010-01-01", sex: "Femenino" },
-      { id: "old", birthDate: "2000-01-01", sex: "Femenino" },
+      {
+        id: "middle",
+        birthDate: "2005-01-01",
+        sex: "Femenino",
+        stakeId: 1,
+      },
+      { id: "unknown", birthDate: null, sex: "Femenino", stakeId: 1 },
+      {
+        id: "young",
+        birthDate: "2010-01-01",
+        sex: "Femenino",
+        stakeId: 1,
+      },
+      {
+        id: "old",
+        birthDate: "2000-01-01",
+        sex: "Femenino",
+        stakeId: 1,
+      },
     ];
 
     const youngestFirst = planParticipantDistribution({
@@ -211,6 +263,264 @@ describe("planParticipantDistribution", () => {
       "young",
       "unknown",
     ]);
+  });
+
+  test("spreads age extremes through every company for the mixed-ages strategy", () => {
+    const plan = planParticipantDistribution({
+      companies: [
+        company("company-1", "Compañía 1"),
+        company("company-2", "Compañía 2"),
+        company("company-3", "Compañía 3"),
+      ],
+      participants: participants("f", "Femenino", 12),
+      direction: "youngest_to_oldest",
+      strategy: "mixed_ages",
+      capacity: { female: 4, male: 1 },
+    });
+
+    expect(plan.companies.map((item) => item.femaleParticipantIds)).toEqual([
+      ["f-12", "f-01", "f-09", "f-04"],
+      ["f-11", "f-02", "f-08", "f-05"],
+      ["f-10", "f-03", "f-07", "f-06"],
+    ]);
+  });
+
+  test("prioritizes distinct stakes within a company across both sexes", () => {
+    const plan = planParticipantDistribution({
+      companies: [company("company-1", "Compañía 1")],
+      participants: [
+        {
+          id: "female-stake-1",
+          birthDate: "2010-01-01",
+          sex: "Femenino",
+          stakeId: 1,
+        },
+        {
+          id: "female-stake-3",
+          birthDate: "2009-01-01",
+          sex: "Femenino",
+          stakeId: 3,
+        },
+        {
+          id: "male-stake-1",
+          birthDate: "2011-01-01",
+          sex: "Masculino",
+          stakeId: 1,
+        },
+        {
+          id: "male-stake-2",
+          birthDate: "2008-01-01",
+          sex: "Masculino",
+          stakeId: 2,
+        },
+      ],
+      direction: "youngest_to_oldest",
+      strategy: "stake_round_robin",
+      capacity: { female: 2, male: 2 },
+    });
+
+    expect(plan.companies[0].femaleParticipantIds).toEqual([
+      "female-stake-1",
+      "female-stake-3",
+    ]);
+    expect(plan.companies[0].maleParticipantIds).toEqual([
+      "male-stake-2",
+      "male-stake-1",
+    ]);
+  });
+
+  test("combines mixed ages with stake diversity when both rules are selected", () => {
+    const plan = planParticipantDistribution({
+      companies: [
+        company("company-1", "Compañía 1"),
+        company("company-2", "Compañía 2"),
+      ],
+      participants: [
+        {
+          id: "stake-1-old",
+          birthDate: "2000-01-01",
+          sex: "Femenino",
+          stakeId: 1,
+        },
+        {
+          id: "stake-1-young",
+          birthDate: "2010-01-01",
+          sex: "Femenino",
+          stakeId: 1,
+        },
+        {
+          id: "stake-2-old",
+          birthDate: "2001-01-01",
+          sex: "Femenino",
+          stakeId: 2,
+        },
+        {
+          id: "stake-2-young",
+          birthDate: "2011-01-01",
+          sex: "Femenino",
+          stakeId: 2,
+        },
+      ],
+      direction: "youngest_to_oldest",
+      strategy: "mixed_ages",
+      stakeDiversity: true,
+      capacity: { female: 2, male: 1 },
+    });
+
+    expect(plan.companies.map((item) => item.femaleParticipantIds)).toEqual([
+      ["stake-2-young", "stake-1-old"],
+      ["stake-1-young", "stake-2-old"],
+    ]);
+  });
+
+  test("maps the legacy stake round-robin strategy to per-company stake diversity", () => {
+    const plan = planParticipantDistribution({
+      companies: [company("company-1", "Compañía 1")],
+      participants: [
+        {
+          id: "female-stake-1-old",
+          birthDate: "2000-01-01",
+          sex: "Femenino",
+          stakeId: 1,
+        },
+        {
+          id: "female-stake-1-young",
+          birthDate: "2010-01-01",
+          sex: "Femenino",
+          stakeId: 1,
+        },
+        {
+          id: "female-stake-2-old",
+          birthDate: "2001-01-01",
+          sex: "Femenino",
+          stakeId: 2,
+        },
+        {
+          id: "female-stake-2-young",
+          birthDate: "2011-01-01",
+          sex: "Femenino",
+          stakeId: 2,
+        },
+        {
+          id: "male-stake-1-old",
+          birthDate: "2000-01-01",
+          sex: "Masculino",
+          stakeId: 1,
+        },
+        {
+          id: "male-stake-1-young",
+          birthDate: "2010-01-01",
+          sex: "Masculino",
+          stakeId: 1,
+        },
+        {
+          id: "male-stake-2-old",
+          birthDate: "2001-01-01",
+          sex: "Masculino",
+          stakeId: 2,
+        },
+        {
+          id: "male-stake-2-young",
+          birthDate: "2011-01-01",
+          sex: "Masculino",
+          stakeId: 2,
+        },
+      ],
+      direction: "youngest_to_oldest",
+      strategy: "stake_round_robin",
+      capacity: { female: 4, male: 4 },
+    });
+
+    expect(plan.companies[0].femaleParticipantIds).toEqual([
+      "female-stake-2-young",
+      "female-stake-1-young",
+      "female-stake-2-old",
+      "female-stake-1-old",
+    ]);
+    expect(plan.companies[0].maleParticipantIds).toEqual([
+      "male-stake-1-young",
+      "male-stake-2-young",
+      "male-stake-2-old",
+      "male-stake-1-old",
+    ]);
+  });
+
+  test("continues the stake rotation across companies", () => {
+    const plan = planParticipantDistribution({
+      companies: [
+        company("company-1", "Compañía 1"),
+        company("company-2", "Compañía 2"),
+        company("company-3", "Compañía 3"),
+      ],
+      participants: [
+        {
+          id: "stake-1-young",
+          birthDate: "2010-01-01",
+          sex: "Femenino",
+          stakeId: 1,
+        },
+        {
+          id: "stake-1-old",
+          birthDate: "2000-01-01",
+          sex: "Femenino",
+          stakeId: 1,
+        },
+        {
+          id: "stake-2-young",
+          birthDate: "2010-01-01",
+          sex: "Femenino",
+          stakeId: 2,
+        },
+        {
+          id: "stake-2-old",
+          birthDate: "2000-01-01",
+          sex: "Femenino",
+          stakeId: 2,
+        },
+        {
+          id: "stake-3-young",
+          birthDate: "2010-01-01",
+          sex: "Femenino",
+          stakeId: 3,
+        },
+        {
+          id: "stake-3-old",
+          birthDate: "2000-01-01",
+          sex: "Femenino",
+          stakeId: 3,
+        },
+      ],
+      direction: "youngest_to_oldest",
+      strategy: "stake_round_robin",
+      capacity: { female: 2, male: 1 },
+    });
+
+    expect(plan.companies.map((item) => item.femaleParticipantIds)).toEqual([
+      ["stake-1-young", "stake-2-young"],
+      ["stake-3-young", "stake-1-old"],
+      ["stake-2-old", "stake-3-old"],
+    ]);
+  });
+
+  test("balances an odd total capacity toward the eligible majority", () => {
+    expect(
+      getBalancedDistributionCapacity(19, { female: 396, male: 343 }),
+    ).toEqual({ female: 10, male: 9 });
+    expect(
+      getBalancedDistributionCapacity(19, { female: 343, male: 396 }),
+    ).toEqual({ female: 9, male: 10 });
+    expect(() =>
+      getBalancedDistributionCapacity(1, { female: 1, male: 1 }),
+    ).toThrow(RangeError);
+    expect(
+      getBalancedDistributionCapacity(80, { female: 396, male: 343 }),
+    ).toEqual({ female: 40, male: 40 });
+    expect(() =>
+      getBalancedDistributionCapacity(COMPANY_PARTICIPANT_LIMIT + 1, {
+        female: 1,
+        male: 1,
+      }),
+    ).toThrow(RangeError);
   });
 
   test("blocks companies whose existing assignments already exceed a limit", () => {

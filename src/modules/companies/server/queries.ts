@@ -27,6 +27,7 @@ export type CompanyParticipant = {
   age: number | null;
   sex: string | null;
   wardName: string;
+  stakeId: number;
   stakeName: string;
 };
 
@@ -80,6 +81,14 @@ export type CompanyParticipantAssignmentValidationResult =
       message: string;
     };
 
+export type CompanyDistributionOverview = {
+  unassigned: ParticipantSexCounts;
+  unassignedParticipants: Awaited<
+    ReturnType<typeof listUnassignedParticipantsForDistribution>
+  >;
+  companies: Awaited<ReturnType<typeof listCompaniesForDistribution>>;
+};
+
 const companyParticipantSelection = {
   id: participants.id,
   firstNames: participants.firstNames,
@@ -89,6 +98,7 @@ const companyParticipantSelection = {
   age: sql<number | null>`extract(year from age(current_date, ${participants.birthDate}))::integer`,
   sex: participants.sex,
   wardName: wards.name,
+  stakeId: wards.stakeId,
   stakeName: stakes.name,
 };
 
@@ -299,6 +309,19 @@ export async function countUnassignedParticipants() {
   return row?.value ?? 0;
 }
 
+export async function getCompanyDistributionOverview(): Promise<CompanyDistributionOverview> {
+  const [companyRows, unassignedRows] = await Promise.all([
+    listCompaniesForDistribution(),
+    listUnassignedParticipantsForDistribution(),
+  ]);
+  const unassigned = getParticipantSexCounts(unassignedRows);
+  return {
+    unassigned,
+    unassignedParticipants: unassignedRows,
+    companies: companyRows,
+  };
+}
+
 export async function listCompaniesForDistribution() {
   const rows = await db
     .select({
@@ -337,8 +360,10 @@ export async function listUnassignedParticipantsForDistribution() {
       id: participants.id,
       birthDate: participants.birthDate,
       sex: participants.sex,
+      stakeId: wards.stakeId,
     })
     .from(participants)
+    .innerJoin(wards, eq(participants.wardId, wards.id))
     .where(isNull(participants.companyId))
     .orderBy(asc(participants.id));
 }

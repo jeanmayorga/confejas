@@ -9,6 +9,12 @@ import * as authSchema from "./src/modules/auth/server/schema";
 
 const databaseUrl = process.env.DATABASE_URL;
 const secret = process.env.BETTER_AUTH_SECRET;
+const localhostOrigins = [
+  "http://localhost",
+  "http://localhost:*",
+  "https://localhost",
+  "https://localhost:*",
+];
 
 if (!databaseUrl) {
   throw new Error("DATABASE_URL is not configured.");
@@ -28,6 +34,7 @@ const db = drizzle(databaseUrl, {
 export const auth = betterAuth({
   ...authOptions,
   baseURL: process.env.BETTER_AUTH_URL,
+  trustedOrigins: localhostOrigins,
   secret,
   database: drizzleAdapter(db, {
     provider: "pg",

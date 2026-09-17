@@ -10,9 +10,17 @@ import { authOptions } from "../auth-options";
 import { getAuthSecret } from "./env";
 import * as authSchema from "./schema";
 
+const localhostOrigins = [
+  "http://localhost",
+  "http://localhost:*",
+  "https://localhost",
+  "https://localhost:*",
+];
+
 export const auth = betterAuth({
   ...authOptions,
   baseURL: process.env.BETTER_AUTH_URL,
+  trustedOrigins: localhostOrigins,
   secret: getAuthSecret(),
   database: drizzleAdapter(db, {
     provider: "pg",
