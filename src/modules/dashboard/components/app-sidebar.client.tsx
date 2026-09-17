@@ -35,7 +35,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail,
 } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/modules/auth/client/auth-client";
@@ -147,7 +146,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
   }
 
   return (
-    <Sidebar variant="inset" collapsible="icon">
+    <Sidebar variant="inset" collapsible="none">
       <SidebarHeader className="relative p-3 group-data-[collapsible=icon]:p-2">
         <SidebarMenu>
           <SidebarMenuItem>
@@ -283,7 +282,6 @@ export function AppSidebar({ user }: AppSidebarProps) {
           </SidebarGroup>
         ))}
       </SidebarContent>
-      <SidebarRail />
     </Sidebar>
   );
 }
