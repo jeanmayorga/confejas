@@ -194,7 +194,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                         isActive={isActive}
                         tooltip={item.title}
                         aria-current={isActive ? "page" : undefined}
-                        className="h-10 gap-3 px-3"
+                        className="h-10 gap-3 px-3 data-active:bg-primary data-active:text-primary-foreground data-active:hover:bg-primary data-active:hover:text-primary-foreground"
                         render={<Link href={item.href} />}
                       >
                         <HugeiconsIcon
