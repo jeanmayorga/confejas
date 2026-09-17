@@ -152,12 +152,12 @@ export function AppSidebar({ user }: AppSidebarProps) {
   return (
     <Sidebar variant="inset" collapsible="icon">
       <SidebarHeader className="relative p-3 group-data-[collapsible=icon]:p-2">
-        <SidebarMenu className="group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:invisible">
+        <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
               tooltip="Confejas"
-              className="h-14 gap-3 px-2 pr-10"
+              className="h-14 justify-center px-2 group-data-[collapsible=icon]:px-0"
               render={<Link href={homeHref} />}
             >
               <Image
@@ -169,12 +169,6 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 priority
                 className="size-11 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-sidebar-border group-data-[collapsible=icon]:size-8"
               />
-              <div className="grid min-w-0 flex-1 text-left leading-tight">
-                <span className="truncate font-semibold">Confejas</span>
-                <span className="truncate text-xs text-sidebar-foreground/60">
-                  Administración
-                </span>
-              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
