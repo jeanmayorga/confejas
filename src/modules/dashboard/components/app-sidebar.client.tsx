@@ -28,7 +28,6 @@ import {
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -37,7 +36,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/modules/auth/client/auth-client";
@@ -171,6 +169,79 @@ export function AppSidebar({ user }: AppSidebarProps) {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <SidebarMenuButton
+                    size="lg"
+                    className="h-14 gap-3 px-2"
+                    aria-label={`Cuenta de ${user.name}`}
+                  />
+                }
+              >
+                <Avatar>
+                  {user.image ? (
+                    <AvatarImage src={user.image} alt={user.name} />
+                  ) : null}
+                  <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                </Avatar>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-medium">{user.name}</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {roleLabel}
+                  </span>
+                </div>
+                <HugeiconsIcon
+                  icon={UnfoldMoreIcon}
+                  strokeWidth={2}
+                  aria-hidden="true"
+                  className="ml-auto group-data-[collapsible=icon]:hidden"
+                />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side="bottom"
+                align="end"
+                sideOffset={8}
+                className="w-64"
+              >
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>
+                    <span className="block truncate font-medium text-foreground">
+                      {user.name}
+                    </span>
+                    <span className="block truncate font-normal">
+                      {user.email}
+                    </span>
+                    <Badge variant="secondary" className="mt-2">
+                      {roleLabel}
+                    </Badge>
+                  </DropdownMenuLabel>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    onClick={handleSignOut}
+                    disabled={isSigningOut}
+                    variant="destructive"
+                  >
+                    {isSigningOut ? (
+                      <Spinner />
+                    ) : (
+                      <HugeiconsIcon
+                        icon={Logout01Icon}
+                        strokeWidth={2}
+                        aria-hidden="true"
+                      />
+                    )}
+                    Cerrar sesión
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         {navigationSections.map((section) => (
@@ -212,82 +283,6 @@ export function AppSidebar({ user }: AppSidebarProps) {
           </SidebarGroup>
         ))}
       </SidebarContent>
-      <SidebarSeparator />
-      <SidebarFooter className="p-3 group-data-[collapsible=icon]:p-2">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <SidebarMenuButton
-                    size="lg"
-                    className="h-14 gap-3 px-2"
-                    aria-label={`Cuenta de ${user.name}`}
-                  />
-                }
-              >
-                <Avatar>
-                  {user.image ? (
-                    <AvatarImage src={user.image} alt={user.name} />
-                  ) : null}
-                  <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                </Avatar>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {roleLabel}
-                  </span>
-                </div>
-                <HugeiconsIcon
-                  icon={UnfoldMoreIcon}
-                  strokeWidth={2}
-                  aria-hidden="true"
-                  className="ml-auto group-data-[collapsible=icon]:hidden"
-                />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                side="top"
-                align="end"
-                sideOffset={8}
-                className="w-64"
-              >
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>
-                    <span className="block truncate font-medium text-foreground">
-                      {user.name}
-                    </span>
-                    <span className="block truncate font-normal">
-                      {user.email}
-                    </span>
-                    <Badge variant="secondary" className="mt-2">
-                      {roleLabel}
-                    </Badge>
-                  </DropdownMenuLabel>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    onClick={handleSignOut}
-                    disabled={isSigningOut}
-                    variant="destructive"
-                  >
-                    {isSigningOut ? (
-                      <Spinner />
-                    ) : (
-                      <HugeiconsIcon
-                        icon={Logout01Icon}
-                        strokeWidth={2}
-                        aria-hidden="true"
-                      />
-                    )}
-                    Cerrar sesión
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );
