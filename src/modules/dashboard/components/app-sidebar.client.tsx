@@ -176,7 +176,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 render={
                   <SidebarMenuButton
                     size="lg"
-                    className="h-14 gap-3 px-2"
+                    className="h-14 gap-3 border border-border bg-white px-2 hover:bg-white data-open:hover:bg-white"
                     aria-label={`Cuenta de ${user.name}`}
                   />
                 }
