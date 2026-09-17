@@ -16,7 +16,7 @@ export const authOptions = {
       ac: accessControl,
       roles: authRoles,
       defaultRole: "participant",
-      adminRoles: ["admin"],
+      adminRoles: ["admin", "staff"],
     }),
   ],
 } satisfies BetterAuthOptions;

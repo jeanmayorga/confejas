@@ -33,7 +33,16 @@ const admin = accessControl.newRole({
 });
 
 const staff = accessControl.newRole({
-  participants: ["list", "read", "create", "update", "check-in"],
+  ...adminAc.statements,
+  participants: [
+    "list",
+    "read",
+    "read-own",
+    "create",
+    "update",
+    "delete",
+    "check-in",
+  ],
 });
 
 const counselor = accessControl.newRole({

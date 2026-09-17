@@ -31,7 +31,7 @@ export function hasRole(value: RoleValue, role: AppRole) {
 }
 
 export function canManageUsers(value: RoleValue) {
-  return hasRole(value, "admin");
+  return getUserRoles(value).some((role) => ["admin", "staff"].includes(role));
 }
 
 export function canViewParticipantDirectory(value: RoleValue) {
@@ -45,7 +45,7 @@ export function canManageParticipants(value: RoleValue) {
 }
 
 export function canDeleteParticipants(value: RoleValue) {
-  return hasRole(value, "admin");
+  return getUserRoles(value).some((role) => ["admin", "staff"].includes(role));
 }
 
 export function canCheckInParticipants(value: RoleValue) {
