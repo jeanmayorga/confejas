@@ -169,9 +169,6 @@ export function AppSidebar({ user }: AppSidebarProps) {
               </div>
               <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">Confejas</span>
-                <span className="truncate text-xs text-muted-foreground">
-                  Gestión del evento
-                </span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
