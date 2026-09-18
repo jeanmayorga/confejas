@@ -28,6 +28,7 @@ import {
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -147,27 +148,76 @@ export function AppSidebar({ user }: AppSidebarProps) {
 
   return (
     <Sidebar variant="inset" collapsible="none">
-      <SidebarHeader className="relative p-3 group-data-[collapsible=icon]:p-2">
+      <SidebarHeader className="p-3">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              tooltip="Confejas"
-              className="h-[88px] justify-center bg-transparent px-2 hover:bg-transparent active:bg-transparent focus-visible:bg-transparent data-active:bg-transparent data-active:text-sidebar-foreground group-data-[collapsible=icon]:px-0"
+              className="h-14 gap-3 bg-transparent px-2 hover:bg-transparent active:bg-transparent focus-visible:bg-transparent data-active:bg-transparent data-active:text-sidebar-foreground"
               render={<Link href={homeHref} />}
             >
-              <Image
-                src="/logo.png"
-                alt=""
-                width={88}
-                height={88}
-                sizes="88px"
-                priority
-                className="size-[88px] shrink-0 rounded-full object-cover group-data-[collapsible=icon]:size-8"
-              />
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-sm ring-1 ring-border">
+                <Image
+                  src="/logo.png"
+                  alt=""
+                  width={40}
+                  height={40}
+                  sizes="40px"
+                  priority
+                  className="size-full rounded-full object-cover"
+                />
+              </div>
+              <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-semibold">Confejas</span>
+                <span className="truncate text-xs text-muted-foreground">
+                  Gestión del evento
+                </span>
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+      </SidebarHeader>
+      <SidebarContent>
+        {navigationSections.map((section) => (
+          <SidebarGroup
+            key={section.label}
+            className="px-3 py-2 first:pt-4 last:pb-4"
+          >
+            <SidebarGroupLabel className="px-2">
+              {section.label}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1">
+                {section.items.map((item) => {
+                  const isActive = item.exact
+                    ? pathname === item.href
+                    : pathname.startsWith(item.href);
+
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        tooltip={item.title}
+                        aria-current={isActive ? "page" : undefined}
+                        className="h-10 gap-3 px-3 hover:bg-primary hover:text-primary-foreground data-active:bg-primary data-active:text-primary-foreground data-active:hover:bg-primary data-active:hover:text-primary-foreground"
+                        render={<Link href={item.href} />}
+                      >
+                        <HugeiconsIcon
+                          icon={item.icon}
+                          strokeWidth={2}
+                          aria-hidden="true"
+                        />
+                        <span>{item.title}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
+      <SidebarFooter className="p-3">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
@@ -186,7 +236,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                   ) : null}
                   <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                 </Avatar>
-                <div className="grid flex-1 text-left text-sm leading-tight">
+                <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
                   <span className="truncate text-xs text-muted-foreground">
                     {roleLabel}
@@ -196,11 +246,11 @@ export function AppSidebar({ user }: AppSidebarProps) {
                   icon={UnfoldMoreIcon}
                   strokeWidth={2}
                   aria-hidden="true"
-                  className="ml-auto group-data-[collapsible=icon]:hidden"
+                  className="ml-auto"
                 />
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                side="bottom"
+                side="top"
                 align="end"
                 sideOffset={8}
                 className="w-64"
@@ -241,47 +291,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
             </DropdownMenu>
           </SidebarMenuItem>
         </SidebarMenu>
-      </SidebarHeader>
-      <SidebarContent>
-        {navigationSections.map((section) => (
-          <SidebarGroup
-            key={section.label}
-            className="px-3 py-2 first:pt-4 last:pb-4 group-data-[collapsible=icon]:px-2"
-          >
-            <SidebarGroupLabel className="px-2">
-              {section.label}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-1">
-                {section.items.map((item) => {
-                  const isActive = item.exact
-                    ? pathname === item.href
-                    : pathname.startsWith(item.href);
-
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        isActive={isActive}
-                        tooltip={item.title}
-                        aria-current={isActive ? "page" : undefined}
-                        className="h-10 gap-3 px-3 hover:bg-primary hover:text-primary-foreground data-active:bg-primary data-active:text-primary-foreground data-active:hover:bg-primary data-active:hover:text-primary-foreground"
-                        render={<Link href={item.href} />}
-                      >
-                        <HugeiconsIcon
-                          icon={item.icon}
-                          strokeWidth={2}
-                          aria-hidden="true"
-                        />
-                        <span>{item.title}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
-      </SidebarContent>
+      </SidebarFooter>
     </Sidebar>
   );
 }
