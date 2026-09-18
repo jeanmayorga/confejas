@@ -8,11 +8,11 @@ import Login02Icon from "@hugeicons/core-free-icons/Login02Icon";
 import Mail02Icon from "@hugeicons/core-free-icons/Mail02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
   Field,
-  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
@@ -26,13 +26,11 @@ type LoginFormProps = {
 
 export function LoginForm({ callbackUrl }: LoginFormProps) {
   const router = useRouter();
-  const [error, setError] = useState<string>();
   const [isPending, setIsPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(undefined);
     setIsPending(true);
 
     const formData = new FormData(event.currentTarget);
@@ -46,14 +44,14 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
       });
 
       if (result.error) {
-        setError("El correo o la contraseña no son correctos.");
+        toast.error("El correo o la contraseña no son correctos.");
         return;
       }
 
       router.replace(callbackUrl);
       router.refresh();
     } catch {
-      setError("No pudimos iniciar sesión. Intenta nuevamente.");
+      toast.error("No pudimos iniciar sesión. Intenta nuevamente.");
     } finally {
       setIsPending(false);
     }
@@ -123,11 +121,6 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
             </Button>
           </div>
         </Field>
-        {error ? (
-          <Field data-invalid="true">
-            <FieldError id="login-error">{error}</FieldError>
-          </Field>
-        ) : null}
         <Field data-disabled={isPending || undefined}>
           <Button
             type="submit"
