@@ -106,7 +106,8 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
               type="button"
               variant="ghost"
               size="icon-sm"
-              className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground active:translate-y-[-50%]"
+              className="absolute top-1/2 right-2 text-muted-foreground hover:text-foreground"
+              style={{ transform: "translateY(-50%)" }}
               aria-label={
                 showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
               }
