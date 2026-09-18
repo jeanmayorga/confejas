@@ -26,6 +26,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Card,
   CardAction,
   CardContent,
@@ -95,6 +105,18 @@ import {
 type CompanyDistributionDialogProps = {
   companyCount: number;
   overview: {
+    allParticipants: Array<{
+      id: string;
+      firstNames: string;
+      lastNames: string;
+      preferredName: string | null;
+      birthDate: string | null;
+      age: number | null;
+      sex: string | null;
+      wardName: string;
+      stakeId: number;
+      stakeName: string;
+    }>;
     unassigned: {
       total: number;
       female: number;
@@ -234,6 +256,9 @@ export function CompanyDistributionDialog({
     DEFAULT_DISTRIBUTION_CAPACITY,
   );
   const [proposal, setProposal] = useState<DistributionProposal | null>(null);
+  const [confirmationStep, setConfirmationStep] = useState<1 | 2 | null>(
+    null,
+  );
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [serverStaleReason, setServerStaleReason] = useState<string | null>(
@@ -241,14 +266,42 @@ export function CompanyDistributionDialog({
   );
   const [isPreviewing, startPreview] = useTransition();
   const [isSaving, startSaving] = useTransition();
-  const unassignedCount = overview.unassigned.total;
-  const eligibleCount = overview.unassigned.female + overview.unassigned.male;
-  const canPreview = unassignedCount > 0;
+  const allParticipantCounts = useMemo(() => {
+    let female = 0;
+    let male = 0;
+
+    for (const participant of overview.allParticipants) {
+      if (participant.sex === FEMALE_PARTICIPANT_SEX) {
+        female += 1;
+      } else if (participant.sex === MALE_PARTICIPANT_SEX) {
+        male += 1;
+      }
+    }
+
+    return {
+      total: overview.allParticipants.length,
+      female,
+      male,
+      unsupportedSex: overview.allParticipants.length - female - male,
+    };
+  }, [overview.allParticipants]);
+  const participantCount = allParticipantCounts.total;
+  const eligibleCount = allParticipantCounts.female + allParticipantCounts.male;
+  const canPreview = eligibleCount > 0;
   const participantsPerCompany = capacity.female + capacity.male;
   const distributionEstimate = useMemo(() => {
-    const participants = overview.unassignedParticipants;
+    const participants = overview.allParticipants;
+    const companies = overview.companies.map((company) => ({
+      ...company,
+      counts: {
+        total: 0,
+        female: 0,
+        male: 0,
+        unsupportedSex: 0,
+      },
+    }));
     const initialPlan = planParticipantDistribution({
-      companies: overview.companies,
+      companies,
       participants,
       direction,
       capacity,
@@ -264,7 +317,7 @@ export function CompanyDistributionDialog({
         ? initialPlan
         : planParticipantDistribution({
             companies: [
-              ...overview.companies,
+              ...companies,
               ...Array.from({ length: additionalCompanyCount }, (_, index) => ({
                 id: `new-company-${index + 1}`,
                 name: `Nueva compañía ${index + 1}`,
@@ -305,6 +358,7 @@ export function CompanyDistributionDialog({
     setStakeDiversity(false);
     setCapacity(DEFAULT_DISTRIBUTION_CAPACITY);
     setProposal(null);
+    setConfirmationStep(null);
     setPreviewError(null);
     setSaveError(null);
     setServerStaleReason(null);
@@ -340,7 +394,7 @@ export function CompanyDistributionDialog({
     setCapacity(
       getBalancedDistributionCapacity(
         nextParticipantsPerCompany,
-        overview.unassigned,
+        allParticipantCounts,
       ),
     );
     setSaveError(null);
@@ -389,8 +443,17 @@ export function CompanyDistributionDialog({
       return;
     }
 
+    setConfirmationStep(1);
+  }
+
+  function executeSave() {
+    if (!proposal || proposalIsStale || !proposal.canSave) {
+      return;
+    }
+
     const proposalToSave = proposal;
     setSaveError(null);
+    setConfirmationStep(null);
 
     startSaving(async () => {
       const result = await saveParticipantDistributionAction({
@@ -426,7 +489,8 @@ export function CompanyDistributionDialog({
   }
 
   return (
-    <Sheet
+    <>
+      <Sheet
       open={open}
       onOpenChange={(nextOpen) => {
         if (isPreviewing || isSaving) {
@@ -467,7 +531,8 @@ export function CompanyDistributionDialog({
             </Badge>
           </div>
           <SheetDescription>
-            Configura el cupo y revisa el resultado antes de guardar.
+            Configura el cupo y revisa cómo quedará toda la distribución antes de guardar.
+            Al guardar, se reemplazarán las asignaciones actuales.
           </SheetDescription>
         </SheetHeader>
 
@@ -492,15 +557,15 @@ export function CompanyDistributionDialog({
                         />
                         Participantes
                       </CardTitle>
-                      <CardDescription>Por ubicar</CardDescription>
+                      <CardDescription>Se redistribuirán todos</CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-col gap-3">
                       <div className="flex items-end gap-2">
                         <p className="font-heading text-2xl font-semibold tabular-nums">
-                          {unassignedCount.toLocaleString("es-EC")}
+                          {participantCount.toLocaleString("es-EC")}
                         </p>
                         <p className="pb-1 text-sm text-muted-foreground">
-                          sin compañía
+                          participantes
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -511,7 +576,7 @@ export function CompanyDistributionDialog({
                             data-icon="inline-start"
                             aria-hidden
                           />
-                          {overview.unassigned.female.toLocaleString("es-EC")}{" "}
+                          {allParticipantCounts.female.toLocaleString("es-EC")}{" "}
                           mujeres
                         </Badge>
                         <Badge variant="outline">
@@ -521,10 +586,10 @@ export function CompanyDistributionDialog({
                             data-icon="inline-start"
                             aria-hidden
                           />
-                          {overview.unassigned.male.toLocaleString("es-EC")}{" "}
+                          {allParticipantCounts.male.toLocaleString("es-EC")}{" "}
                           hombres
                         </Badge>
-                        {eligibleCount !== unassignedCount ? (
+                        {eligibleCount !== participantCount ? (
                           <Badge variant="secondary">
                             {eligibleCount.toLocaleString("es-EC")} elegibles
                           </Badge>
@@ -828,7 +893,7 @@ export function CompanyDistributionDialog({
                 </Card>
               </FieldSet>
 
-              {overview.unassigned.unsupportedSex > 0 ? (
+              {allParticipantCounts.unsupportedSex > 0 ? (
                 <Card size="sm">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -837,7 +902,7 @@ export function CompanyDistributionDialog({
                         strokeWidth={2}
                         aria-hidden
                       />
-                      {overview.unassigned.unsupportedSex.toLocaleString(
+                      {allParticipantCounts.unsupportedSex.toLocaleString(
                         "es-EC",
                       )}{" "}
                       pendientes
@@ -850,13 +915,14 @@ export function CompanyDistributionDialog({
               ) : null}
 
               <FieldDescription>
-                Las asignaciones actuales se conservan.
+                Las asignaciones actuales se reemplazarán al guardar. Los
+                registros de participantes se conservarán.
               </FieldDescription>
 
               {!canPreview ? (
                 <Field>
                   <FieldDescription>
-                    No hay participantes sin compañía para proponer.
+                    No hay participantes elegibles para proponer.
                   </FieldDescription>
                 </Field>
               ) : null}
@@ -930,7 +996,7 @@ export function CompanyDistributionDialog({
                   data-icon="inline-start"
                 />
               )}
-              {isPreviewing ? "Preparando…" : "Generar propuesta"}
+              {isPreviewing ? "Preparando…" : "Generar nueva propuesta"}
             </Button>
             <Button
               type="button"
@@ -961,7 +1027,49 @@ export function CompanyDistributionDialog({
           </SheetFooter>
         </form>
       </SheetContent>
-    </Sheet>
+      </Sheet>
+      <AlertDialog
+        open={confirmationStep !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !isSaving) {
+            setConfirmationStep(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmationStep === 2
+                ? "Última confirmación"
+                : "¿Rehacer todas las compañías?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmationStep === 2
+                ? "Esta es la última confirmación. Se reemplazarán las asignaciones actuales de todos los participantes y se conservarán sus registros. Esta acción no se puede deshacer."
+                : "La propuesta reemplazará la distribución actual completa. Revisa que el resultado sea el que quieres antes de continuar."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSaving}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={isSaving}
+              onClick={() => {
+                if (confirmationStep === 1) {
+                  setConfirmationStep(2);
+                } else {
+                  executeSave();
+                }
+              }}
+            >
+              {confirmationStep === 2
+                ? "Rehacer definitivamente"
+                : "Continuar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

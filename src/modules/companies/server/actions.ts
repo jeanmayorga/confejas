@@ -36,6 +36,7 @@ import {
 } from "../distribution";
 import {
   getCompanyDetail,
+  listAllParticipants,
   listCompaniesForDistribution,
   listUnassignedParticipants,
   type CompanyDetail,
@@ -80,7 +81,7 @@ export type DistributionProposalCompany = {
 };
 
 export type DistributionProposal = {
-  version: 4;
+  version: 5;
   previewKey: string;
   generatedAt: string;
   direction: DistributionDirection;
@@ -281,8 +282,12 @@ async function commitParticipantAssignments(
   expectedCompanies: readonly ExpectedCompanyCapacity[],
   expectedUnassignedParticipants?: readonly ExpectedUnassignedParticipant[],
   requireExactCompanySet = false,
+  replaceAllAssignments = false,
 ) {
-  if (assignments.length === 0 || expectedCompanies.length === 0) {
+  if (
+    (!replaceAllAssignments && assignments.length === 0) ||
+    expectedCompanies.length === 0
+  ) {
     return new Set<string>();
   }
 
@@ -308,6 +313,41 @@ async function commitParticipantAssignments(
   const exactUnassignedValidation = (() => {
     if (!expectedUnassignedParticipants) {
       return sql``;
+    }
+
+    if (replaceAllAssignments) {
+      const expectedParticipantValues = expectedUnassignedParticipants.map(
+        (participant) =>
+          sql`(
+            ${participant.id}::uuid,
+            ${participant.sex}::text,
+            ${participant.birthDate}::date
+          )`,
+      );
+
+      return sql`
+        and (
+          select count(*)
+          from ${participants}
+        ) = ${expectedUnassignedParticipants.length}
+        and not exists (
+          select 1
+          from (
+            values ${sql.join(expectedParticipantValues, sql`, `)}
+          ) as expected_participants (
+            participant_id,
+            expected_sex,
+            expected_birth_date
+          )
+          left join ${participants} as current_participant
+            on current_participant.id = expected_participants.participant_id
+          where current_participant.id is null
+            or current_participant.sex is distinct from expected_participants.expected_sex
+            or current_participant.birth_date is distinct from (
+              expected_participants.expected_birth_date
+            )
+        )
+      `;
     }
 
     if (expectedUnassignedParticipants.length === 0) {
@@ -379,7 +419,7 @@ async function commitParticipantAssignments(
       from requested_assignments
       inner join ${participants} as participant
         on participant.id = requested_assignments.participant_id
-      where participant.company_id is null
+      where ${replaceAllAssignments ? sql`true` : sql`participant.company_id is null`}
         and participant.sex = requested_assignments.expected_sex
         and participant.birth_date is not distinct from (
           requested_assignments.expected_birth_date
@@ -401,18 +441,30 @@ async function commitParticipantAssignments(
         requested_company.company_id,
         company.id as existing_company_id,
         company.name as company_name,
-        count(assigned_participant.id)::integer as total,
-        count(assigned_participant.id) filter (
-          where assigned_participant.sex = ${FEMALE_PARTICIPANT_SEX}
-        )::integer as female,
-        count(assigned_participant.id) filter (
-          where assigned_participant.sex = ${MALE_PARTICIPANT_SEX}
-        )::integer as male
+        ${replaceAllAssignments
+          ? sql`
+            0::integer as total,
+            0::integer as female,
+            0::integer as male
+          `
+          : sql`
+            count(assigned_participant.id)::integer as total,
+            count(assigned_participant.id) filter (
+              where assigned_participant.sex = ${FEMALE_PARTICIPANT_SEX}
+            )::integer as female,
+            count(assigned_participant.id) filter (
+              where assigned_participant.sex = ${MALE_PARTICIPANT_SEX}
+            )::integer as male
+          `}
       from expected_capacity as requested_company
       left join ${companies} as company
         on company.id = requested_company.company_id
-      left join ${participants} as assigned_participant
-        on assigned_participant.company_id = company.id
+      ${replaceAllAssignments
+        ? sql``
+        : sql`
+          left join ${participants} as assigned_participant
+            on assigned_participant.company_id = company.id
+        `}
       group by requested_company.company_id, company.id, company.name
     ), validation as (
       select
@@ -462,15 +514,37 @@ async function commitParticipantAssignments(
             or capacity.male + addition.male > ${COMPANY_PARTICIPANT_SEX_LIMIT}
         ) as is_valid
     )
-    update ${participants} as participant
-    set
-      company_id = eligible_participants.company_id,
-      updated_at = ${new Date()}
-    from eligible_participants, validation
-    where validation.is_valid
-      and participant.id = eligible_participants.participant_id
-      and participant.company_id is null
-    returning participant.id as id
+    ), updated_participants as (
+      ${replaceAllAssignments
+        ? sql`
+          update ${participants} as participant
+          set
+            company_id = (
+              select eligible.company_id
+              from eligible_participants as eligible
+              where eligible.participant_id = participant.id
+            ),
+            updated_at = ${new Date()}
+          from validation
+          where validation.is_valid
+          returning participant.id as id
+        `
+        : sql`
+          update ${participants} as participant
+          set
+            company_id = eligible_participants.company_id,
+            updated_at = ${new Date()}
+          from eligible_participants, validation
+          where validation.is_valid
+            and participant.id = eligible_participants.participant_id
+            and participant.company_id is null
+          returning participant.id as id
+        `}
+    )
+    select updated.id
+    from updated_participants as updated
+    inner join eligible_participants as eligible
+      on eligible.participant_id = updated.id
   `);
   const batchResult = (await db.batch([
     getCompanyCapacityLockQuery(),
@@ -535,7 +609,7 @@ function createDistributionPreviewKey(
   plan: ReturnType<typeof planParticipantDistribution>,
 ) {
   const canonicalProposal = JSON.stringify({
-    version: 4,
+    version: 5,
     direction,
     strategy,
     stakeDiversity,
@@ -561,21 +635,30 @@ async function buildDistributionProposal(
   strategy: DistributionStrategy,
   stakeDiversity: boolean,
 ) {
-  const [companyRows, unassignedParticipants] = await Promise.all([
+  const [companyRows, allParticipants] = await Promise.all([
     listCompaniesForDistribution(),
-    listUnassignedParticipants(),
+    listAllParticipants(),
   ]);
+  const resettableCompanies = companyRows.map((company) => ({
+    ...company,
+    counts: {
+      total: 0,
+      female: 0,
+      male: 0,
+      unsupportedSex: 0,
+    },
+  }));
 
   const initialPlan = planParticipantDistribution({
-    companies: companyRows,
-    participants: unassignedParticipants,
+    companies: resettableCompanies,
+    participants: allParticipants,
     direction,
     capacity,
     strategy,
     stakeDiversity,
   });
   const generatedCompanyNames = getGeneratedCompanyNames(
-    companyRows.map((company) => company.name),
+    resettableCompanies.map((company) => company.name),
     getRequiredAdditionalCompanyCount(initialPlan, capacity),
   );
   const plan =
@@ -583,7 +666,7 @@ async function buildDistributionProposal(
       ? initialPlan
       : planParticipantDistribution({
           companies: [
-            ...companyRows,
+            ...resettableCompanies,
             ...generatedCompanyNames.map((name, index) => ({
               id: `new-company-${index + 1}`,
               name,
@@ -595,14 +678,14 @@ async function buildDistributionProposal(
               },
             })),
           ],
-          participants: unassignedParticipants,
+          participants: allParticipants,
           direction,
           capacity,
           strategy,
           stakeDiversity,
         });
   const participantsById = new Map(
-    unassignedParticipants.map((participant) => [participant.id, participant]),
+    allParticipants.map((participant) => [participant.id, participant]),
   );
   const getParticipants = (participantIds: readonly string[]) =>
     participantIds.flatMap((participantId) => {
@@ -615,7 +698,7 @@ async function buildDistributionProposal(
     plan.pending.unsupportedSexParticipantIds,
   );
   const proposal: DistributionProposal = {
-    version: 4,
+    version: 5,
     previewKey: createDistributionPreviewKey(
       direction,
       strategy,
@@ -939,6 +1022,7 @@ export async function saveParticipantDistributionAction(
         ...currentProposal.pending.unsupportedSex,
       ],
       true,
+      true,
     );
 
     if (
@@ -958,8 +1042,8 @@ export async function saveParticipantDistributionAction(
       success: true,
       message:
         createdCompanyCount > 0
-          ? `Se crearon ${createdCompanyCount} compañías y se asignaron ${assignedParticipantIds.size} participantes correctamente.`
-          : `Se asignaron ${assignedParticipantIds.size} participantes correctamente.`,
+          ? `Se crearon ${createdCompanyCount} compañías y se rehízo la distribución de ${assignedParticipantIds.size} participantes correctamente.`
+          : `Se rehízo la distribución de ${assignedParticipantIds.size} participantes correctamente.`,
       assignedCount: assignedParticipantIds.size,
       createdCompanyCount,
     };
