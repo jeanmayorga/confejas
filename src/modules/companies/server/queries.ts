@@ -82,6 +82,7 @@ export type CompanyParticipantAssignmentValidationResult =
     };
 
 export type CompanyDistributionOverview = {
+  allParticipants: Awaited<ReturnType<typeof listAllParticipants>>;
   unassigned: ParticipantSexCounts;
   unassignedParticipants: Awaited<
     ReturnType<typeof listUnassignedParticipantsForDistribution>
@@ -300,6 +301,19 @@ export async function listUnassignedParticipants(): Promise<
     );
 }
 
+export async function listAllParticipants(): Promise<CompanyParticipant[]> {
+  return db
+    .select(companyParticipantSelection)
+    .from(participants)
+    .innerJoin(wards, eq(participants.wardId, wards.id))
+    .innerJoin(stakes, eq(wards.stakeId, stakes.id))
+    .orderBy(
+      asc(participants.firstNames),
+      asc(participants.lastNames),
+      asc(participants.id),
+    );
+}
+
 export async function countUnassignedParticipants() {
   const [row] = await db
     .select({ value: count() })
@@ -310,12 +324,14 @@ export async function countUnassignedParticipants() {
 }
 
 export async function getCompanyDistributionOverview(): Promise<CompanyDistributionOverview> {
-  const [companyRows, unassignedRows] = await Promise.all([
+  const [companyRows, allParticipants, unassignedRows] = await Promise.all([
     listCompaniesForDistribution(),
+    listAllParticipants(),
     listUnassignedParticipantsForDistribution(),
   ]);
   const unassigned = getParticipantSexCounts(unassignedRows);
   return {
+    allParticipants,
     unassigned,
     unassignedParticipants: unassignedRows,
     companies: companyRows,
