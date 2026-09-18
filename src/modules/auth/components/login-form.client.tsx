@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import EyeIcon from "@hugeicons/core-free-icons/EyeIcon";
+import EyeOffIcon from "@hugeicons/core-free-icons/EyeOffIcon";
 import LockPasswordIcon from "@hugeicons/core-free-icons/LockPasswordIcon";
 import Login02Icon from "@hugeicons/core-free-icons/Login02Icon";
 import Mail02Icon from "@hugeicons/core-free-icons/Mail02Icon";
@@ -26,6 +28,7 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string>();
   const [isPending, setIsPending] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -92,13 +95,31 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
             <Input
               id="password"
               name="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               placeholder="Ingresa tu contraseña"
               required
               disabled={isPending}
-              className="h-11 pl-11 pr-4"
+              className="h-11 pl-11 pr-11"
             />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              aria-label={
+                showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+              }
+              aria-pressed={showPassword}
+              disabled={isPending}
+              onClick={() => setShowPassword((visible) => !visible)}
+            >
+              <HugeiconsIcon
+                icon={showPassword ? EyeOffIcon : EyeIcon}
+                strokeWidth={2}
+                aria-hidden
+              />
+            </Button>
           </div>
         </Field>
         {error ? (
