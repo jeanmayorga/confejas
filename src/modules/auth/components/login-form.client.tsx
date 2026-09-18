@@ -60,44 +60,46 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
     <form onSubmit={handleSubmit}>
       <FieldGroup className="gap-5">
         <Field data-disabled={isPending || undefined}>
-          <FieldLabel htmlFor="email">
+          <FieldLabel htmlFor="email">Correo electrónico</FieldLabel>
+          <div className="relative">
             <HugeiconsIcon
               icon={Mail02Icon}
               strokeWidth={2}
               aria-hidden
+              className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground"
             />
-            Correo electrónico
-          </FieldLabel>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            placeholder="nombre@ejemplo.com"
-            required
-            disabled={isPending}
-            className="h-11 px-4"
-          />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="nombre@ejemplo.com"
+              required
+              disabled={isPending}
+              className="h-11 pl-11 pr-4"
+            />
+          </div>
         </Field>
         <Field data-disabled={isPending || undefined}>
-          <FieldLabel htmlFor="password">
+          <FieldLabel htmlFor="password">Contraseña</FieldLabel>
+          <div className="relative">
             <HugeiconsIcon
               icon={LockPasswordIcon}
               strokeWidth={2}
               aria-hidden
+              className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground"
             />
-            Contraseña
-          </FieldLabel>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            placeholder="Ingresa tu contraseña"
-            required
-            disabled={isPending}
-            className="h-11 px-4"
-          />
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Ingresa tu contraseña"
+              required
+              disabled={isPending}
+              className="h-11 pl-11 pr-4"
+            />
+          </div>
         </Field>
         {error ? (
           <Field data-invalid="true">
