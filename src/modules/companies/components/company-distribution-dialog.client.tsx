@@ -203,14 +203,22 @@ function formatAgeRange(range: ProposalAgeRange | null) {
   return includesMissingAge ? `${label} y edades sin registrar` : label;
 }
 
-function getParticipantCapacityValue(value: string, fallback: number) {
-  const nextValue = Number(value);
-
-  if (!Number.isInteger(nextValue)) {
-    return fallback;
+function parseParticipantCapacityValue(value: string) {
+  if (!/^\d+$/.test(value)) {
+    return null;
   }
 
-  return Math.min(COMPANY_PARTICIPANT_LIMIT, Math.max(2, nextValue));
+  const nextValue = Number(value);
+
+  if (
+    !Number.isSafeInteger(nextValue) ||
+    nextValue < 2 ||
+    nextValue > COMPANY_PARTICIPANT_LIMIT
+  ) {
+    return null;
+  }
+
+  return nextValue;
 }
 
 function getDistributionAlgorithmLabel(
@@ -255,6 +263,12 @@ export function CompanyDistributionDialog({
   const [capacity, setCapacity] = useState<DistributionCapacity>(
     DEFAULT_DISTRIBUTION_CAPACITY,
   );
+  const [participantCapacityInput, setParticipantCapacityInput] = useState(
+    String(
+      DEFAULT_DISTRIBUTION_CAPACITY.female +
+        DEFAULT_DISTRIBUTION_CAPACITY.male,
+    ),
+  );
   const [proposal, setProposal] = useState<DistributionProposal | null>(null);
   const [confirmationStep, setConfirmationStep] = useState<1 | 2 | null>(
     null,
@@ -287,7 +301,11 @@ export function CompanyDistributionDialog({
   }, [overview.allParticipants]);
   const participantCount = allParticipantCounts.total;
   const eligibleCount = allParticipantCounts.female + allParticipantCounts.male;
-  const canPreview = eligibleCount > 0;
+  const parsedParticipantCapacity = parseParticipantCapacityValue(
+    participantCapacityInput,
+  );
+  const hasValidParticipantCapacity = parsedParticipantCapacity !== null;
+  const canPreview = eligibleCount > 0 && hasValidParticipantCapacity;
   const participantsPerCompany = capacity.female + capacity.male;
   const distributionEstimate = useMemo(() => {
     const participants = overview.allParticipants;
@@ -357,6 +375,12 @@ export function CompanyDistributionDialog({
     setStrategy(DEFAULT_DISTRIBUTION_STRATEGY);
     setStakeDiversity(false);
     setCapacity(DEFAULT_DISTRIBUTION_CAPACITY);
+    setParticipantCapacityInput(
+      String(
+        DEFAULT_DISTRIBUTION_CAPACITY.female +
+          DEFAULT_DISTRIBUTION_CAPACITY.male,
+      ),
+    );
     setProposal(null);
     setConfirmationStep(null);
     setPreviewError(null);
@@ -386,10 +410,14 @@ export function CompanyDistributionDialog({
   }
 
   function handleParticipantCapacityChange(value: string) {
-    const nextParticipantsPerCompany = getParticipantCapacityValue(
-      value,
-      participantsPerCompany,
-    );
+    setParticipantCapacityInput(value);
+
+    const nextParticipantsPerCompany = parseParticipantCapacityValue(value);
+
+    if (nextParticipantsPerCompany === null) {
+      setSaveError(null);
+      return;
+    }
 
     setCapacity(
       getBalancedDistributionCapacity(
@@ -515,7 +543,7 @@ export function CompanyDistributionDialog({
 
       <SheetContent
         side="right"
-        className="w-full max-w-2xl p-0 sm:!top-4 sm:!h-[calc(100%-1rem)] sm:!max-w-2xl"
+        className="w-full max-w-2xl p-0 sm:!top-0 sm:!h-full sm:!max-w-2xl"
       >
         <SheetHeader className="border-b pr-16">
           <div className="flex items-center gap-2">
@@ -540,7 +568,7 @@ export function CompanyDistributionDialog({
           className="flex min-h-0 flex-1 flex-col overflow-hidden"
           onSubmit={handlePreview}
         >
-          <div className="min-h-0 flex-1 overscroll-contain overflow-y-auto px-6 pb-6">
+          <div className="min-h-0 flex-1 overscroll-contain overflow-y-auto px-6 pt-6 pb-6">
             <FieldGroup className="gap-6">
               <Field>
                 <div
@@ -644,7 +672,7 @@ export function CompanyDistributionDialog({
                         Participantes por compañía
                       </CardTitle>
                       <CardDescription>
-                        Elige entre 2 y {COMPANY_PARTICIPANT_LIMIT} personas.
+                        Ingresa el número de participantes por compañía.
                       </CardDescription>
                       <CardAction>
                         <Badge variant="secondary">Equilibrado</Badge>
@@ -662,9 +690,7 @@ export function CompanyDistributionDialog({
                         name="participant-capacity"
                         type="number"
                         inputMode="numeric"
-                        min={2}
-                        max={COMPANY_PARTICIPANT_LIMIT}
-                        value={participantsPerCompany}
+                        value={participantCapacityInput}
                         onChange={(event) =>
                           handleParticipantCapacityChange(event.target.value)
                         }
@@ -691,6 +717,12 @@ export function CompanyDistributionDialog({
                       </div>
                     </CardContent>
                   </Card>
+                  {!hasValidParticipantCapacity ? (
+                    <FieldError>
+                      Ingresa un número entero entre 2 y{" "}
+                      {COMPANY_PARTICIPANT_LIMIT}.
+                    </FieldError>
+                  ) : null}
                 </Field>
               </FieldSet>
 
