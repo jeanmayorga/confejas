@@ -153,16 +153,16 @@ export function AppSidebar({ user }: AppSidebarProps) {
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              className="h-14 gap-3 bg-transparent px-2 hover:bg-transparent active:bg-transparent focus-visible:bg-transparent data-active:bg-transparent data-active:text-sidebar-foreground"
+              className="h-16 gap-3 bg-transparent px-2 hover:bg-transparent active:bg-transparent focus-visible:bg-transparent data-active:bg-transparent data-active:text-sidebar-foreground"
               render={<Link href={homeHref} />}
             >
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-sm ring-1 ring-border">
+              <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-sm ring-1 ring-border">
                 <Image
                   src="/logo.png"
                   alt=""
-                  width={40}
-                  height={40}
-                  sizes="40px"
+                  width={56}
+                  height={56}
+                  sizes="56px"
                   priority
                   className="size-full rounded-full object-cover"
                 />
