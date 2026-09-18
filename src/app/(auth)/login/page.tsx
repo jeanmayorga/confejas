@@ -82,7 +82,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
           <div className="relative flex w-full max-w-md flex-col gap-5">
             <Card className="w-full">
-              <CardContent className="pt-6">
+              <CardContent className="pt-0">
                 <LoginForm callbackUrl={safeCallbackUrl} />
               </CardContent>
             </Card>
