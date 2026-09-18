@@ -1,6 +1,10 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import LockPasswordIcon from "@hugeicons/core-free-icons/LockPasswordIcon";
+import Login02Icon from "@hugeicons/core-free-icons/Login02Icon";
+import Mail02Icon from "@hugeicons/core-free-icons/Mail02Icon";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -56,7 +60,14 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
     <form onSubmit={handleSubmit}>
       <FieldGroup className="gap-5">
         <Field data-disabled={isPending || undefined}>
-          <FieldLabel htmlFor="email">Correo electrónico</FieldLabel>
+          <FieldLabel htmlFor="email">
+            <HugeiconsIcon
+              icon={Mail02Icon}
+              strokeWidth={2}
+              aria-hidden
+            />
+            Correo electrónico
+          </FieldLabel>
           <Input
             id="email"
             name="email"
@@ -69,7 +80,14 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
           />
         </Field>
         <Field data-disabled={isPending || undefined}>
-          <FieldLabel htmlFor="password">Contraseña</FieldLabel>
+          <FieldLabel htmlFor="password">
+            <HugeiconsIcon
+              icon={LockPasswordIcon}
+              strokeWidth={2}
+              aria-hidden
+            />
+            Contraseña
+          </FieldLabel>
           <Input
             id="password"
             name="password"
@@ -93,6 +111,12 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
             className="w-full"
             disabled={isPending}
           >
+            <HugeiconsIcon
+              icon={Login02Icon}
+              strokeWidth={2}
+              data-icon="inline-start"
+              aria-hidden
+            />
             {isPending ? <Spinner data-icon="inline-start" /> : null}
             {isPending ? "Ingresando..." : "Ingresar"}
           </Button>

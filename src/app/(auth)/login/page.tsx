@@ -5,9 +5,6 @@ import { redirect } from "next/navigation";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
 } from "@/components/ui/card";
 import { LoginForm } from "@/modules/auth/components/login-form.client";
 import { getSession } from "@/modules/auth/server/session";
@@ -85,26 +82,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
           <div className="relative flex w-full max-w-md flex-col gap-5">
             <Card className="w-full">
-              <CardHeader>
-                <CardDescription>
-                  Ingresa con las credenciales asignadas para continuar al
-                  panel de gestión.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <LoginForm callbackUrl={safeCallbackUrl} />
               </CardContent>
-              <CardFooter className="justify-center">
-                <p className="text-center text-xs leading-relaxed text-muted-foreground">
-                  Acceso exclusivo para personal autorizado.
-                </p>
-              </CardFooter>
             </Card>
-
-            <p className="text-center text-xs leading-relaxed text-muted-foreground">
-              ¿Necesitas ayuda para ingresar? Contacta al administrador del
-              sistema.
-            </p>
           </div>
         </section>
       </div>
