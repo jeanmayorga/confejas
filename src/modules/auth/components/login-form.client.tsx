@@ -44,14 +44,18 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
       });
 
       if (result.error) {
-        toast.error("El correo o la contraseña no son correctos.");
+        toast.error("El correo o la contraseña no son correctos.", {
+          className: "login-error-toast",
+        });
         return;
       }
 
       router.replace(callbackUrl);
       router.refresh();
     } catch {
-      toast.error("No pudimos iniciar sesión. Intenta nuevamente.");
+      toast.error("No pudimos iniciar sesión. Intenta nuevamente.", {
+        className: "login-error-toast",
+      });
     } finally {
       setIsPending(false);
     }
