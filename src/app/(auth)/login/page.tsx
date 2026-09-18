@@ -8,7 +8,6 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { LoginForm } from "@/modules/auth/components/login-form.client";
 import { getSession } from "@/modules/auth/server/session";
@@ -87,11 +86,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <div className="relative flex w-full max-w-md flex-col gap-5">
             <Card className="w-full">
               <CardHeader>
-                <CardTitle>
-                  <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                    Bienvenido de nuevo
-                  </h1>
-                </CardTitle>
                 <CardDescription>
                   Ingresa con las credenciales asignadas para continuar al
                   panel de gestión.
