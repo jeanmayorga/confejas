@@ -1,6 +1,5 @@
 "use client";
 
-import { Fragment } from "react";
 import MapPinpoint01Icon from "@hugeicons/core-free-icons/MapPinpoint01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -52,74 +51,91 @@ export function UnitsDirectory({ units }: UnitsDirectoryProps) {
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="overflow-hidden rounded-xl border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Estaca</TableHead>
-                <TableHead>Participantes</TableHead>
-                <TableHead className="w-28 text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {units.map((stake) => {
-                const participantCount = stake.wards.reduce(
-                  (total, ward) => total + ward.participantCount,
-                  0,
-                );
+        <div className="flex flex-col gap-6">
+          {units.map((stake) => {
+            const participantCount = stake.wards.reduce(
+              (total, ward) => total + ward.participantCount,
+              0,
+            );
 
-                return (
-                  <Fragment key={stake.id}>
-                    <TableRow className="bg-muted/30">
-                      <TableCell className="font-medium">{stake.name}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={participantCount > 0 ? "secondary" : "outline"}
-                        >
-                          {participantCount}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-1">
-                          <StakeFormDialog stake={stake} />
-                          <DeleteStakeButton
-                            stake={{
-                              id: stake.id,
-                              name: stake.name,
-                              wardCount: stake.wards.length,
-                            }}
-                          />
-                        </div>
-                      </TableCell>
+            return (
+              <section
+                key={stake.id}
+                className="overflow-hidden rounded-xl border"
+                aria-labelledby={`stake-${stake.id}`}
+              >
+                <div className="flex flex-col gap-3 border-b bg-muted/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 id={`stake-${stake.id}`} className="font-medium">
+                      {stake.name}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      {participantCount} participantes
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 justify-end gap-1">
+                    <StakeFormDialog stake={stake} />
+                    <DeleteStakeButton
+                      stake={{
+                        id: stake.id,
+                        name: stake.name,
+                        wardCount: stake.wards.length,
+                      }}
+                    />
+                  </div>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Barrio</TableHead>
+                      <TableHead>Participantes</TableHead>
+                      <TableHead className="w-28 text-right">Acciones</TableHead>
                     </TableRow>
-                    {stake.wards.map((ward) => (
-                      <TableRow key={ward.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2 pl-6 text-muted-foreground">
-                            <span
-                              className="h-px w-3 bg-border"
-                              aria-hidden="true"
-                            />
-                            <span>{ward.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell />
-                        <TableCell>
-                          <div className="flex justify-end gap-1">
-                            <WardFormDialog
-                              stakes={stakes}
-                              ward={{ ...ward, stakeId: stake.id }}
-                            />
-                            <DeleteWardButton ward={ward} />
-                          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {stake.wards.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={3}
+                          className="h-20 text-center text-muted-foreground"
+                        >
+                          Esta estaca aún no tiene barrios.
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </Fragment>
-                );
-              })}
-            </TableBody>
-          </Table>
+                    ) : (
+                      stake.wards.map((ward) => (
+                        <TableRow key={ward.id}>
+                          <TableCell className="font-medium">
+                            {ward.name}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                ward.participantCount > 0
+                                  ? "secondary"
+                                  : "outline"
+                              }
+                            >
+                              {ward.participantCount}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex justify-end gap-1">
+                              <WardFormDialog
+                                stakes={stakes}
+                                ward={{ ...ward, stakeId: stake.id }}
+                              />
+                              <DeleteWardButton ward={ward} />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </section>
+            );
+          })}
         </div>
       )}
     </div>
