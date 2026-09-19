@@ -70,7 +70,7 @@ export function StakeEditSheet({ stake, stakes }: StakeEditSheetProps) {
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size="xs"
               aria-label={"Editar " + stake.name + " y sus barrios"}
               onClick={() => handleOpenChange(true)}
             >
