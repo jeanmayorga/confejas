@@ -119,7 +119,7 @@ export function UserFormDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
-          <FieldGroup>
+          <FieldGroup className="gap-4">
             <Field>
               <FieldLabel htmlFor={`user-name-${user?.id ?? "new"}`}>Nombre</FieldLabel>
               <Input
