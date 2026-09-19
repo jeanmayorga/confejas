@@ -37,9 +37,6 @@ type DeleteCompanyButtonProps = {
   };
 };
 
-const deleteButtonClassName =
-  "border-destructive/40 text-destructive hover:border-destructive hover:bg-destructive hover:text-destructive-foreground";
-
 export function DeleteCompanyButton({
   company,
   label,
@@ -76,12 +73,11 @@ export function DeleteCompanyButton({
             render={
               <AlertDialogTrigger
                 render={
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    className={deleteButtonClassName}
-                    disabled={disabled}
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="xs"
+                      disabled={disabled}
                     aria-label={`No se puede eliminar ${companyLabel} porque tiene asignaciones`}
                   >
                     <HugeiconsIcon
@@ -127,9 +123,8 @@ export function DeleteCompanyButton({
               render={
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="destructive"
                   size="xs"
-                  className={deleteButtonClassName}
                   disabled={disabled}
                   aria-label={`Eliminar ${companyLabel}`}
                 >
