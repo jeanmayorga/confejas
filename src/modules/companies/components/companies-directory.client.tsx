@@ -9,7 +9,11 @@ import {
   useState,
   useTransition,
 } from "react";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  type InfiniteData,
+  useInfiniteQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -94,11 +98,17 @@ type DraggedCompanyParticipant = {
   participantId: string;
   companyId: string | null;
   name: string;
+  participant: CompanyParticipant;
 };
 
 type DraggedCompanyParticipants = {
   source: "company" | "unassigned";
   participants: DraggedCompanyParticipant[];
+};
+
+type PendingCompanyMove = DraggedCompanyParticipants & {
+  id: number;
+  targetCompanyId: string | null;
 };
 
 const participantStatusClassNames = {
@@ -139,6 +149,128 @@ function getParticipantSexLabel(value: string | null) {
   return value?.trim() || "Sexo no registrado";
 }
 
+function getParticipantCounts(participants: CompanyParticipant[]) {
+  let female = 0;
+  let male = 0;
+  let unsupported = 0;
+
+  for (const participant of participants) {
+    if (participant.sex === FEMALE_PARTICIPANT_SEX) {
+      female += 1;
+    } else if (participant.sex === MALE_PARTICIPANT_SEX) {
+      male += 1;
+    } else {
+      unsupported += 1;
+    }
+  }
+
+  return { female, male, unsupported, total: participants.length };
+}
+
+function applyPendingCompanyMove(
+  companies: CompanyDirectoryItem[],
+  move: PendingCompanyMove,
+  capacity: DistributionCapacity,
+) {
+  const sourceParticipantIdsByCompany = new Map<string, Set<string>>();
+
+  for (const participant of move.participants) {
+    if (!participant.companyId) continue;
+
+    const ids =
+      sourceParticipantIdsByCompany.get(participant.companyId) ?? new Set();
+    ids.add(participant.participantId);
+    sourceParticipantIdsByCompany.set(participant.companyId, ids);
+  }
+
+  return companies.map((company) => {
+    const sourceParticipantIds = sourceParticipantIdsByCompany.get(company.id);
+    const incomingParticipants =
+      move.targetCompanyId === company.id
+        ? move.participants.map(({ participant }) => participant)
+        : [];
+
+    if (!sourceParticipantIds && incomingParticipants.length === 0) {
+      return company;
+    }
+
+    const nextParticipants = sourceParticipantIds
+      ? company.participants.filter(
+          (participant) => !sourceParticipantIds.has(participant.id),
+        )
+      : [...company.participants];
+    const nextParticipantIds = new Set(
+      nextParticipants.map((participant) => participant.id),
+    );
+
+    for (const participant of incomingParticipants) {
+      if (!nextParticipantIds.has(participant.id)) {
+        nextParticipants.push(participant);
+        nextParticipantIds.add(participant.id);
+      }
+    }
+
+    const counts = getParticipantCounts(nextParticipants);
+
+    return {
+      ...company,
+      participants: nextParticipants,
+      participantCount: counts.total,
+      femaleCount: counts.female,
+      maleCount: counts.male,
+      unsupportedSexCount: counts.unsupported,
+      remainingCapacity: Math.max(
+        0,
+        capacity.female + capacity.male - counts.total,
+      ),
+      remainingFemaleCapacity: Math.max(0, capacity.female - counts.female),
+      remainingMaleCapacity: Math.max(0, capacity.male - counts.male),
+    };
+  });
+}
+
+function isPendingMoveReflected(
+  companies: CompanyDirectoryItem[],
+  move: PendingCompanyMove,
+) {
+  if (move.targetCompanyId) {
+    const targetCompany = companies.find(
+      (company) => company.id === move.targetCompanyId,
+    );
+
+    return (
+      targetCompany !== undefined &&
+      move.participants.every(({ participantId }) =>
+        targetCompany.participants.some(
+          (participant) => participant.id === participantId,
+        ),
+      )
+    );
+  }
+
+  return move.participants.every(({ participantId, companyId }) => {
+    const sourceCompany = companies.find((company) => company.id === companyId);
+
+    return !sourceCompany?.participants.some(
+      (participant) => participant.id === participantId,
+    );
+  });
+}
+
+function matchesParticipantSearch(
+  participant: CompanyParticipant,
+  search: string,
+) {
+  const normalizedSearch = search.trim().toLocaleLowerCase("es");
+
+  return (
+    normalizedSearch.length === 0 ||
+    getParticipantName(participant)
+      .toLocaleLowerCase("es")
+      .includes(normalizedSearch)
+  );
+}
+
 export function CompaniesDirectory({
   companies,
   canDelete,
@@ -159,6 +291,10 @@ export function CompaniesDirectory({
   const [companyDropTargetId, setCompanyDropTargetId] = useState<string | null>(
     null,
   );
+  const [pendingCompanyMoves, setPendingCompanyMoves] = useState<
+    PendingCompanyMove[]
+  >([]);
+  const nextPendingMoveIdRef = useRef(0);
   const [moving, setMoving] = useState(false);
   const [refreshing, startTransition] = useTransition();
   const dragDisabled = moving || refreshing;
@@ -170,6 +306,17 @@ export function CompaniesDirectory({
         ),
       ),
     [draggedParticipant],
+  );
+  const displayedCompanies = useMemo(
+    () =>
+      pendingCompanyMoves.reduce(
+        (currentCompanies, move) =>
+          isPendingMoveReflected(currentCompanies, move)
+            ? currentCompanies
+            : applyPendingCompanyMove(currentCompanies, move, capacity),
+        companies,
+      ),
+    [capacity, companies, pendingCompanyMoves],
   );
 
   function clearDragState() {
@@ -192,6 +339,7 @@ export function CompaniesDirectory({
       participantId: participant.id,
       companyId: company.id,
       name: getParticipantName(participant),
+      participant,
     };
     const participants = selectedParticipantIds.has(participant.id)
       ? companies.flatMap((currentCompany) =>
@@ -203,6 +351,7 @@ export function CompaniesDirectory({
               participantId: currentParticipant.id,
               companyId: currentCompany.id,
               name: getParticipantName(currentParticipant),
+              participant: currentParticipant,
             })),
         )
       : [dragged];
@@ -230,6 +379,7 @@ export function CompaniesDirectory({
       participantId: participant.id,
       companyId: null,
       name: getParticipantName(participant),
+      participant,
     };
     const participants = selectedUnassignedParticipantIds.has(participant.id)
       ? availableParticipants
@@ -240,6 +390,7 @@ export function CompaniesDirectory({
             participantId: currentParticipant.id,
             companyId: null,
             name: getParticipantName(currentParticipant),
+            participant: currentParticipant,
           }))
       : [dragged];
 
@@ -329,6 +480,88 @@ export function CompaniesDirectory({
     targetCompany: CompanyDirectoryItem | null,
   ) {
     const targetCompanyId = targetCompany?.id ?? null;
+    const pendingMove: PendingCompanyMove = {
+      ...dragged,
+      id: nextPendingMoveIdRef.current,
+      targetCompanyId,
+    };
+    nextPendingMoveIdRef.current += 1;
+    const unassignedQuerySnapshots = queryClient.getQueriesData<
+      InfiniteData<UnassignedParticipantsPage>
+    >({
+      queryKey: ["company-unassigned-participants"],
+    });
+
+    setPendingCompanyMoves((current) => [
+      ...current.filter((move) => !isPendingMoveReflected(companies, move)),
+      pendingMove,
+    ]);
+    queryClient.setQueriesData<InfiniteData<UnassignedParticipantsPage>>(
+      { queryKey: ["company-unassigned-participants"] },
+      (current) => {
+        if (!current || current.pages.length === 0) {
+          return current;
+        }
+
+        if (targetCompanyId === null) {
+          const existingParticipantIds = new Set(
+            current.pages.flatMap((page) =>
+              page.rows.map((participant) => participant.id),
+            ),
+          );
+          const additions = dragged.participants
+            .map(({ participant }) => participant)
+            .filter(
+              (participant) =>
+                matchesParticipantSearch(
+                  participant,
+                  current.pages[0].search,
+                ) && !existingParticipantIds.has(participant.id),
+            );
+
+          if (additions.length === 0) {
+            return current;
+          }
+
+          return {
+            ...current,
+            pages: current.pages.map((page, index) => ({
+              ...page,
+              total: page.total + additions.length,
+              rows: index === 0 ? [...additions, ...page.rows] : page.rows,
+            })),
+          };
+        }
+
+        const participantIds = new Set(
+          dragged.participants.map(({ participantId }) => participantId),
+        );
+        const removedParticipantIds = new Set<string>();
+        const pages = current.pages.map((page) => ({
+          ...page,
+          rows: page.rows.filter((participant) => {
+            if (!participantIds.has(participant.id)) {
+              return true;
+            }
+
+            removedParticipantIds.add(participant.id);
+            return false;
+          }),
+        }));
+
+        if (removedParticipantIds.size === 0) {
+          return current;
+        }
+
+        return {
+          ...current,
+          pages: pages.map((page) => ({
+            ...page,
+            total: Math.max(0, page.total - removedParticipantIds.size),
+          })),
+        };
+      },
+    );
 
     setMoving(true);
     const operation = moveCompanyParticipantsAction(
@@ -337,26 +570,35 @@ export function CompaniesDirectory({
         companyId,
       })),
       targetCompanyId,
-    ).then(async (result) => {
-      if (!result.success) {
-        throw new Error(result.message);
-      }
+    )
+      .then(async (result) => {
+        if (!result.success) {
+          throw new Error(result.message);
+        }
 
-      await queryClient.invalidateQueries({
-        queryKey: ["company-unassigned-participants"],
+        startTransition(() => {
+          router.refresh();
+        });
+
+        if (dragged.source === "company") {
+          setSelectedParticipantIds(new Set());
+        } else {
+          setSelectedUnassignedParticipantIds(new Set());
+        }
+
+        return result;
+      })
+      .catch((error: unknown) => {
+        for (const [queryKey, data] of unassignedQuerySnapshots) {
+          queryClient.setQueryData(queryKey, data);
+        }
+
+        setPendingCompanyMoves((current) =>
+          current.filter((move) => move.id !== pendingMove.id),
+        );
+
+        throw error;
       });
-      startTransition(() => {
-        router.refresh();
-      });
-
-      if (dragged.source === "company") {
-        setSelectedParticipantIds(new Set());
-      } else {
-        setSelectedUnassignedParticipantIds(new Set());
-      }
-
-      return result;
-    });
 
     const participantLabel =
       dragged.participants.length === 1
@@ -441,7 +683,7 @@ export function CompaniesDirectory({
     moveDraggedParticipants(dragged, company);
   }
 
-  if (companies.length === 0) {
+  if (displayedCompanies.length === 0) {
     return (
       <Empty className="min-h-80">
         <EmptyHeader>
@@ -463,7 +705,7 @@ export function CompaniesDirectory({
   return (
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
       <div className="flex min-w-0 flex-col gap-5">
-        {companies.map((company, index) => (
+        {displayedCompanies.map((company, index) => (
           <CompanyCard
             key={company.id}
             company={company}
