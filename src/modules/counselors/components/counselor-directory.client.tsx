@@ -46,7 +46,6 @@ type CounselorDirectoryProps = {
   counselors: CounselorDirectoryItem[];
   companies: { id: string; name: string }[];
   canDelete: boolean;
-  initialSort: CounselorSort;
 };
 
 const diacriticPattern = /\p{Diacritic}/gu;
@@ -137,10 +136,9 @@ export function CounselorDirectory({
   counselors,
   companies,
   canDelete,
-  initialSort,
 }: CounselorDirectoryProps) {
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<CounselorSort>(initialSort);
+  const [sort, setSort] = useState<CounselorSort>("company");
   const normalizedSearch = normalizeSearch(search);
   const visibleCounselors = useMemo(() => {
     const filteredCounselors = normalizedSearch
