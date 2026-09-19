@@ -317,7 +317,7 @@ function CompanyCard({
                               <Button
                                 type="button"
                                 variant="outline"
-                                size="sm"
+                                size="xs"
                                 disabled={management.busy}
                                 aria-label={`Mover ${getParticipantName(participant)} a otra compañía`}
                                 onClick={() =>
@@ -342,7 +342,7 @@ function CompanyCard({
                                 <Button
                                   type="button"
                                   variant="destructive"
-                                  size="icon-sm"
+                                  size="icon-xs"
                                   disabled={management.busy}
                                   aria-label={`Eliminar permanentemente a ${getParticipantName(participant)}`}
                                   onClick={() =>
