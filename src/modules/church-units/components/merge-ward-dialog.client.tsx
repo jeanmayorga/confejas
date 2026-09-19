@@ -18,9 +18,12 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Tooltip,
@@ -145,25 +148,40 @@ export function MergeWardDialog({
             <FieldLabel htmlFor={"merge-ward-" + ward.id}>
               Conservar en
             </FieldLabel>
-            <NativeSelect
-              id={"merge-ward-" + ward.id}
+            <Select
               value={targetWardId}
-              onChange={(event) => setTargetWardId(event.currentTarget.value)}
-              className="w-full"
+              onValueChange={(nextWardId) => {
+                if (nextWardId) {
+                  setTargetWardId(nextWardId);
+                }
+              }}
               disabled={pending}
             >
-              {candidates.map((candidate) => (
-                <NativeSelectOption
-                  key={candidate.id}
-                  value={candidate.id.toString()}
-                >
-                  {candidate.name} ({candidate.participantCount}{" "}
-                  {candidate.participantCount === 1
-                    ? "participante"
-                    : "participantes"})
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
+              <SelectTrigger
+                id={"merge-ward-" + ward.id}
+                aria-label="Conservar en"
+                className="w-full"
+              >
+                <SelectValue>
+                  {targetWard
+                    ? `${targetWard.name} (${targetWard.participantCount} ${targetWard.participantCount === 1 ? "participante" : "participantes"})`
+                    : "Selecciona un barrio"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent align="start" alignItemWithTrigger={false}>
+                {candidates.map((candidate) => (
+                  <SelectItem
+                    key={candidate.id}
+                    value={candidate.id.toString()}
+                  >
+                    {candidate.name} ({candidate.participantCount}{" "}
+                    {candidate.participantCount === 1
+                      ? "participante"
+                      : "participantes"})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
         </FieldGroup>
 
