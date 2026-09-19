@@ -59,7 +59,7 @@ export function UnitsDirectory({ units }: UnitsDirectoryProps) {
               >
                 <div className="flex h-9 flex-col justify-center gap-3 border-b bg-muted/30 px-4 py-0 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h2 id={`stake-${stake.id}`} className="text-sm font-normal">
+                    <h2 id={`stake-${stake.id}`} className="text-sm font-medium">
                       {stake.name}
                     </h2>
                   </div>
