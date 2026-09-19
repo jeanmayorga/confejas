@@ -19,10 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DeleteStakeButton } from "@/modules/church-units/components/delete-stake-button.client";
-import { DeleteWardButton } from "@/modules/church-units/components/delete-ward-button.client";
-import { StakeFormDialog } from "@/modules/church-units/components/stake-form-dialog.client";
-import { WardFormDialog } from "@/modules/church-units/components/ward-form-dialog.client";
+import { StakeEditSheet } from "@/modules/church-units/components/stake-edit-sheet.client";
 import type { UnitConfiguration } from "@/modules/church-units/server/queries";
 
 type UnitsDirectoryProps = {
@@ -34,10 +31,6 @@ export function UnitsDirectory({ units }: UnitsDirectoryProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap justify-end gap-2">
-        <StakeFormDialog />
-        <WardFormDialog stakes={stakes} />
-      </div>
       {units.length === 0 ? (
         <Empty className="min-h-64 rounded-xl border">
           <EmptyHeader>
@@ -46,7 +39,7 @@ export function UnitsDirectory({ units }: UnitsDirectoryProps) {
             </EmptyMedia>
             <EmptyTitle>Aún no hay unidades</EmptyTitle>
             <EmptyDescription>
-              Crea una estaca para empezar a registrar sus barrios.
+              No hay unidades configuradas para esta sesión.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -74,14 +67,7 @@ export function UnitsDirectory({ units }: UnitsDirectoryProps) {
                     </p>
                   </div>
                   <div className="flex shrink-0 justify-end gap-1">
-                    <StakeFormDialog stake={stake} />
-                    <DeleteStakeButton
-                      stake={{
-                        id: stake.id,
-                        name: stake.name,
-                        wardCount: stake.wards.length,
-                      }}
-                    />
+                    <StakeEditSheet stake={stake} stakes={stakes} />
                   </div>
                 </div>
                 <Table>
@@ -89,14 +75,13 @@ export function UnitsDirectory({ units }: UnitsDirectoryProps) {
                     <TableRow>
                       <TableHead>Barrio</TableHead>
                       <TableHead>Participantes</TableHead>
-                      <TableHead className="w-28 text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {stake.wards.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={3}
+                          colSpan={2}
                           className="h-20 text-center text-muted-foreground"
                         >
                           Esta estaca aún no tiene barrios.
@@ -118,15 +103,6 @@ export function UnitsDirectory({ units }: UnitsDirectoryProps) {
                             >
                               {ward.participantCount}
                             </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex justify-end gap-1">
-                              <WardFormDialog
-                                stakes={stakes}
-                                ward={{ ...ward, stakeId: stake.id }}
-                              />
-                              <DeleteWardButton ward={ward} />
-                            </div>
                           </TableCell>
                         </TableRow>
                       ))

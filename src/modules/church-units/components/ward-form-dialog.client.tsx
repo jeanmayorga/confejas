@@ -44,19 +44,23 @@ type WardFormDialogProps = {
   stakes: StakeOption[];
   ward?: EditableWard;
   disabled?: boolean;
+  triggerLabel?: string;
+  defaultStakeId?: number;
 };
 
 export function WardFormDialog({
   stakes,
   ward,
   disabled = false,
+  triggerLabel,
+  defaultStakeId,
 }: WardFormDialogProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const editing = Boolean(ward);
-  const defaultStakeId = ward?.stakeId ?? stakes[0]?.id;
+  const selectedStakeId = ward?.stakeId ?? defaultStakeId ?? stakes[0]?.id;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -91,8 +95,8 @@ export function WardFormDialog({
       <DialogTrigger
         render={
           <Button
-            variant={editing ? "outline" : "default"}
-            size={editing ? "sm" : "default"}
+            variant={editing ? "secondary" : "default"}
+            size={editing ? "icon-md" : "default"}
             disabled={disabled || stakes.length === 0}
             aria-label={editing ? `Editar ${ward?.name}` : undefined}
           />
@@ -103,7 +107,7 @@ export function WardFormDialog({
           strokeWidth={2}
           data-icon="inline-start"
         />
-        {editing ? "Editar" : "Nuevo barrio"}
+        {editing ? null : triggerLabel ?? "Nuevo barrio"}
       </DialogTrigger>
 
       <DialogContent>
@@ -143,7 +147,7 @@ export function WardFormDialog({
               <NativeSelect
                 id={`ward-stake-${ward?.id ?? "new"}`}
                 name="stakeId"
-                defaultValue={defaultStakeId?.toString() ?? ""}
+                defaultValue={selectedStakeId?.toString() ?? ""}
                 className="w-full"
                 disabled={pending}
                 required
