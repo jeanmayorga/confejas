@@ -252,9 +252,7 @@ function getPasswordSurname(lastNames: string | null, name: string) {
 }
 
 function generateCounselorPassword(lastNames: string | null, name: string) {
-  const password = `${getPasswordSurname(lastNames, name)}${randomInt(1000, 10000)}`;
-
-  return password.padEnd(12, "!");
+  return `${getPasswordSurname(lastNames, name)}${randomInt(1000, 10000)}`;
 }
 
 export async function lookupCounselorGovernmentIdAction(
