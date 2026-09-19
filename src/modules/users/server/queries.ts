@@ -21,11 +21,16 @@ export async function listUsers(page: number) {
         id: users.id,
         name: users.name,
         email: users.email,
+        image: users.image,
+        emailVerified: users.emailVerified,
         role: users.role,
         companyId: users.companyId,
         companyName: companies.name,
         banned: users.banned,
+        banReason: users.banReason,
+        banExpires: users.banExpires,
         createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
         lastConnectionAt: sql<string | null>`(
           select max(${sessions.updatedAt})
           from ${sessions}

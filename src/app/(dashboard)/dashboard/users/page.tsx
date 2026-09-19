@@ -2,46 +2,22 @@ import { redirect } from "next/navigation";
 
 import { DataPagination } from "@/components/data-pagination";
 import { PageHeader } from "@/components/page-header";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { requireAdmin } from "@/modules/auth/server/session";
-import { canManageUsers, getRoleLabel } from "@/modules/auth/roles";
 import { listCompanyOptions } from "@/modules/companies/server/queries";
-import { UserDangerActions } from "@/modules/users/components/user-danger-actions.client";
 import { UserFormDialog } from "@/modules/users/components/user-form-dialog.client";
+import { UserRow } from "@/modules/users/components/user-row.client";
 import { listUsers } from "@/modules/users/server/queries";
 
 type UsersPageProps = {
   searchParams: Promise<{ page?: string | string[] }>;
 };
-
-const dateFormatter = new Intl.DateTimeFormat("es-EC", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
-
-function getUserInitials(name: string) {
-  const nameParts = name.trim().split(/\s+/);
-
-  return `${nameParts[0]?.charAt(0) ?? "U"}${
-    nameParts.length > 1 ? (nameParts.at(-1)?.charAt(0) ?? "") : ""
-  }`.toLocaleUpperCase("es");
-}
-
-function formatDate(value: Date | string | null) {
-  if (!value) return "Nunca";
-
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime()) ? "Nunca" : dateFormatter.format(date);
-}
 
 export default async function UsersPage({ searchParams }: UsersPageProps) {
   const session = await requireAdmin();
@@ -84,46 +60,12 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
           </TableHeader>
           <TableBody>
             {result.rows.map((user) => (
-              <TableRow key={user.id} className="h-9">
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Avatar size="sm" aria-hidden="true">
-                      <AvatarFallback className="font-medium">
-                        {getUserInitials(user.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="font-medium">{user.name}</span>
-                  </div>
-                </TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant={
-                      canManageUsers(user.role) ? "default" : "secondary"
-                    }
-                  >
-                    {getRoleLabel(user.role)}
-                  </Badge>
-                </TableCell>
-                <TableCell>{user.companyName ?? "Sin asignar"}</TableCell>
-                <TableCell>
-                  <Badge variant={user.banned ? "destructive" : "outline"}>
-                    {user.banned ? "Bloqueado" : "Activo"}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {dateFormatter.format(user.createdAt)}
-                </TableCell>
-                <TableCell>
-                  {formatDate(user.lastConnectionAt)}
-                </TableCell>
-                <TableCell>
-                  <UserDangerActions
-                    user={user}
-                    isCurrentUser={session.user.id === user.id}
-                  />
-                </TableCell>
-              </TableRow>
+              <UserRow
+                key={user.id}
+                user={user}
+                companies={companies}
+                isCurrentUser={session.user.id === user.id}
+              />
             ))}
           </TableBody>
         </Table>

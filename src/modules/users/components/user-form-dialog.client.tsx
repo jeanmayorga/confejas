@@ -39,12 +39,17 @@ type EditableUser = {
 
 type UserFormDialogProps = {
   companies: { id: string; name: string }[];
+  triggerLabel?: string;
   user?: EditableUser;
 };
 
 const roles = Object.entries(roleLabels) as [AppRole, string][];
 
-export function UserFormDialog({ companies, user }: UserFormDialogProps) {
+export function UserFormDialog({
+  companies,
+  triggerLabel,
+  user,
+}: UserFormDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -88,8 +93,8 @@ export function UserFormDialog({ companies, user }: UserFormDialogProps) {
       <DialogTrigger
         render={
           <Button
-            variant={editing ? "ghost" : "default"}
-            size={editing ? "icon-sm" : "default"}
+            variant={editing ? (triggerLabel ? "outline" : "ghost") : "default"}
+            size={editing && !triggerLabel ? "icon-sm" : "sm"}
             aria-label={editing ? `Editar ${user?.name}` : undefined}
           />
         }
@@ -99,7 +104,9 @@ export function UserFormDialog({ companies, user }: UserFormDialogProps) {
           strokeWidth={2}
           data-icon="inline-start"
         />
-        {editing ? <span className="sr-only">Editar usuario</span> : "Nuevo usuario"}
+        {editing
+          ? triggerLabel ?? <span className="sr-only">Editar usuario</span>
+          : "Nuevo usuario"}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
