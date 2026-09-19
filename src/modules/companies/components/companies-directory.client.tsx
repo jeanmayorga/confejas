@@ -1,15 +1,12 @@
 "use client";
 
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
-import Delete02Icon from "@hugeicons/core-free-icons/Delete02Icon";
 import FemaleSymbolIcon from "@hugeicons/core-free-icons/FemaleSymbolIcon";
 import MaleSymbolIcon from "@hugeicons/core-free-icons/MaleSymbolIcon";
-import ArrowDataTransferHorizontalIcon from "@hugeicons/core-free-icons/ArrowDataTransferHorizontalIcon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardAction,
@@ -35,11 +32,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { getParticipantInitials } from "@/modules/participants/components/participant-details.client";
 import {
@@ -48,10 +40,6 @@ import {
 } from "@/modules/participants/status";
 import { getCompanyDisplayName } from "@/modules/companies/company-label";
 import { CreateCompanyButton } from "@/modules/companies/components/create-company-button.client";
-import {
-  CompanyParticipantManagement,
-  useCompanyParticipantManagement,
-} from "@/modules/companies/components/company-participant-management.client";
 import { DeleteCompanyButton } from "@/modules/companies/components/delete-company-button.client";
 import {
   COMPANY_PARTICIPANT_LIMIT as COMPANY_CAPACITY,
@@ -135,21 +123,19 @@ export function CompaniesDirectory({
   }
 
   return (
-    <CompanyParticipantManagement companies={companies} canDelete={canDelete}>
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="flex min-w-0 flex-col gap-5">
-          {companies.map((company, index) => (
-            <CompanyCard
-              key={company.id}
-              company={company}
-              position={index + 1}
-              canDelete={canDelete}
-            />
-          ))}
-        </div>
-        <UnassignedParticipantsCard participants={unassignedParticipants} />
+    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="flex min-w-0 flex-col gap-5">
+        {companies.map((company, index) => (
+          <CompanyCard
+            key={company.id}
+            company={company}
+            position={index + 1}
+            canDelete={canDelete}
+          />
+        ))}
       </div>
-    </CompanyParticipantManagement>
+      <UnassignedParticipantsCard participants={unassignedParticipants} />
+    </div>
   );
 }
 
@@ -231,12 +217,11 @@ function CompanyCard({
   position: number;
   canDelete: boolean;
 }) {
-  const management = useCompanyParticipantManagement();
   const titleId = `company-${company.id}-title`;
   const companyLabel = getCompanyDisplayName(company.name, position);
 
   return (
-    <Card className="py-3" aria-labelledby={titleId} aria-busy={management.busy}>
+    <Card className="py-3" aria-labelledby={titleId}>
       <CardHeader className="border-b !pb-2">
         <CardTitle id={titleId} className="text-lg">
           {companyLabel}
@@ -246,7 +231,6 @@ function CompanyCard({
             <DeleteCompanyButton
               company={company}
               label={companyLabel}
-              disabled={management.busy}
             />
           ) : null}
         </CardAction>
@@ -327,14 +311,13 @@ function CompanyCard({
 
           {company.participants.length > 0 ? (
             <TableFrame className="mt-3">
-              <Table className="min-w-[720px] table-fixed">
+              <Table className="min-w-[580px] table-fixed">
                 <colgroup>
                   <col className="w-12" />
                   <col className="w-24" />
                   <col />
                   <col className="w-[76px]" />
                   <col className="w-20" />
-                  <col className="w-32" />
                 </colgroup>
                 <TableHeader>
                   <TableRow>
@@ -343,7 +326,6 @@ function CompanyCard({
                     <TableHead>Nombres</TableHead>
                     <TableHead>Edad</TableHead>
                     <TableHead>Sexo</TableHead>
-                    <TableHead className="text-left">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -390,56 +372,6 @@ function CompanyCard({
                       <Badge variant="secondary">
                         {getParticipantSexLabel(participant.sex)}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-start gap-1">
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="xs"
-                                disabled={management.busy}
-                                aria-label={`Mover ${getParticipantName(participant)} a otra compañía`}
-                                onClick={() =>
-                                  management.openMove([participant.id])
-                                }
-                              />
-                            }
-                          >
-                            <HugeiconsIcon
-                              icon={ArrowDataTransferHorizontalIcon}
-                              strokeWidth={2}
-                              data-icon="inline-start"
-                            />
-                            Mover
-                          </TooltipTrigger>
-                          <TooltipContent>Mover a otra compañía</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon-xs"
-                                disabled={management.busy}
-                                aria-label={`Quitar a ${getParticipantName(participant)} de ${companyLabel}`}
-                                onClick={() =>
-                                  management.openRemove([participant.id])
-                                }
-                              />
-                            }
-                          >
-                            <HugeiconsIcon
-                              icon={Delete02Icon}
-                              strokeWidth={2}
-                            />
-                          </TooltipTrigger>
-                          <TooltipContent>Quitar de la compañía</TooltipContent>
-                        </Tooltip>
-                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
