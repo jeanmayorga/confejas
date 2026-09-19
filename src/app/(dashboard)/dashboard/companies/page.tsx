@@ -14,7 +14,7 @@ import { canDeleteParticipants } from "@/modules/auth/roles";
 import { requireParticipantManagementAccess } from "@/modules/auth/server/session";
 import { CompaniesDirectory } from "@/modules/companies/components/companies-directory.client";
 import { CompanyDistributionDialog } from "@/modules/companies/components/company-distribution-dialog.client";
-import { CompanyFormDialog } from "@/modules/companies/components/company-form-dialog.client";
+import { CreateCompanyButton } from "@/modules/companies/components/create-company-button.client";
 import {
   listCompanies,
   listUnassignedParticipants,
@@ -36,7 +36,7 @@ export default async function CompaniesPage() {
         actions={
           <>
             <CompanyDistributionDialog />
-            <CompanyFormDialog />
+            <CreateCompanyButton />
           </>
         }
       />
@@ -53,7 +53,7 @@ export default async function CompaniesPage() {
                 <EmptyDescription>
                   Crea la primera compañía para empezar a asignar participantes.
                 </EmptyDescription>
-                <CompanyFormDialog />
+                <CreateCompanyButton />
               </EmptyHeader>
             </Empty>
           </CardContent>

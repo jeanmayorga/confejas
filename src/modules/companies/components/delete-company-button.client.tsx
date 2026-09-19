@@ -28,6 +28,7 @@ import { deleteCompanyAction } from "@/modules/companies/server/actions";
 
 type DeleteCompanyButtonProps = {
   disabled?: boolean;
+  label?: string;
   company: {
     id: string;
     name: string;
@@ -38,6 +39,7 @@ type DeleteCompanyButtonProps = {
 
 export function DeleteCompanyButton({
   company,
+  label,
   disabled = false,
 }: DeleteCompanyButtonProps) {
   const router = useRouter();
@@ -46,6 +48,7 @@ export function DeleteCompanyButton({
   const [pending, startTransition] = useTransition();
   const hasAssignments =
     company.participantCount > 0 || company.counselorCount > 0;
+  const companyLabel = label ?? company.name;
 
   function handleDelete() {
     startTransition(async () => {
@@ -72,7 +75,7 @@ export function DeleteCompanyButton({
               variant="ghost"
               size="icon-sm"
               disabled
-              aria-label={`No se puede eliminar ${company.name} porque tiene asignaciones`}
+              aria-label={`No se puede eliminar ${companyLabel} porque tiene asignaciones`}
             >
               <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
             </Button>
@@ -102,7 +105,7 @@ export function DeleteCompanyButton({
                   size="icon-sm"
                   className="text-destructive"
                   disabled={disabled}
-                  aria-label={`Eliminar ${company.name}`}
+                  aria-label={`Eliminar ${companyLabel}`}
                 >
                   <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
                 </Button>
@@ -119,8 +122,8 @@ export function DeleteCompanyButton({
           </AlertDialogTitle>
           <AlertDialogDescription>
             {confirmationStep === 1
-              ? `${company.name} se eliminará permanentemente. Selecciona continuar para revisar la confirmación final.`
-              : `Esta es la última confirmación. ${company.name} se eliminará permanentemente. Esta acción no se puede deshacer.`}
+              ? `${companyLabel} se eliminará permanentemente. Selecciona continuar para revisar la confirmación final.`
+              : `Esta es la última confirmación. ${companyLabel} se eliminará permanentemente. Esta acción no se puede deshacer.`}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

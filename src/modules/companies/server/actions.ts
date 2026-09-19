@@ -2,7 +2,7 @@
 
 import { createHash } from "node:crypto";
 
-import { and, count, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, count, eq, inArray, sql } from "drizzle-orm";
 import type { NeonHttpQueryResult } from "drizzle-orm/neon-http";
 import { revalidatePath } from "next/cache";
 
@@ -33,6 +33,10 @@ import {
   type ParticipantCompanyAssignment,
   type ParticipantSexCounts,
 } from "../distribution";
+import {
+  formatCompanyName,
+  getNextCompanyNumber,
+} from "../company-label";
 import {
   getCompanyDetail,
   listAllParticipants,
@@ -190,39 +194,6 @@ function isCompanyId(value: unknown): value is string {
 }
 
 const isParticipantId = isCompanyId;
-
-function getCompanyName(formData: FormData) {
-  const name = String(formData.get("name") ?? "")
-    .trim()
-    .replace(/\s+/g, " ");
-
-  if (!name) {
-    throw new Error("El nombre de la compañía es obligatorio.");
-  }
-
-  if (name.length > 120) {
-    throw new Error("El nombre no puede superar 120 caracteres.");
-  }
-
-  return name;
-}
-
-async function companyNameExists(name: string, excludedId?: string) {
-  const [company] = await db
-    .select({ id: companies.id })
-    .from(companies)
-    .where(
-      excludedId
-        ? and(
-            sql`lower(${companies.name}) = lower(${name})`,
-            ne(companies.id, excludedId),
-          )
-        : sql`lower(${companies.name}) = lower(${name})`,
-    )
-    .limit(1);
-
-  return Boolean(company);
-}
 
 function getSafeError(error: unknown) {
   if (error instanceof Error) {
@@ -1173,59 +1144,23 @@ export async function assignParticipantsToCompanyAction(
   }
 }
 
-export async function createCompanyAction(
-  formData: FormData,
-): Promise<CompanyActionResult> {
+export async function createCompanyAction(): Promise<CompanyActionResult> {
   try {
     const session = await requireSession();
     if (!canManageParticipants(session.user.role)) {
       return { success: false, message: "No tienes permiso para crear compañías." };
     }
 
-    const name = getCompanyName(formData);
-    if (await companyNameExists(name)) {
-      return { success: false, message: "Ya existe una compañía con ese nombre." };
-    }
+    const companyRows = await db
+      .select({ name: companies.name })
+      .from(companies);
+    const name = formatCompanyName(
+      getNextCompanyNumber(companyRows.map((company) => company.name)),
+    );
 
     await db.insert(companies).values({ name });
     revalidateCompanyPaths();
-    return { success: true, message: "Compañía creada correctamente." };
-  } catch (error) {
-    return { success: false, message: getSafeError(error) };
-  }
-}
-
-export async function updateCompanyAction(
-  companyId: string,
-  formData: FormData,
-): Promise<CompanyActionResult> {
-  try {
-    const session = await requireSession();
-    if (!canManageParticipants(session.user.role)) {
-      return { success: false, message: "No tienes permiso para editar compañías." };
-    }
-
-    if (!isCompanyId(companyId)) {
-      return { success: false, message: "La compañía no es válida." };
-    }
-
-    const name = getCompanyName(formData);
-    if (await companyNameExists(name, companyId)) {
-      return { success: false, message: "Ya existe una compañía con ese nombre." };
-    }
-
-    const [updated] = await db
-      .update(companies)
-      .set({ name, updatedAt: new Date() })
-      .where(eq(companies.id, companyId))
-      .returning({ id: companies.id });
-
-    if (!updated) {
-      return { success: false, message: "La compañía ya no existe." };
-    }
-
-    revalidateCompanyPaths();
-    return { success: true, message: "Compañía actualizada correctamente." };
+    return { success: true, message: `${name} creada correctamente.` };
   } catch (error) {
     return { success: false, message: getSafeError(error) };
   }

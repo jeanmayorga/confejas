@@ -46,7 +46,8 @@ import {
   getParticipantStatusLabel,
   type ParticipantStatus,
 } from "@/modules/participants/status";
-import { CompanyFormDialog } from "@/modules/companies/components/company-form-dialog.client";
+import { getCompanyDisplayName } from "@/modules/companies/company-label";
+import { CreateCompanyButton } from "@/modules/companies/components/create-company-button.client";
 import {
   CompanyParticipantManagement,
   useCompanyParticipantManagement,
@@ -127,7 +128,7 @@ export function CompaniesDirectory({
           </p>
         </EmptyHeader>
         <EmptyContent>
-          <CompanyFormDialog />
+          <CreateCompanyButton />
         </EmptyContent>
       </Empty>
     );
@@ -232,21 +233,21 @@ function CompanyCard({
 }) {
   const management = useCompanyParticipantManagement();
   const titleId = `company-${company.id}-title`;
+  const companyLabel = getCompanyDisplayName(company.name, position);
 
   return (
     <Card aria-labelledby={titleId} aria-busy={management.busy}>
-      <CardHeader className="has-data-[slot=card-action]:grid-cols-1 border-b sm:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
+      <CardHeader className="border-b">
         <CardTitle id={titleId} className="text-lg">
-          {position}. {company.name}
+          {companyLabel}
         </CardTitle>
-        <CardDescription>
-          Cupo máximo: {COMPANY_CAPACITY} participantes, hasta{" "}
-          {COMPANY_SEX_CAPACITY} mujeres y {COMPANY_SEX_CAPACITY} hombres.
-        </CardDescription>
-        <CardAction className="col-start-1 row-start-3 row-span-1 mt-2 flex flex-wrap items-center justify-start gap-1 sm:col-start-2 sm:row-start-1 sm:row-span-2 sm:mt-0 sm:justify-end sm:justify-self-end">
-          <CompanyFormDialog company={company} disabled={management.busy} />
+        <CardAction>
           {canDelete ? (
-            <DeleteCompanyButton company={company} disabled={management.busy} />
+            <DeleteCompanyButton
+              company={company}
+              label={companyLabel}
+              disabled={management.busy}
+            />
           ) : null}
         </CardAction>
       </CardHeader>
@@ -424,7 +425,7 @@ function CompanyCard({
                                 variant="destructive"
                                 size="icon-xs"
                                 disabled={management.busy}
-                                aria-label={`Quitar a ${getParticipantName(participant)} de ${company.name}`}
+                                aria-label={`Quitar a ${getParticipantName(participant)} de ${companyLabel}`}
                                 onClick={() =>
                                   management.openRemove([participant.id])
                                 }
