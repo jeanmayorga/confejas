@@ -89,17 +89,6 @@ export function getCounselorCredentialsEmail({
                           <td style="padding:0 16px 16px;font-family:monospace;font-size:20px;line-height:1.4;font-weight:700;letter-spacing:0.04em;color:#0b639f;word-break:break-word">${safePassword}</td>
                         </tr>
                       </table>
-                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:26px 0 0;width:100%;border-collapse:collapse">
-                        <tr>
-                          <td style="padding:0 0 10px;font-size:15px;line-height:1.5;font-weight:700;color:#17202a">Con tu acceso podrás:</td>
-                        </tr>
-                        <tr>
-                          <td style="padding:4px 0;font-size:14px;line-height:1.5;color:#475569">&#10003;&nbsp; Ver la agenda de la conferencia</td>
-                        </tr>
-                        <tr>
-                          <td style="padding:4px 0;font-size:14px;line-height:1.5;color:#475569">&#10003;&nbsp; Consultar los participantes de tu compañía</td>
-                        </tr>
-                      </table>
                       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0 0;width:100%;border-collapse:collapse">
                         <tr>
                           <td align="center">
@@ -107,7 +96,6 @@ export function getCounselorCredentialsEmail({
                           </td>
                         </tr>
                       </table>
-                      <p style="margin:26px 0 0;padding:14px 16px;border-radius:10px;background-color:#fff8e8;font-size:13px;line-height:1.6;color:#805b12"><strong>Importante:</strong> esta es una contraseña temporal. Por seguridad, no compartas estas credenciales.</p>
                     </td>
                   </tr>
                   <tr>
