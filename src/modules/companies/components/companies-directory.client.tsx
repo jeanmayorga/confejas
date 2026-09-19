@@ -457,7 +457,7 @@ function CapacityProgress({
       renderTrack={false}
       aria-label={`Ocupación de ${total.toLocaleString("es-EC")} participantes: ${male.toLocaleString("es-EC")} hombres de ${capacity.male} y ${female.toLocaleString("es-EC")} mujeres de ${capacity.female}`}
     >
-      <ProgressTrack className="h-7">
+      <ProgressTrack className="h-6">
         <span
           aria-hidden="true"
           className="h-full shrink-0 bg-primary transition-[width]"
