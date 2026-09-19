@@ -618,10 +618,10 @@ function CapacityProgress({
     return (
       <Progress value={0} renderTrack={false} aria-label="Sin participantes asignados">
         <ProgressTrack className="h-6 text-xs font-bold">
-          <span className="flex h-full w-1/2 items-center bg-primary/10 px-3 text-primary">
+          <span className="flex h-full w-1/2 items-center bg-muted px-3 text-muted-foreground">
             Hombres 0/{capacity.male}
           </span>
-          <span className="flex h-full w-1/2 items-center bg-company-female/15 px-3 text-company-female">
+          <span className="flex h-full w-1/2 items-center border-l bg-muted px-3 text-muted-foreground">
             Mujeres 0/{capacity.female}
           </span>
         </ProgressTrack>
