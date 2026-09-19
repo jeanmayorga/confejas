@@ -258,18 +258,27 @@ function CompanyCard({
               <Table className="min-w-[900px]">
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Estado</TableHead>
                     <TableHead>Nombres</TableHead>
                     <TableHead>Edad</TableHead>
                     <TableHead>Sexo</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Barrio</TableHead>
-                    <TableHead>Estaca</TableHead>
                     <TableHead className="text-left">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                 {company.participants.map((participant) => (
                   <TableRow key={participant.id}>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "border-transparent",
+                          participantStatusClassNames[participant.status],
+                        )}
+                      >
+                        {getParticipantStatusLabel(participant.status)}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="max-w-0 overflow-hidden">
                       <div className="flex items-center gap-2">
                         <Avatar size="sm" aria-hidden="true">
@@ -303,19 +312,6 @@ function CompanyCard({
                         {getParticipantSexLabel(participant.sex)}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "border-transparent",
-                          participantStatusClassNames[participant.status],
-                        )}
-                      >
-                        {getParticipantStatusLabel(participant.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{participant.wardName}</TableCell>
-                    <TableCell>{participant.stakeName}</TableCell>
                     <TableCell>
                       <div className="flex justify-start gap-1">
                         <Tooltip>
