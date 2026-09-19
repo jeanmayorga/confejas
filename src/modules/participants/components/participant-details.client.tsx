@@ -33,11 +33,13 @@ import InformationCircleIcon from "@hugeicons/core-free-icons/InformationCircleI
 import MedicalFileIcon from "@hugeicons/core-free-icons/MedicalFileIcon";
 import UserEdit01Icon from "@hugeicons/core-free-icons/UserEdit01Icon";
 import UserGroupIcon from "@hugeicons/core-free-icons/UserGroupIcon";
+import WhatsappIcon from "@hugeicons/core-free-icons/WhatsappIcon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { toast } from "sonner";
 import { DeleteParticipantButton } from "@/modules/participants/components/delete-participant-button.client";
 import { ParticipantQrDialog } from "@/modules/participants/components/participant-qr-dialog.client";
 import { updateParticipantMedicalNotesAction } from "@/modules/participants/server/actions";
+import { getWhatsAppHref } from "@/modules/participants/whatsapp";
 import {
   getParticipantStatusLabel,
   isParticipantStatus,
@@ -75,6 +77,30 @@ function membershipLabel(value: boolean | null) {
   }
 
   return value ? "Sí" : "No";
+}
+
+function WhatsAppPhoneLink({ value }: { value: string | null }) {
+  const href = getWhatsAppHref(value);
+
+  if (!href || !value) {
+    return present(value);
+  }
+
+  return (
+    <a
+      href={href}
+      aria-label={`Abrir WhatsApp para ${value}`}
+      className="inline-flex items-center gap-1.5 text-primary underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <HugeiconsIcon
+        icon={WhatsappIcon}
+        className="size-3.5 shrink-0"
+        strokeWidth={2}
+        aria-hidden
+      />
+      <span>{value}</span>
+    </a>
+  );
 }
 
 export function getParticipantInitials(firstNames: string, lastNames: string) {
@@ -380,7 +406,10 @@ export function ParticipantDetails({
                 label="Talla de camiseta"
                 value={present(participant.shirtSize)}
               />
-              <DetailItem label="Celular" value={present(participant.phone)} />
+              <DetailItem
+                label="Celular"
+                value={<WhatsAppPhoneLink value={participant.phone} />}
+              />
               <DetailItem
                 label="Correo electrónico"
                 value={present(participant.email)}
@@ -427,7 +456,11 @@ export function ParticipantDetails({
               />
               <DetailItem
                 label="Teléfono de emergencia"
-                value={present(participant.emergencyContactPhone)}
+                value={
+                  <WhatsAppPhoneLink
+                    value={participant.emergencyContactPhone}
+                  />
+                }
               />
             </dl>
             <Field className="mt-5">

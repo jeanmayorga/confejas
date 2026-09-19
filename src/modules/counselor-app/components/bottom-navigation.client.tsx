@@ -38,9 +38,9 @@ export function CounselorBottomNavigation() {
   return (
     <nav
       aria-label="Navegación principal"
-      className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-xl border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-background/90"
+      className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-xl border-t bg-background/95 px-2 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur supports-[backdrop-filter]:bg-background/90"
     >
-      <div className="grid h-18 grid-cols-3 px-2">
+      <div className="grid h-18 grid-cols-3 gap-1">
         {navigationItems.map((item) => {
           const isActive = item.isActive(pathname);
 
