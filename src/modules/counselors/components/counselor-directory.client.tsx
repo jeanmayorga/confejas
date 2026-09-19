@@ -84,10 +84,6 @@ type CounselorCompany = {
   name: string;
 };
 
-function getCompanyGroupKey(counselor: CounselorDirectoryItem) {
-  return counselor.companyId ?? "__unassigned__";
-}
-
 const diacriticPattern = /\p{Diacritic}/gu;
 const counselorNameCollator = new Intl.Collator("es", { sensitivity: "base" });
 const companyNameCollator = new Intl.Collator("es", {
@@ -393,34 +389,9 @@ export function CounselorDirectory({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visibleCounselors.map((counselor, index) => {
-                const companySortActive = sort.startsWith("company_");
-                const companyGroupKey = getCompanyGroupKey(counselor);
+              {visibleCounselors.map((counselor) => {
                 const companyId = counselor.companyId;
                 const companyName = counselor.companyName;
-                const previousCounselor = visibleCounselors[index - 1];
-                const isFirstCompanyRow =
-                  !companySortActive ||
-                  !previousCounselor ||
-                  getCompanyGroupKey(previousCounselor) !== companyGroupKey;
-                let companyRowSpan = 1;
-
-                if (companySortActive && isFirstCompanyRow) {
-                  for (
-                    let nextIndex = index + 1;
-                    nextIndex < visibleCounselors.length;
-                    nextIndex += 1
-                  ) {
-                    if (
-                      getCompanyGroupKey(visibleCounselors[nextIndex]) !==
-                      companyGroupKey
-                    ) {
-                      break;
-                    }
-
-                    companyRowSpan += 1;
-                  }
-                }
 
                 return (
                   <TableRow
@@ -431,31 +402,26 @@ export function CounselorDirectory({
                     onClick={() => openCounselor(counselor)}
                     onKeyDown={(event) => handleRowKeyDown(event, counselor)}
                   >
-                    {isFirstCompanyRow ? (
-                      <TableCell
-                        rowSpan={companyRowSpan}
-                        className="max-w-0 overflow-hidden truncate align-middle"
-                      >
-                        {companyId && companyName ? (
-                          <button
-                            type="button"
-                            className="flex h-full w-full items-center truncate text-left font-normal hover:underline"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              openCompany({
-                                id: companyId,
-                                name: companyName,
-                              });
-                            }}
-                            onKeyDown={(event) => event.stopPropagation()}
-                          >
-                            {companyName}
-                          </button>
-                        ) : (
-                          <span className="text-muted-foreground">Sin asignar</span>
-                        )}
-                      </TableCell>
-                    ) : null}
+                    <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden truncate">
+                      {companyId && companyName ? (
+                        <button
+                          type="button"
+                          className="flex h-full w-full items-center truncate text-left font-normal text-foreground transition-colors hover:text-primary hover:underline"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openCompany({
+                              id: companyId,
+                              name: companyName,
+                            });
+                          }}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
+                          {companyName}
+                        </button>
+                      ) : (
+                        <span className="text-muted-foreground">Sin asignar</span>
+                      )}
+                    </TableCell>
                   <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden truncate">
                     <div className="flex items-center gap-2">
                       <Avatar size="sm" className="!size-5" aria-hidden="true">
