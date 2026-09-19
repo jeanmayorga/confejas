@@ -32,6 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Progress, ProgressLabel } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { getParticipantInitials } from "@/modules/participants/components/participant-details.client";
 import {
@@ -283,7 +284,7 @@ function CompanyCard({
       </CardHeader>
 
       <CardContent className="flex flex-col gap-5">
-        <CapacityBadges
+        <CapacityProgress
           total={company.participantCount}
           female={company.femaleCount}
           male={company.maleCount}
@@ -441,7 +442,7 @@ function CompanyCard({
   );
 }
 
-function CapacityBadges({
+function CapacityProgress({
   total,
   female,
   male,
@@ -455,57 +456,31 @@ function CapacityBadges({
   capacity: DistributionCapacity;
 }) {
   const totalCapacity = capacity.female + capacity.male;
+  const assigned = female + male + unsupported;
+  const progress = totalCapacity > 0
+    ? Math.min(100, (assigned / totalCapacity) * 100)
+    : 0;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Badge
-        variant={
-          total > totalCapacity
-            ? "destructive"
-            : total === totalCapacity
-              ? "default"
-              : "secondary"
-        }
-      >
-        Total {total.toLocaleString("es-EC")}/{totalCapacity}
-      </Badge>
-      <Badge
-        variant={
-          female > capacity.female
-            ? "destructive"
-            : female === capacity.female
-              ? "default"
-              : "outline"
-        }
-      >
-        <HugeiconsIcon
-          icon={FemaleSymbolIcon}
-          strokeWidth={2}
-          data-icon="inline-start"
-        />
-        Mujeres {female.toLocaleString("es-EC")}/{capacity.female}
-      </Badge>
-      <Badge
-        variant={
-          male > capacity.male
-            ? "destructive"
-            : male === capacity.male
-              ? "default"
-              : "outline"
-        }
-      >
-        <HugeiconsIcon
-          icon={MaleSymbolIcon}
-          strokeWidth={2}
-          data-icon="inline-start"
-        />
-        Hombres {male.toLocaleString("es-EC")}/{capacity.male}
-      </Badge>
+    <Progress
+      value={progress}
+      aria-label={`Ocupación de ${total.toLocaleString("es-EC")} participantes`}
+    >
+      <ProgressLabel className="flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <span className="inline-flex items-center gap-1.5">
+          <HugeiconsIcon icon={MaleSymbolIcon} strokeWidth={2} />
+          Hombres {male.toLocaleString("es-EC")}/{capacity.male}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <HugeiconsIcon icon={FemaleSymbolIcon} strokeWidth={2} />
+          Mujeres {female.toLocaleString("es-EC")}/{capacity.female}
+        </span>
+      </ProgressLabel>
       {unsupported > 0 ? (
-        <Badge variant="secondary">
+        <span className="text-sm text-muted-foreground">
           Otro o sin registrar {unsupported.toLocaleString("es-EC")}
-        </Badge>
+        </span>
       ) : null}
-    </div>
+    </Progress>
   );
 }
