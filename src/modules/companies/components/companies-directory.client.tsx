@@ -1,6 +1,9 @@
 "use client";
 
+import { useDeferredValue, useEffect, useRef, useState } from "react";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
+import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -20,7 +23,13 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -56,9 +65,17 @@ export type CompanyDirectoryItem = CompanyListItem;
 
 type CompaniesDirectoryProps = {
   companies: CompanyDirectoryItem[];
-  unassignedParticipants: CompanyParticipant[];
   canDelete: boolean;
   capacity: DistributionCapacity;
+};
+
+type UnassignedParticipantsPage = {
+  rows: CompanyParticipant[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  search: string;
 };
 
 const participantStatusClassNames = {
@@ -101,7 +118,6 @@ function getParticipantSexLabel(value: string | null) {
 
 export function CompaniesDirectory({
   companies,
-  unassignedParticipants,
   canDelete,
   capacity,
 }: CompaniesDirectoryProps) {
@@ -137,22 +153,83 @@ export function CompaniesDirectory({
           />
         ))}
       </div>
-      <UnassignedParticipantsCard
-        participants={unassignedParticipants}
-        capacity={capacity}
-      />
+      <UnassignedParticipantsCard capacity={capacity} />
     </div>
   );
 }
 
 function UnassignedParticipantsCard({
-  participants,
   capacity,
 }: {
-  participants: CompanyParticipant[];
   capacity: DistributionCapacity;
 }) {
   const titleId = "unassigned-participants-title";
+  const queryClient = useQueryClient();
+  const listViewportRef = useRef<HTMLDivElement>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
+  const unassignedParticipantsQuery = useInfiniteQuery({
+    queryKey: ["company-unassigned-participants", deferredSearch],
+    queryFn: async ({ pageParam }) => {
+      const params = new URLSearchParams({ page: String(pageParam) });
+
+      if (deferredSearch) {
+        params.set("query", deferredSearch);
+      }
+
+      const response = await fetch(
+        `/api/companies/unassigned-participants?${params}`,
+        { cache: "no-store" },
+      );
+
+      if (!response.ok) {
+        throw new Error("No pudimos cargar los participantes sin compañía.");
+      }
+
+      return (await response.json()) as UnassignedParticipantsPage;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
+  });
+  const participants =
+    unassignedParticipantsQuery.data?.pages.flatMap((page) => page.rows) ?? [];
+  const firstPage = unassignedParticipantsQuery.data?.pages[0];
+  const total = firstPage?.total ?? 0;
+  const { fetchNextPage, hasNextPage, isFetchingNextPage } =
+    unassignedParticipantsQuery;
+
+  useEffect(() => {
+    listViewportRef.current?.scrollTo({ top: 0 });
+  }, [deferredSearch]);
+
+  useEffect(() => {
+    const listViewport = listViewportRef.current;
+    const loadMoreNode = loadMoreRef.current;
+
+    if (
+      !listViewport ||
+      !loadMoreNode ||
+      !hasNextPage ||
+      isFetchingNextPage
+    ) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void fetchNextPage();
+        }
+      },
+      { root: listViewport, rootMargin: "0px 0px 240px" },
+    );
+
+    observer.observe(loadMoreNode);
+
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   return (
     <aside className="self-start xl:sticky xl:top-6" aria-labelledby={titleId}>
@@ -164,14 +241,35 @@ function UnassignedParticipantsCard({
         </CardHeader>
 
         <CardContent className="border-b py-3">
-          <div className="flex flex-wrap gap-2">
-            <CompanyDistributionDialog capacity={capacity} />
-            <CompanyCapacityDialog capacity={capacity} />
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap gap-2">
+              <CompanyDistributionDialog
+                capacity={capacity}
+                onDistributed={() => {
+                  void queryClient.invalidateQueries({
+                    queryKey: ["company-unassigned-participants"],
+                  });
+                }}
+              />
+              <CompanyCapacityDialog capacity={capacity} />
+            </div>
+            <InputGroup>
+              <InputGroupAddon>
+                <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
+              </InputGroupAddon>
+              <InputGroupInput
+                type="search"
+                placeholder="Buscar participante"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                aria-label="Buscar participantes sin compañía"
+              />
+            </InputGroup>
           </div>
         </CardContent>
 
-        {participants.length > 0 ? (
-          <CardContent className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-0">
+        {unassignedParticipantsQuery.isPending ? (
+          <CardContent className="min-h-0 flex-1 p-0">
             <TableFrame className="rounded-none border-0">
               <Table className="min-w-[440px] table-fixed">
                 <colgroup>
@@ -189,44 +287,22 @@ function UnassignedParticipantsCard({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {participants.map((participant) => (
-                    <TableRow key={participant.id}>
+                  {Array.from({ length: 8 }, (_, index) => (
+                    <TableRow key={index}>
                       <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "border-transparent",
-                            participantStatusClassNames[participant.status],
-                          )}
-                        >
-                          {getParticipantStatusLabel(participant.status)}
-                        </Badge>
+                        <Skeleton className="h-5 w-16 rounded-full" />
                       </TableCell>
-                      <TableCell className="max-w-0 overflow-hidden">
+                      <TableCell>
                         <div className="flex items-center gap-2">
-                          <Avatar size="sm" aria-hidden="true">
-                            <AvatarFallback
-                              className={cn(
-                                "!text-[9px] font-medium",
-                                participantStatusClassNames[participant.status],
-                              )}
-                            >
-                              {getParticipantInitials(
-                                participant.firstNames,
-                                participant.lastNames,
-                              )}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="min-w-0 truncate font-medium">
-                            {getParticipantName(participant)}
-                          </span>
+                          <Skeleton className="size-6 rounded-full" />
+                          <Skeleton className="h-3 w-32" />
                         </div>
                       </TableCell>
-                      <TableCell>{getParticipantAge(participant.age)}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary">
-                          {getParticipantSexLabel(participant.sex)}
-                        </Badge>
+                        <Skeleton className="h-3 w-12" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-14 rounded-full" />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -234,16 +310,103 @@ function UnassignedParticipantsCard({
               </Table>
             </TableFrame>
           </CardContent>
+        ) : unassignedParticipantsQuery.isError ? (
+          <CardContent className="flex min-h-40 flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground">
+            No pudimos cargar los participantes sin compañía.
+          </CardContent>
+        ) : participants.length > 0 ? (
+          <CardContent className="flex min-h-0 flex-1 flex-col p-0">
+            <div
+              ref={listViewportRef}
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+            >
+              <TableFrame className="rounded-none border-0">
+                <Table className="min-w-[440px] table-fixed">
+                  <colgroup>
+                    <col className="w-24" />
+                    <col />
+                    <col className="w-[76px]" />
+                    <col className="w-20" />
+                  </colgroup>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Estado</TableHead>
+                      <TableHead>Nombres</TableHead>
+                      <TableHead>Edad</TableHead>
+                      <TableHead>Sexo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {participants.map((participant) => (
+                      <TableRow key={participant.id}>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "border-transparent",
+                              participantStatusClassNames[participant.status],
+                            )}
+                          >
+                            {getParticipantStatusLabel(participant.status)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-0 overflow-hidden">
+                          <div className="flex items-center gap-2">
+                            <Avatar size="sm" aria-hidden="true">
+                              <AvatarFallback
+                                className={cn(
+                                  "!text-[9px] font-medium",
+                                  participantStatusClassNames[participant.status],
+                                )}
+                              >
+                                {getParticipantInitials(
+                                  participant.firstNames,
+                                  participant.lastNames,
+                                )}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="min-w-0 truncate font-medium">
+                              {getParticipantName(participant)}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{getParticipantAge(participant.age)}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {getParticipantSexLabel(participant.sex)}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {isFetchingNextPage ? (
+                      <TableRow>
+                        <TableCell colSpan={4}>
+                          <Skeleton className="h-3 w-28" />
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </TableBody>
+                </Table>
+              </TableFrame>
+              {hasNextPage ? (
+                <div ref={loadMoreRef} className="h-px" aria-hidden="true" />
+              ) : null}
+            </div>
+          </CardContent>
         ) : (
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            No hay participantes sin compañía.
+            {deferredSearch
+              ? "No encontramos participantes sin compañía."
+              : "No hay participantes sin compañía."}
           </CardContent>
         )}
 
         <CardFooter className="justify-between border-t !pt-3">
           <span className="font-medium">Total de participantes</span>
           <Badge variant="secondary">
-            {participants.length.toLocaleString("es-EC")}
+            {unassignedParticipantsQuery.isPending
+              ? "…"
+              : total.toLocaleString("es-EC")}
           </Badge>
         </CardFooter>
       </Card>

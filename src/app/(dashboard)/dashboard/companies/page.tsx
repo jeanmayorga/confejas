@@ -14,17 +14,13 @@ import { canDeleteParticipants } from "@/modules/auth/roles";
 import { requireParticipantManagementAccess } from "@/modules/auth/server/session";
 import { CompaniesDirectory } from "@/modules/companies/components/companies-directory.client";
 import { CreateCompanyButton } from "@/modules/companies/components/create-company-button.client";
-import {
-  listCompanies,
-  listUnassignedParticipants,
-} from "@/modules/companies/server/queries";
+import { listCompanies } from "@/modules/companies/server/queries";
 import { getCompanyCapacity } from "@/modules/companies/server/settings";
 
 export default async function CompaniesPage() {
   const session = await requireParticipantManagementAccess();
-  const [companies, unassignedParticipants, capacity] = await Promise.all([
+  const [companies, capacity] = await Promise.all([
     listCompanies(),
-    listUnassignedParticipants(),
     getCompanyCapacity(),
   ]);
   const canDelete = canDeleteParticipants(session.user.role);
@@ -57,7 +53,6 @@ export default async function CompaniesPage() {
       ) : (
         <CompaniesDirectory
           companies={companies}
-          unassignedParticipants={unassignedParticipants}
           canDelete={canDelete}
           capacity={capacity}
         />

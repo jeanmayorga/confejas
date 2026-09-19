@@ -1,6 +1,17 @@
 import "server-only";
 
-import { and, asc, count, eq, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  ilike,
+  isNotNull,
+  isNull,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import { stakes, wards } from "@/modules/church-units/server/schema";
 import { counselors } from "@/modules/counselors/server/schema";
@@ -92,6 +103,8 @@ export type CompanyDistributionOverview = {
   >;
   companies: Awaited<ReturnType<typeof listCompaniesForDistribution>>;
 };
+
+export const UNASSIGNED_PARTICIPANTS_PAGE_SIZE = 50;
 
 const companyParticipantSelection = {
   id: participants.id,
@@ -312,6 +325,67 @@ export async function listUnassignedParticipants(): Promise<
       asc(participants.lastNames),
       asc(participants.id),
     );
+}
+
+export async function listUnassignedParticipantsPage({
+  page = 1,
+  search = "",
+}: {
+  page?: number;
+  search?: string;
+}) {
+  const safePage = Number.isSafeInteger(page) && page > 0 ? page : 1;
+  const safeSearch = search.trim().slice(0, 100);
+  const searchPattern = `%${safeSearch}%`;
+  const searchFilter = safeSearch
+    ? or(
+        ilike(participants.firstNames, searchPattern),
+        ilike(participants.lastNames, searchPattern),
+        ilike(
+          sql`concat_ws(' ', ${participants.firstNames}, ${participants.lastNames})`,
+          searchPattern,
+        ),
+        ilike(wards.name, searchPattern),
+        ilike(stakes.name, searchPattern),
+      )
+    : undefined;
+  const filters = and(isNull(participants.companyId), searchFilter);
+  const offset = (safePage - 1) * UNASSIGNED_PARTICIPANTS_PAGE_SIZE;
+
+  const [rows, [totalRow]] = await Promise.all([
+    db
+      .select(companyParticipantSelection)
+      .from(participants)
+      .innerJoin(wards, eq(participants.wardId, wards.id))
+      .innerJoin(stakes, eq(wards.stakeId, stakes.id))
+      .where(filters)
+      .orderBy(
+        asc(participants.firstNames),
+        asc(participants.lastNames),
+        asc(participants.id),
+      )
+      .limit(UNASSIGNED_PARTICIPANTS_PAGE_SIZE)
+      .offset(offset),
+    db
+      .select({ value: count() })
+      .from(participants)
+      .innerJoin(wards, eq(participants.wardId, wards.id))
+      .innerJoin(stakes, eq(wards.stakeId, stakes.id))
+      .where(filters),
+  ]);
+  const total = totalRow?.value ?? 0;
+
+  return {
+    rows,
+    page: safePage,
+    pageSize: UNASSIGNED_PARTICIPANTS_PAGE_SIZE,
+    total,
+    totalPages: Math.max(
+      1,
+      Math.ceil(total / UNASSIGNED_PARTICIPANTS_PAGE_SIZE),
+    ),
+    search: safeSearch,
+  };
 }
 
 export async function listAllParticipants(): Promise<CompanyParticipant[]> {

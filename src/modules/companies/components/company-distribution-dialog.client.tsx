@@ -29,8 +29,10 @@ import {
 
 export function CompanyDistributionDialog({
   capacity,
+  onDistributed,
 }: {
   capacity: DistributionCapacity;
+  onDistributed?: () => void;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -82,6 +84,7 @@ export function CompanyDistributionDialog({
 
       toast.success(result.message);
       setOpen(false);
+      onDistributed?.();
       router.refresh();
     });
   }
