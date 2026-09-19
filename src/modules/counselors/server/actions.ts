@@ -14,7 +14,7 @@ import {
 import { auth } from "@/modules/auth/server/auth";
 import { user as users } from "@/modules/auth/server/schema";
 import { requireSession } from "@/modules/auth/server/session";
-import { stakes } from "@/modules/church-units/server/schema";
+import { stakes, wards } from "@/modules/church-units/server/schema";
 import { companies } from "@/modules/companies/server/schema";
 import { normalizeGovernmentId } from "@/modules/participants/identity";
 import {
@@ -88,21 +88,21 @@ function getOptionalEmail(formData: FormData) {
 }
 
 function getCounselorData(formData: FormData) {
-  const governmentId = normalizeGovernmentId(
-    String(formData.get("governmentId") ?? ""),
-  );
+  const rawGovernmentId = optionalText(formData, "governmentId", 32);
+  const governmentId = rawGovernmentId
+    ? normalizeGovernmentId(rawGovernmentId)
+    : null;
 
-  if (!governmentId || !/^\d{10}$/.test(governmentId)) {
+  if (governmentId && !/^\d{10}$/.test(governmentId)) {
     throw new Error("Ingresa una cédula ecuatoriana válida de 10 dígitos.");
   }
 
   const firstNames = formatCounselorName(
-    requiredText(formData, "firstNames", "Los nombres", 160),
+    requiredText(formData, "firstNames", "El nombre", 160),
   );
-  const lastNames = formatCounselorName(
-    requiredText(formData, "lastNames", "Los apellidos", 160),
-  );
-  const name = `${firstNames} ${lastNames}`;
+  const rawLastNames = optionalText(formData, "lastNames", 160);
+  const lastNames = rawLastNames ? formatCounselorName(rawLastNames) : null;
+  const name = [firstNames, lastNames].filter(Boolean).join(" ");
 
   if (name.length > 160) {
     throw new Error("El nombre completo no puede superar 160 caracteres.");
@@ -122,7 +122,7 @@ async function getCompanyId(formData: FormData) {
   const companyId = String(formData.get("companyId") ?? "");
 
   if (!companyId) {
-    return null;
+    throw new Error("La compañía es obligatoria.");
   }
 
   if (!isUuid(companyId)) {
@@ -179,6 +179,34 @@ async function getStakeId(formData: FormData) {
   }
 
   return stake.id;
+}
+
+async function getWardId(formData: FormData, stakeId: number | null) {
+  const wardId = optionalPositiveInteger(formData, "wardId", "barrio");
+
+  if (!wardId) {
+    return null;
+  }
+
+  if (!stakeId) {
+    throw new Error("Selecciona una estaca antes de asignar un barrio.");
+  }
+
+  const [ward] = await db
+    .select({ id: wards.id, stakeId: wards.stakeId })
+    .from(wards)
+    .where(eq(wards.id, wardId))
+    .limit(1);
+
+  if (!ward) {
+    throw new Error("El barrio seleccionado ya no existe.");
+  }
+
+  if (ward.stakeId !== stakeId) {
+    throw new Error("El barrio debe pertenecer a la estaca seleccionada.");
+  }
+
+  return ward.id;
 }
 
 function getSafeError(error: unknown) {
@@ -289,10 +317,11 @@ export async function createCounselorAction(
     const counselorData = getCounselorData(formData);
     const companyId = await getCompanyId(formData);
     const stakeId = await getStakeId(formData);
+    const wardId = await getWardId(formData, stakeId);
 
     await db
       .insert(counselors)
-      .values({ ...counselorData, companyId, stakeId });
+      .values({ ...counselorData, companyId, stakeId, wardId });
     revalidateCounselorPaths();
     return { success: true, message: "Consejero creado correctamente." };
   } catch (error) {
@@ -464,12 +493,14 @@ export async function updateCounselorAction(
     const counselorData = getCounselorData(formData);
     const companyId = await getCompanyId(formData);
     const stakeId = await getStakeId(formData);
+    const wardId = await getWardId(formData, stakeId);
     const [updated] = await db
       .update(counselors)
       .set({
         ...counselorData,
         companyId,
         stakeId,
+        wardId,
         updatedAt: new Date(),
       })
       .where(eq(counselors.id, counselorId))

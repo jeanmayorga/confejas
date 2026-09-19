@@ -35,12 +35,14 @@ export type CounselorFormValues = {
   email: string | null;
   companyId: string | null;
   stakeId: number | null;
+  wardId: number | null;
 };
 
 type CounselorFormProps = {
   counselor?: CounselorFormValues;
   companies: { id: string; name: string }[];
   stakes: { id: number; name: string }[];
+  wards: { id: number; name: string; stakeId: number }[];
   onCancel: () => void;
   onSuccess?: () => void;
 };
@@ -49,6 +51,7 @@ export function CounselorForm({
   counselor,
   companies,
   stakes,
+  wards,
   onCancel,
   onSuccess,
 }: CounselorFormProps) {
@@ -59,7 +62,13 @@ export function CounselorForm({
   const [stakeId, setStakeId] = useState(
     counselor?.stakeId ? String(counselor.stakeId) : "",
   );
+  const [wardId, setWardId] = useState(
+    counselor?.wardId ? String(counselor.wardId) : "",
+  );
   const isEditing = Boolean(counselor?.id);
+  const availableWards = stakeId
+    ? wards.filter((ward) => ward.stakeId === Number(stakeId))
+    : [];
 
   function handleGovernmentIdLookup() {
     const form = formRef.current;
@@ -113,6 +122,18 @@ export function CounselorForm({
     });
   }
 
+  function handleStakeChange(value: string) {
+    setStakeId(value);
+
+    if (
+      wardId &&
+      wards.find((ward) => String(ward.id) === wardId)?.stakeId !==
+        Number(value)
+    ) {
+      setWardId("");
+    }
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -147,10 +168,9 @@ export function CounselorForm({
               autoComplete="off"
               maxLength={10}
               pattern="[0-9]{10}"
-              defaultValue={counselor?.governmentId ?? ""}
-              autoFocus
-              required
-            />
+            defaultValue={counselor?.governmentId ?? ""}
+            autoFocus
+          />
             <Button
               type="button"
               variant="outline"
@@ -174,7 +194,7 @@ export function CounselorForm({
           </FieldDescription>
         </Field>
         <Field>
-          <FieldLabel htmlFor="counselor-first-names">Nombres</FieldLabel>
+          <FieldLabel htmlFor="counselor-first-names">Nombre</FieldLabel>
           <Input
             id="counselor-first-names"
             name="firstNames"
@@ -190,7 +210,6 @@ export function CounselorForm({
             name="lastNames"
             maxLength={160}
             defaultValue={counselor?.lastNames ?? ""}
-            required
           />
         </Field>
         <Field>
@@ -223,7 +242,7 @@ export function CounselorForm({
             id="counselor-stake"
             name="stakeId"
             value={stakeId}
-            onChange={(event) => setStakeId(event.currentTarget.value)}
+            onChange={(event) => handleStakeChange(event.currentTarget.value)}
             className="w-full"
           >
             <NativeSelectOption value="">Sin asignar</NativeSelectOption>
@@ -236,6 +255,26 @@ export function CounselorForm({
             </NativeSelectOptGroup>
           </NativeSelect>
         </Field>
+        <Field>
+          <FieldLabel htmlFor="counselor-ward">Barrio</FieldLabel>
+          <NativeSelect
+            id="counselor-ward"
+            name="wardId"
+            value={wardId}
+            onChange={(event) => setWardId(event.currentTarget.value)}
+            className="w-full"
+            disabled={!stakeId}
+          >
+            <NativeSelectOption value="">
+              {stakeId ? "Sin asignar" : "Selecciona una estaca"}
+            </NativeSelectOption>
+            {availableWards.map((ward) => (
+              <NativeSelectOption key={ward.id} value={String(ward.id)}>
+                {ward.name}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </Field>
         <Field className="sm:col-span-2">
           <FieldLabel htmlFor="counselor-company">Compañía</FieldLabel>
           <NativeSelect
@@ -243,8 +282,9 @@ export function CounselorForm({
             name="companyId"
             defaultValue={counselor?.companyId ?? ""}
             className="w-full"
+            required
           >
-            <NativeSelectOption value="">Sin asignar</NativeSelectOption>
+            <NativeSelectOption value="">Selecciona una compañía</NativeSelectOption>
             <NativeSelectOptGroup label="Compañías">
               {companies.map((company) => (
                 <NativeSelectOption key={company.id} value={company.id}>

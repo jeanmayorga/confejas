@@ -9,7 +9,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { stakes } from "@/modules/church-units/server/schema";
+import { stakes, wards } from "@/modules/church-units/server/schema";
 import { companies } from "@/modules/companies/server/schema";
 
 export const counselors = pgTable(
@@ -27,6 +27,10 @@ export const counselors = pgTable(
       onUpdate: "cascade",
     }),
     stakeId: integer().references(() => stakes.id, {
+      onDelete: "restrict",
+      onUpdate: "cascade",
+    }),
+    wardId: integer().references(() => wards.id, {
       onDelete: "restrict",
       onUpdate: "cascade",
     }),
@@ -51,5 +55,9 @@ export const counselorsRelations = relations(counselors, ({ one }) => ({
   stake: one(stakes, {
     fields: [counselors.stakeId],
     references: [stakes.id],
+  }),
+  ward: one(wards, {
+    fields: [counselors.wardId],
+    references: [wards.id],
   }),
 }));

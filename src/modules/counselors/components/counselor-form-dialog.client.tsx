@@ -20,11 +20,13 @@ import {
 type CounselorFormDialogProps = {
   companies: { id: string; name: string }[];
   stakes: { id: number; name: string }[];
+  wards: { id: number; name: string; stakeId: number }[];
 };
 
 export function CounselorFormDialog({
   companies,
   stakes,
+  wards,
 }: CounselorFormDialogProps) {
   const [open, setOpen] = useState(false);
 
@@ -55,6 +57,7 @@ export function CounselorFormDialog({
         <CounselorForm
           companies={companies}
           stakes={stakes}
+          wards={wards}
           onCancel={() => setOpen(false)}
           onSuccess={() => setOpen(false)}
         />

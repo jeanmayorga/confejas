@@ -68,12 +68,15 @@ type CounselorDirectoryItem = {
   companyName: string | null;
   stakeId: number | null;
   stakeName: string | null;
+  wardId: number | null;
+  wardName: string | null;
 };
 
 type CounselorDirectoryProps = {
   counselors: CounselorDirectoryItem[];
   companies: { id: string; name: string }[];
   stakes: { id: number; name: string }[];
+  wards: { id: number; name: string; stakeId: number }[];
   canManage: boolean;
   canDelete: boolean;
 };
@@ -127,6 +130,7 @@ function getCounselorSearchText(counselor: CounselorDirectoryItem) {
       counselor.email,
       counselor.whatsapp,
       counselor.stakeName,
+      counselor.wardName,
     ]
       .filter(Boolean)
       .join(" "),
@@ -186,6 +190,7 @@ export function CounselorDirectory({
   counselors,
   companies,
   stakes,
+  wards,
   canManage,
   canDelete,
 }: CounselorDirectoryProps) {
@@ -285,6 +290,7 @@ export function CounselorDirectory({
           <CounselorFormDialog
             companies={companies}
             stakes={stakes}
+            wards={wards}
           />
         }
       />
@@ -344,6 +350,7 @@ export function CounselorDirectory({
                 <CounselorFormDialog
                   companies={companies}
                   stakes={stakes}
+                  wards={wards}
                 />
               )}
             </EmptyHeader>
@@ -485,6 +492,7 @@ export function CounselorDirectory({
                 counselor={selectedCounselor}
                 companies={companies}
                 stakes={stakes}
+                wards={wards}
                 onCancel={() => setCounselorSheetMode("view")}
                 onSuccess={closeCounselorSheet}
               />
@@ -557,6 +565,12 @@ export function CounselorDirectory({
                       <dt className="text-muted-foreground">Estaca</dt>
                       <dd className="font-medium">
                         {selectedCounselor.stakeName ?? "Sin asignar"}
+                      </dd>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <dt className="text-muted-foreground">Barrio</dt>
+                      <dd className="font-medium">
+                        {selectedCounselor.wardName ?? "Sin asignar"}
                       </dd>
                     </div>
                   </dl>

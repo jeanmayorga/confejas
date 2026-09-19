@@ -127,6 +127,13 @@
       "when": 1789832972390,
       "tag": "0017_shocking_zzzax",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1789833174654,
+      "tag": "0018_new_bullseye",
+      "breakpoints": true
     }
   ]
 }
