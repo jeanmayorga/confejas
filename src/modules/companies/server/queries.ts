@@ -5,6 +5,7 @@ import { and, asc, count, eq, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { stakes, wards } from "@/modules/church-units/server/schema";
 import { counselors } from "@/modules/counselors/server/schema";
 import { participants } from "@/modules/participants/server/schema";
+import type { ParticipantStatus } from "@/modules/participants/status";
 import { db } from "@/server/db";
 
 import {
@@ -26,6 +27,7 @@ export type CompanyParticipant = {
   birthDate: string | null;
   age: number | null;
   sex: string | null;
+  status: ParticipantStatus;
   wardName: string;
   stakeId: number;
   stakeName: string;
@@ -98,6 +100,7 @@ const companyParticipantSelection = {
   birthDate: participants.birthDate,
   age: sql<number | null>`extract(year from age(current_date, ${participants.birthDate}))::integer`,
   sex: participants.sex,
+  status: participants.status,
   wardName: wards.name,
   stakeId: wards.stakeId,
   stakeName: stakes.name,
