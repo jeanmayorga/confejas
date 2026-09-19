@@ -4,11 +4,8 @@ import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
 import Delete02Icon from "@hugeicons/core-free-icons/Delete02Icon";
 import FemaleSymbolIcon from "@hugeicons/core-free-icons/FemaleSymbolIcon";
 import MaleSymbolIcon from "@hugeicons/core-free-icons/MaleSymbolIcon";
-import UserEdit01Icon from "@hugeicons/core-free-icons/UserEdit01Icon";
-import UserRemove01Icon from "@hugeicons/core-free-icons/UserRemove01Icon";
 import ArrowDataTransferHorizontalIcon from "@hugeicons/core-free-icons/ArrowDataTransferHorizontalIcon";
 import { HugeiconsIcon } from "@hugeicons/react";
-import Link from "next/link";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -337,51 +334,6 @@ function CompanyCard({
                             Mover
                           </TooltipTrigger>
                           <TooltipContent>Mover a otra compañía</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon-sm"
-                                disabled={management.busy}
-                                aria-label={`Quitar a ${getParticipantName(participant)} de ${company.name}`}
-                                onClick={() =>
-                                  management.openRemove([participant.id])
-                                }
-                              />
-                            }
-                          >
-                            <HugeiconsIcon
-                              icon={UserRemove01Icon}
-                              strokeWidth={2}
-                            />
-                          </TooltipTrigger>
-                          <TooltipContent>Quitar de la compañía</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                render={
-                                  <Link
-                                    href={`/dashboard/participants/${participant.id}/edit`}
-                                  />
-                                }
-                                variant="ghost"
-                                size="icon-sm"
-                                disabled={management.busy}
-                                aria-label={`Editar ${getParticipantName(participant)}`}
-                              />
-                            }
-                          >
-                            <HugeiconsIcon
-                              icon={UserEdit01Icon}
-                              strokeWidth={2}
-                            />
-                          </TooltipTrigger>
-                          <TooltipContent>Editar participante</TooltipContent>
                         </Tooltip>
                         {canDelete ? (
                           <Tooltip>
