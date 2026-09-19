@@ -16,21 +16,20 @@ import {
 import { requireCheckInAccess } from "@/modules/auth/server/session";
 
 export const metadata: Metadata = {
-  title: "Check-in | Confejas",
+  title: "Bienvenida | Confejas",
 };
 
-const checkInOptions = [
+const welcomeOptions = [
   {
     title: "Escanear por código QR",
-    description:
-      "Abre la cámara y lee el QR que contiene la cédula del participante.",
+    description: "Abre la cámara y lee el QR único del participante.",
     href: "/dashboard/check-in/scan",
     icon: QrCodeScanIcon,
   },
   {
-    title: "Escribir código",
+    title: "Ingresar código",
     description:
-      "Ingresa manualmente la cédula cuando no sea posible escanear el QR.",
+      "Ingresa el código único cuando no sea posible escanear el QR.",
     href: "/dashboard/check-in/code",
     icon: KeyboardIcon,
   },
@@ -44,16 +43,16 @@ export default async function CheckInPage() {
       <div className="flex flex-col gap-2">
         <p className="text-sm font-medium text-primary">Recepción</p>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-          Check-in de participantes
+          Bienvenida de participantes
         </h1>
         <p className="max-w-2xl text-muted-foreground">
-          Elige cómo identificar al participante. Antes de confirmar la llegada
+          Elige cómo identificar al participante. Antes de confirmar su llegada
           podrás revisar su perfil y asignación.
         </p>
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">
-        {checkInOptions.map((option) => (
+        {welcomeOptions.map((option) => (
           <Link
             key={option.href}
             href={option.href}

@@ -9,12 +9,11 @@ import { ParticipantCheckInSheetLoader } from "@/modules/participants/components
 import { ParticipantCodeLookup } from "@/modules/participants/components/participant-code-lookup.client";
 
 export const metadata: Metadata = {
-  title: "Escribir código | Confejas",
+  title: "Ingresar código | Confejas",
 };
 
 type CodeCheckInPageProps = {
   searchParams: Promise<{
-    error?: string | string[];
     participantId?: string | string[];
     saved?: string | string[];
   }>;
@@ -29,7 +28,6 @@ export default async function CodeCheckInPage({
     ? query.participantId[0]
     : query.participantId;
   const savedValue = Array.isArray(query.saved) ? query.saved[0] : query.saved;
-  const errorValue = Array.isArray(query.error) ? query.error[0] : query.error;
 
   return (
     <div className="flex flex-col gap-6">
@@ -37,10 +35,10 @@ export default async function CodeCheckInPage({
         <div>
           <p className="text-sm font-medium text-primary">Recepción</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-            Escribir código
+            Ingresar código
           </h1>
           <p className="mt-1 text-muted-foreground">
-            Ingresa la cédula para localizar al participante.
+            Ingresa el código único para localizar al participante.
           </p>
         </div>
         <Button
@@ -55,7 +53,6 @@ export default async function CodeCheckInPage({
 
       <ParticipantCodeLookup key={participantId ?? "code-lookup"} />
       <ParticipantCheckInSheetLoader
-        assignmentError={errorValue === "assignment"}
         participantId={participantId}
         returnPath="/dashboard/check-in/code"
         saved={savedValue === "1"}

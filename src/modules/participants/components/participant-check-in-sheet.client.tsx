@@ -5,57 +5,35 @@ import { useRouter } from "next/navigation";
 import CheckmarkCircle02Icon from "@hugeicons/core-free-icons/CheckmarkCircle02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useFormStatus } from "react-dom";
-import { toast } from "sonner";
 
 import { completeParticipantCheckInFromSheet } from "@/app/(dashboard)/dashboard/check-in/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
-import {
-  NativeSelect,
-  NativeSelectOptGroup,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import type { LodgingBuildingOverview } from "@/modules/lodging/server/queries";
 
 export type CheckInSheetParticipant = {
   id: string;
   firstNames: string;
   lastNames: string;
   preferredName: string | null;
-  governmentId: string | null;
-  birthDate: string | null;
-  sex: string | null;
-  phone: string | null;
-  email: string | null;
   wardName: string;
   stakeName: string;
   shirtSize: string | null;
-  companyId: string | null;
   companyName: string | null;
   roomName: string | null;
   checkedInAt: string | null;
 };
 
 type ParticipantCheckInSheetProps = {
-  assignmentError?: boolean;
-  companies: { id: string; name: string }[];
-  lodgingBuildings: LodgingBuildingOverview[];
   participant: CheckInSheetParticipant;
   returnPath: "/dashboard/check-in/scan" | "/dashboard/check-in/code";
   saved?: boolean;
@@ -65,56 +43,46 @@ function getInitials(firstNames: string, lastNames: string) {
   return `${firstNames.charAt(0)}${lastNames.charAt(0)}`.toUpperCase();
 }
 
-function CheckInSubmitButton({
-  checkedIn,
-  saved,
-}: {
-  checkedIn: boolean;
-  saved: boolean;
-}) {
+function DetailItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+      <dd className="truncate text-sm font-medium">{value}</dd>
+    </div>
+  );
+}
+
+function CheckInSubmitButton({ confirmed }: { confirmed: boolean }) {
   const { pending } = useFormStatus();
 
   return (
-    <Button type="submit" size="lg" disabled={pending || saved}>
+    <Button
+      type="submit"
+      variant="success"
+      size="xl"
+      className="w-full"
+      disabled={pending || confirmed}
+    >
       {pending ? (
         <Spinner data-icon="inline-start" />
       ) : (
-        <HugeiconsIcon
-          icon={CheckmarkCircle02Icon}
-          data-icon="inline-start"
-        />
+        <HugeiconsIcon icon={CheckmarkCircle02Icon} data-icon="inline-start" />
       )}
-      {saved
-        ? "Llegada confirmada"
-        : pending
-          ? "Guardando…"
-          : checkedIn
-            ? "Guardar cambios"
-            : "Confirmar llegada"}
+      {confirmed ? "Llegó" : pending ? "Registrando llegada…" : "Ya llegó"}
     </Button>
   );
 }
 
 export function ParticipantCheckInSheet({
-  assignmentError = false,
-  companies,
-  lodgingBuildings,
   participant,
   returnPath,
   saved = false,
 }: ParticipantCheckInSheetProps) {
   const router = useRouter();
-  const [open, setOpen] = useState(true);
-  const checkedIn = Boolean(participant.checkedInAt);
+  const [open, setOpen] = useState(!saved);
+  const confirmed = saved || Boolean(participant.checkedInAt);
   const action = completeParticipantCheckInFromSheet.bind(null, returnPath);
-
-  useEffect(() => {
-    if (assignmentError) {
-      toast.error(
-        "No se pudo guardar la asignación. Verifica la compañía, el sexo y los cupos disponibles.",
-      );
-    }
-  }, [assignmentError]);
+  const preferredName = participant.preferredName?.trim();
 
   useEffect(() => {
     if (!saved) {
@@ -125,42 +93,44 @@ export function ParticipantCheckInSheet({
     const prefersReducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
+
+    const celebrationTimer = window.setTimeout(
+      () => {
+        if (canceled || prefersReducedMotion) {
+          return;
+        }
+
+        void import("canvas-confetti")
+          .then(({ default: confetti }) => {
+            if (!canceled) {
+              void confetti({
+                particleCount: 90,
+                spread: 70,
+                startVelocity: 32,
+                ticks: 150,
+                origin: { x: 0.5, y: 0.68 },
+                disableForReducedMotion: true,
+              });
+            }
+          })
+          .catch(() => undefined);
+      },
+      prefersReducedMotion ? 0 : 150,
+    );
     const resetTimer = window.setTimeout(
       () => {
         if (canceled) {
           return;
         }
 
-        setOpen(false);
         router.replace(returnPath, { scroll: false });
       },
       prefersReducedMotion ? 350 : 1300,
     );
 
-    void import("canvas-confetti")
-      .then(({ default: confetti }) => {
-        if (canceled) {
-          return;
-        }
-
-        const sheetWidth = Math.min(window.innerWidth, 576);
-
-        void confetti({
-          particleCount: 90,
-          spread: 70,
-          startVelocity: 32,
-          ticks: 150,
-          origin: {
-            x: 1 - sheetWidth / (window.innerWidth * 2),
-            y: 0.75,
-          },
-          disableForReducedMotion: true,
-        });
-      })
-      .catch(() => undefined);
-
     return () => {
       canceled = true;
+      window.clearTimeout(celebrationTimer);
       window.clearTimeout(resetTimer);
     };
   }, [returnPath, router, saved]);
@@ -174,143 +144,96 @@ export function ParticipantCheckInSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl">
-        <SheetHeader className="border-b pr-14">
-          <div className="flex items-center gap-3">
-            <Avatar size="lg" className="size-12">
-              <AvatarFallback>
-                {getInitials(participant.firstNames, participant.lastNames)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <SheetTitle className="text-xl">
-                  {participant.firstNames} {participant.lastNames}
-                </SheetTitle>
-                <Badge variant={checkedIn ? "default" : "secondary"}>
-                  {checkedIn ? "Llegó" : "Pendiente"}
-                </Badge>
-              </div>
-              <SheetDescription className="mt-1">
-                Cédula: {participant.governmentId ?? "No registrada"}
-                {participant.preferredName
-                  ? ` · Prefiere ${participant.preferredName}`
-                  : null}
-              </SheetDescription>
-            </div>
-          </div>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
+        <DialogHeader className="pr-12">
+          <DialogTitle>Participante</DialogTitle>
+          <DialogDescription className="sr-only">
+            Revisa los datos del participante antes de confirmar su llegada.
+          </DialogDescription>
+        </DialogHeader>
 
-        <form action={action} className="flex min-h-0 flex-1 flex-col">
+        <form action={action} className="flex flex-col gap-5">
           <input type="hidden" name="participantId" value={participant.id} />
           {saved ? (
             <p className="sr-only" role="status">
-              La información del participante fue actualizada.
+              La llegada del participante fue confirmada.
             </p>
           ) : null}
 
-          <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-6 py-5">
-            <section
-              className="flex flex-col gap-3"
-              aria-labelledby="participant-data-heading"
-            >
-              <h2 id="participant-data-heading" className="font-medium">
-                Datos clave
+          <div className="flex flex-col gap-4">
+            <section className="rounded-3xl bg-muted p-5">
+              <div className="flex items-start justify-between gap-4">
+                <Avatar size="lg" className="size-20">
+                  <AvatarFallback className="bg-background">
+                    {getInitials(participant.firstNames, participant.lastNames)}
+                  </AvatarFallback>
+                </Avatar>
+                <Badge variant={confirmed ? "default" : "secondary"}>
+                  {confirmed ? "Confirmado" : "Pendiente"}
+                </Badge>
+              </div>
+              <h2 className="mt-4 text-lg font-semibold">
+                {participant.firstNames} {participant.lastNames}
               </h2>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                <div className="flex flex-col gap-1">
-                  <dt className="text-muted-foreground">Sexo</dt>
-                  <dd className="font-medium">
-                    {participant.sex ?? "No registrado"}
-                  </dd>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <dt className="text-muted-foreground">Barrio</dt>
-                  <dd className="font-medium">{participant.wardName}</dd>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <dt className="text-muted-foreground">Estaca</dt>
-                  <dd className="font-medium">{participant.stakeName}</dd>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <dt className="text-muted-foreground">Talla</dt>
-                  <dd className="font-medium">
-                    {participant.shirtSize ?? "No registrada"}
-                  </dd>
-                </div>
+              {preferredName ? (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Me gustaría que me llamen: {preferredName}
+                </p>
+              ) : null}
+            </section>
+
+            <section
+              className="rounded-xl border bg-card p-4"
+              aria-labelledby="participant-location-heading"
+            >
+              <h2 id="participant-location-heading" className="font-medium">
+                Información del participante
+              </h2>
+              <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4">
+                <DetailItem label="Barrio" value={participant.wardName} />
+                <DetailItem label="Estaca" value={participant.stakeName} />
+                <DetailItem
+                  label="Talla de la camiseta"
+                  value={participant.shirtSize ?? "No registrada"}
+                />
               </dl>
             </section>
 
-            <section className="flex flex-col gap-3" aria-labelledby="assignment-heading">
-              <div className="flex items-center justify-between gap-3">
-                <h2 id="assignment-heading" className="font-medium">
-                  Asignación
-                </h2>
-                <Badge variant="outline">Opcional</Badge>
-              </div>
-              <FieldGroup className="grid gap-4 sm:grid-cols-2">
-                <Field>
-                  <FieldLabel htmlFor="companyId">Compañía</FieldLabel>
-                  <NativeSelect
-                    id="companyId"
-                    name="companyId"
-                    defaultValue={participant.companyId ?? ""}
-                    className="w-full"
-                  >
-                    <NativeSelectOption value="">Sin asignar</NativeSelectOption>
-                    {companies.map((company) => (
-                      <NativeSelectOption key={company.id} value={company.id}>
-                        {company.name}
-                      </NativeSelectOption>
-                    ))}
-                  </NativeSelect>
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="roomName">
-                    Edificio y dormitorio
-                  </FieldLabel>
-                  <NativeSelect
-                    id="roomName"
-                    name="roomName"
-                    defaultValue={participant.roomName ?? ""}
-                    className="w-full"
-                  >
-                    <NativeSelectOption value="">Sin asignar</NativeSelectOption>
-                    {lodgingBuildings.map((building) => (
-                      <NativeSelectOptGroup
-                        key={building.id}
-                        label={`${building.name} · ${building.sex === "female" ? "Mujeres" : "Varones"}`}
-                      >
-                        {building.rooms.map((room) => (
-                          <NativeSelectOption
-                            key={room.id}
-                            value={room.name}
-                            disabled={
-                              room.availableParticipantCapacity === 0 &&
-                              participant.roomName !== room.name
-                            }
-                          >
-                            Dormitorio {room.number} · {room.assignedParticipants}
-                            /{room.participantCapacity}
-                          </NativeSelectOption>
-                        ))}
-                      </NativeSelectOptGroup>
-                    ))}
-                  </NativeSelect>
-                  <FieldDescription>
-                    Se contabiliza automáticamente en Alojamiento.
-                  </FieldDescription>
-                </Field>
-              </FieldGroup>
+            <section
+              className="rounded-xl border bg-card p-4"
+              aria-labelledby="participant-assignment-heading"
+            >
+              <h2 id="participant-assignment-heading" className="font-medium">
+                Compañía y alojamiento
+              </h2>
+              <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4">
+                <DetailItem
+                  label="Compañía"
+                  value={participant.companyName ?? "Sin compañía"}
+                />
+                <DetailItem
+                  label="Alojamiento"
+                  value={participant.roomName ?? "Sin alojamiento"}
+                />
+              </dl>
             </section>
           </div>
 
-          <SheetFooter className="border-t">
-            <CheckInSubmitButton checkedIn={checkedIn} saved={saved} />
-          </SheetFooter>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <CheckInSubmitButton confirmed={confirmed} />
+            <Button
+              type="button"
+              variant="outline"
+              size="xl"
+              className="w-full"
+              onClick={() => handleOpenChange(false)}
+            >
+              Cancelar
+            </Button>
+          </DialogFooter>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
