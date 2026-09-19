@@ -10,7 +10,6 @@ import ArrowDown02Icon from "@hugeicons/core-free-icons/ArrowDown02Icon";
 import ArrowUp02Icon from "@hugeicons/core-free-icons/ArrowUp02Icon";
 import ArrowUpDownIcon from "@hugeicons/core-free-icons/ArrowUpDownIcon";
 import Cancel01Icon from "@hugeicons/core-free-icons/Cancel01Icon";
-import MailSend02Icon from "@hugeicons/core-free-icons/MailSend02Icon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import UserEdit01Icon from "@hugeicons/core-free-icons/UserEdit01Icon";
 import UserGroup02Icon from "@hugeicons/core-free-icons/UserGroup02Icon";
@@ -44,6 +43,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFrame,
   TableHead,
   TableHeader,
   TableRow,
@@ -51,6 +51,7 @@ import {
 import { CounselorFormDialog } from "@/modules/counselors/components/counselor-form-dialog.client";
 import { CounselorForm } from "@/modules/counselors/components/counselor-form.client";
 import { DeleteCounselorButton } from "@/modules/counselors/components/delete-counselor-button.client";
+import { SendCounselorCredentialsButton } from "@/modules/counselors/components/send-counselor-credentials-button.client";
 
 type CounselorSortField = "company";
 type CounselorSort = "company_asc" | "company_desc";
@@ -130,19 +131,6 @@ function getCounselorSearchText(counselor: CounselorDirectoryItem) {
       .filter(Boolean)
       .join(" "),
   );
-}
-
-function getCredentialsMailto(counselor: CounselorDirectoryItem) {
-  if (!counselor.email) {
-    return undefined;
-  }
-
-  const params = new URLSearchParams({
-    subject: `Credenciales de acceso - ${counselor.name}`,
-    body: `Hola ${counselor.name},\n\nAquí tienes la información de acceso a Conferencia JAS 2026.\n\n`,
-  });
-
-  return `mailto:${counselor.email}?${params.toString()}`;
 }
 
 function SortableTableHead({
@@ -333,7 +321,7 @@ export function CounselorDirectory({
         </InputGroup>
       </div>
 
-      <div className="flex flex-col overflow-hidden rounded-lg border border-border/50 bg-card">
+      <TableFrame>
         {visibleCounselors.length === 0 ? (
           <Empty className="min-h-96">
             <EmptyHeader>
@@ -370,7 +358,7 @@ export function CounselorDirectory({
               <col className="w-[130px]" />
               <col className="w-[92px]" />
             </colgroup>
-            <TableHeader className="bg-muted/50">
+            <TableHeader>
               <TableRow>
                 <SortableTableHead
                   label="Compañía"
@@ -446,30 +434,7 @@ export function CounselorDirectory({
                     onClick={keepRowClosed}
                     onKeyDown={(event) => event.stopPropagation()}
                   >
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="xs"
-                      disabled={!counselor.email}
-                      aria-label={
-                        counselor.email
-                          ? `Enviar credenciales a ${counselor.name}`
-                          : `No hay email para ${counselor.name}`
-                      }
-                      onClick={() => {
-                        const mailto = getCredentialsMailto(counselor);
-                        if (mailto) {
-                          window.location.href = mailto;
-                        }
-                      }}
-                    >
-                      <HugeiconsIcon
-                        icon={MailSend02Icon}
-                        strokeWidth={2}
-                        data-icon="inline-start"
-                      />
-                      Enviar
-                    </Button>
+                    <SendCounselorCredentialsButton counselor={counselor} />
                   </TableCell>
                   <TableCell
                     className="h-9 max-h-9"
@@ -488,7 +453,7 @@ export function CounselorDirectory({
             </TableBody>
           </Table>
         )}
-      </div>
+      </TableFrame>
 
       <Sheet
         open={selectedCounselor !== null}

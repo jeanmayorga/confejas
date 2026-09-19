@@ -1,12 +1,18 @@
 "use server";
 
+import { randomInt } from "node:crypto";
+
 import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 import {
   canDeleteParticipants,
   canManageParticipants,
+  hasRole,
 } from "@/modules/auth/roles";
+import { auth } from "@/modules/auth/server/auth";
+import { user as users } from "@/modules/auth/server/schema";
 import { requireSession } from "@/modules/auth/server/session";
 import { stakes } from "@/modules/church-units/server/schema";
 import { companies } from "@/modules/companies/server/schema";
@@ -15,9 +21,11 @@ import {
   lookupEcuadorianCitizen,
   type EcuadorianCitizen,
 } from "@/modules/participants/server/ecuador-api";
+import { getResendClient, RESEND_FROM_EMAIL } from "@/lib/resend";
 import { db } from "@/server/db";
 
 import { formatCounselorName } from "../name";
+import { getCounselorCredentialsEmail } from "./credentials-email";
 import { counselors } from "./schema";
 
 export type CounselorActionResult =
@@ -202,6 +210,23 @@ function getSafeError(error: unknown) {
 function revalidateCounselorPaths() {
   revalidatePath("/dashboard/counselors");
   revalidatePath("/dashboard/companies");
+  revalidatePath("/dashboard/users");
+}
+
+function getPasswordSurname(lastNames: string | null, name: string) {
+  const fallbackSurname = name.trim().split(/\s+/).at(-1) ?? "consejero";
+  const surname = (lastNames?.trim() || fallbackSurname)
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^a-zA-Z0-9]/g, "");
+
+  return surname || "consejero";
+}
+
+function generateCounselorPassword(lastNames: string | null, name: string) {
+  const password = `${getPasswordSurname(lastNames, name)}${randomInt(1000, 10000)}`;
+
+  return password.padEnd(12, "!");
 }
 
 export async function lookupCounselorGovernmentIdAction(
@@ -272,6 +297,153 @@ export async function createCounselorAction(
     return { success: true, message: "Consejero creado correctamente." };
   } catch (error) {
     return { success: false, message: getSafeError(error) };
+  }
+}
+
+export async function sendCounselorCredentialsAction(
+  counselorId: string,
+): Promise<CounselorActionResult> {
+  try {
+    const session = await requireSession();
+
+    if (!canManageParticipants(session.user.role)) {
+      return {
+        success: false,
+        message: "No tienes permiso para enviar credenciales.",
+      };
+    }
+
+    if (!isUuid(counselorId)) {
+      return { success: false, message: "El consejero no es válido." };
+    }
+
+    const [counselor] = await db
+      .select({
+        id: counselors.id,
+        name: counselors.name,
+        lastNames: counselors.lastNames,
+        email: counselors.email,
+        companyId: counselors.companyId,
+        companyName: companies.name,
+      })
+      .from(counselors)
+      .leftJoin(companies, eq(counselors.companyId, companies.id))
+      .where(eq(counselors.id, counselorId))
+      .limit(1);
+
+    if (!counselor) {
+      return { success: false, message: "El consejero ya no existe." };
+    }
+
+    const email = counselor.email?.trim().toLocaleLowerCase() ?? "";
+    if (!email) {
+      return {
+        success: false,
+        message: "El consejero no tiene un email registrado.",
+      };
+    }
+
+    if (!counselor.companyId || !counselor.companyName) {
+      return {
+        success: false,
+        message: "Asigna una compañía antes de enviar las credenciales.",
+      };
+    }
+
+    const [existingUser] = await db
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    if (existingUser && !hasRole(existingUser.role, "counselor")) {
+      return {
+        success: false,
+        message: "Ya existe un usuario con ese email y no tiene rol de consejero.",
+      };
+    }
+
+    const password = generateCounselorPassword(
+      counselor.lastNames,
+      counselor.name,
+    );
+    const requestHeaders = await headers();
+    let userId = existingUser?.id;
+
+    if (userId) {
+      await auth.api.setUserPassword({
+        body: { userId, newPassword: password },
+        headers: requestHeaders,
+      });
+    } else {
+      await auth.api.createUser({
+        body: {
+          name: counselor.name,
+          email,
+          password,
+          role: "counselor",
+        },
+        headers: requestHeaders,
+      });
+
+      const [createdUser] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (!createdUser) {
+        return {
+          success: false,
+          message: "No se pudo encontrar el usuario recién creado.",
+        };
+      }
+
+      userId = createdUser.id;
+    }
+
+    await db
+      .update(users)
+      .set({ companyId: counselor.companyId })
+      .where(eq(users.id, userId));
+
+    const emailContent = getCounselorCredentialsEmail({
+      name: counselor.name,
+      email,
+      password,
+      companyName: counselor.companyName,
+    });
+    const { error } = await getResendClient().emails.send({
+      from: RESEND_FROM_EMAIL,
+      to: email,
+      subject: emailContent.subject,
+      html: emailContent.html,
+    });
+
+    if (error) {
+      return {
+        success: false,
+        message: "La cuenta se actualizó, pero no se pudo enviar el email.",
+      };
+    }
+
+    revalidateCounselorPaths();
+    return {
+      success: true,
+      message: "Credenciales enviadas correctamente.",
+    };
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("RESEND_API_KEY")) {
+      return {
+        success: false,
+        message: "No está configurado el servicio de email.",
+      };
+    }
+
+    return {
+      success: false,
+      message: "No se pudieron enviar las credenciales. Inténtalo nuevamente.",
+    };
   }
 }
 

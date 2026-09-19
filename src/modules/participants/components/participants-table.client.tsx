@@ -529,7 +529,7 @@ export function ParticipantsTable({
           <col className="w-[195px]" />
           <col className="w-[98px]" />
         </colgroup>
-        <TableHeader className="bg-muted/50">
+        <TableHeader>
           <TableRow>
             <SortableTableHead
               label="ID"

@@ -14,6 +14,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFrame,
   TableHead,
   TableFooter,
   TableHeader,
@@ -52,9 +53,8 @@ export function UnitsDirectory({ units }: UnitsDirectoryProps) {
             );
 
             return (
-              <section
+              <TableFrame
                 key={stake.id}
-                className="overflow-hidden rounded-xl border"
                 aria-labelledby={`stake-${stake.id}`}
               >
                 <div className="flex h-9 flex-col justify-center gap-3 border-b bg-muted/30 px-4 py-0 sm:flex-row sm:items-center sm:justify-between">
@@ -108,7 +108,7 @@ export function UnitsDirectory({ units }: UnitsDirectoryProps) {
                     </TableRow>
                   </TableFooter>
                 </Table>
-              </section>
+              </TableFrame>
             );
           })}
         </div>

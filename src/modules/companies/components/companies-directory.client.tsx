@@ -33,6 +33,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFrame,
   TableHead,
   TableHeader,
   TableRow,
@@ -200,37 +201,37 @@ function CompanyCard({
           </div>
 
           {company.counselors.length > 0 ? (
-            <Table className="mt-3 min-w-[420px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Consejero</TableHead>
-                  <TableHead>Estaca</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-              {company.counselors.map((counselor) => (
-                <TableRow
-                  key={counselor.id}
-                >
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Avatar size="sm" aria-hidden="true">
-                        <AvatarFallback className="bg-muted text-[9px] font-medium text-muted-foreground">
-                          {getCounselorInitials(counselor.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="min-w-0 break-words font-medium">
-                        {counselor.name}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {counselor.stakeName ?? "Sin estaca"}
-                  </TableCell>
-                </TableRow>
-              ))}
-              </TableBody>
-            </Table>
+            <TableFrame className="mt-3">
+              <Table className="min-w-[420px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Consejero</TableHead>
+                    <TableHead>Estaca</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {company.counselors.map((counselor) => (
+                    <TableRow key={counselor.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar size="sm" aria-hidden="true">
+                            <AvatarFallback className="bg-muted text-[9px] font-medium text-muted-foreground">
+                              {getCounselorInitials(counselor.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="min-w-0 break-words font-medium">
+                            {counselor.name}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {counselor.stakeName ?? "Sin estaca"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableFrame>
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">
               Sin consejeros asignados.
@@ -253,19 +254,20 @@ function CompanyCard({
           </div>
 
           {company.participants.length > 0 ? (
-            <Table className="mt-3 min-w-[900px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombres</TableHead>
-                  <TableHead>Edad</TableHead>
-                  <TableHead>Sexo</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Barrio</TableHead>
-                  <TableHead>Estaca</TableHead>
-                  <TableHead className="text-left">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <TableFrame className="mt-3">
+              <Table className="min-w-[900px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nombres</TableHead>
+                    <TableHead>Edad</TableHead>
+                    <TableHead>Sexo</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Barrio</TableHead>
+                    <TableHead>Estaca</TableHead>
+                    <TableHead className="text-left">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                 {company.participants.map((participant) => (
                   <TableRow key={participant.id}>
                     <TableCell className="max-w-0 overflow-hidden">
@@ -415,8 +417,9 @@ function CompanyCard({
                     </TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
-            </Table>
+                </TableBody>
+              </Table>
+            </TableFrame>
           ) : (
             <Empty className="min-h-40 p-6">
               <EmptyHeader>

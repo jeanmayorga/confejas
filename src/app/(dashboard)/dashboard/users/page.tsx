@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import {
   Table,
   TableBody,
+  TableFrame,
   TableHead,
   TableHeader,
   TableRow,
@@ -44,9 +45,9 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
         actions={<UserFormDialog companies={companies} />}
       />
 
-      <div className="flex flex-col overflow-hidden rounded-lg border border-border/50 bg-card">
+      <TableFrame>
         <Table className="min-w-[1100px]" aria-label="Usuarios autorizados">
-          <TableHeader className="bg-muted/50">
+          <TableHeader>
             <TableRow>
               <TableHead>Nombre</TableHead>
               <TableHead>Email</TableHead>
@@ -81,7 +82,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
             />
           </div>
         ) : null}
-      </div>
+      </TableFrame>
     </div>
   );
 }

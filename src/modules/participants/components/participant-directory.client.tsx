@@ -38,6 +38,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFrame,
   TableHead,
   TableHeader,
   TableRow,
@@ -123,7 +124,7 @@ function getDirectoryQueryString(queryState: {
 function ParticipantDirectoryLoading() {
   return (
     <Table className="min-w-[980px]" aria-label="Cargando participantes">
-      <TableHeader className="bg-muted/50">
+      <TableHeader>
         <TableRow>
           <TableHead className="w-16">ID</TableHead>
           <TableHead className="min-w-28">Estado</TableHead>
@@ -329,7 +330,7 @@ export function ParticipantDirectory({
         onQueryStateChange={updateQueryState}
       />
 
-      <div className="flex flex-col overflow-hidden rounded-lg border border-border/50 bg-card">
+      <TableFrame>
         <div className="flex-1">
           {participantsQuery.isPending ? (
             <ParticipantDirectoryLoading />
@@ -412,7 +413,7 @@ export function ParticipantDirectory({
             </div>
           )}
         </div>
-      </div>
+      </TableFrame>
 
       <Sheet
         open={isCreateOpen}
