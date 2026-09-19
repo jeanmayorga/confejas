@@ -15,11 +15,17 @@ import { requireParticipantManagementAccess } from "@/modules/auth/server/sessio
 import { CompaniesDirectory } from "@/modules/companies/components/companies-directory.client";
 import { CompanyDistributionDialog } from "@/modules/companies/components/company-distribution-dialog.client";
 import { CompanyFormDialog } from "@/modules/companies/components/company-form-dialog.client";
-import { listCompanies } from "@/modules/companies/server/queries";
+import {
+  listCompanies,
+  listUnassignedParticipants,
+} from "@/modules/companies/server/queries";
 
 export default async function CompaniesPage() {
   const session = await requireParticipantManagementAccess();
-  const companies = await listCompanies();
+  const [companies, unassignedParticipants] = await Promise.all([
+    listCompanies(),
+    listUnassignedParticipants(),
+  ]);
   const canDelete = canDeleteParticipants(session.user.role);
 
   return (
@@ -53,7 +59,11 @@ export default async function CompaniesPage() {
           </CardContent>
         </Card>
       ) : (
-        <CompaniesDirectory companies={companies} canDelete={canDelete} />
+        <CompaniesDirectory
+          companies={companies}
+          unassignedParticipants={unassignedParticipants}
+          canDelete={canDelete}
+        />
       )}
     </div>
   );

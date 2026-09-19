@@ -67,6 +67,7 @@ export type CompanyDirectoryItem = CompanyListItem;
 
 type CompaniesDirectoryProps = {
   companies: CompanyDirectoryItem[];
+  unassignedParticipants: CompanyParticipant[];
   canDelete: boolean;
 };
 
@@ -110,6 +111,7 @@ function getParticipantSexLabel(value: string | null) {
 
 export function CompaniesDirectory({
   companies,
+  unassignedParticipants,
   canDelete,
 }: CompaniesDirectoryProps) {
   if (companies.length === 0) {
@@ -133,17 +135,94 @@ export function CompaniesDirectory({
 
   return (
     <CompanyParticipantManagement companies={companies} canDelete={canDelete}>
-      <div className="flex flex-col gap-5">
-        {companies.map((company, index) => (
-          <CompanyCard
-            key={company.id}
-            company={company}
-            position={index + 1}
-            canDelete={canDelete}
-          />
-        ))}
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="flex min-w-0 flex-col gap-5">
+          {companies.map((company, index) => (
+            <CompanyCard
+              key={company.id}
+              company={company}
+              position={index + 1}
+              canDelete={canDelete}
+            />
+          ))}
+        </div>
+        <UnassignedParticipantsCard participants={unassignedParticipants} />
       </div>
     </CompanyParticipantManagement>
+  );
+}
+
+function UnassignedParticipantsCard({
+  participants,
+}: {
+  participants: CompanyParticipant[];
+}) {
+  const titleId = "unassigned-participants-title";
+
+  return (
+    <aside className="xl:sticky xl:top-6" aria-labelledby={titleId}>
+      <Card>
+        <CardHeader className="border-b">
+          <CardTitle id={titleId} className="text-base">
+            Participantes sin compañía
+          </CardTitle>
+          <CardDescription>
+            {participants.length === 1
+              ? "1 participante pendiente de asignación."
+              : `${participants.length.toLocaleString("es-EC")} participantes pendientes de asignación.`}
+          </CardDescription>
+          <CardAction>
+            <Badge variant={participants.length > 0 ? "secondary" : "outline"}>
+              {participants.length.toLocaleString("es-EC")}
+            </Badge>
+          </CardAction>
+        </CardHeader>
+
+        {participants.length > 0 ? (
+          <CardContent className="max-h-[calc(100dvh-9rem)] overflow-y-auto p-0">
+            <ul aria-label="Participantes sin compañía">
+              {participants.map((participant) => (
+                <li
+                  key={participant.id}
+                  className="flex items-center gap-2 border-b px-4 py-2.5 last:border-b-0"
+                >
+                  <Avatar size="sm" aria-hidden="true">
+                    <AvatarFallback
+                      className={cn(
+                        "!text-[9px] font-medium",
+                        participantStatusClassNames[participant.status],
+                      )}
+                    >
+                      {getParticipantInitials(
+                        participant.firstNames,
+                        participant.lastNames,
+                      )}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {getParticipantName(participant)}
+                      {participant.preferredName ? (
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          ({participant.preferredName})
+                        </span>
+                      ) : null}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {participant.wardName} · {participant.stakeName}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        ) : (
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            Todos los participantes tienen compañía.
+          </CardContent>
+        )}
+      </Card>
+    </aside>
   );
 }
 
