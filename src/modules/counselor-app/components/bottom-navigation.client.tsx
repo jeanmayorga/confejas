@@ -50,17 +50,24 @@ export function CounselorBottomNavigation() {
               href={item.href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-2 text-[11px] font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-                isActive &&
-                  "bg-primary text-primary-foreground shadow-sm hover:bg-primary hover:text-primary-foreground",
+                "group flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-2 text-[11px] font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+                isActive && "text-foreground",
               )}
             >
-              <HugeiconsIcon
-                icon={item.icon}
-                strokeWidth={isActive ? 2.2 : 1.8}
-                className="size-5"
-                aria-hidden
-              />
+              <span
+                className={cn(
+                  "flex h-8 min-w-14 items-center justify-center rounded-full px-3 transition-colors group-hover:text-foreground",
+                  isActive &&
+                    "bg-primary text-primary-foreground group-hover:text-primary-foreground",
+                )}
+              >
+                <HugeiconsIcon
+                  icon={item.icon}
+                  strokeWidth={isActive ? 2.2 : 1.8}
+                  className="size-5"
+                  aria-hidden
+                />
+              </span>
               <span className="truncate">{item.label}</span>
             </Link>
           );
