@@ -148,17 +148,12 @@ function UnassignedParticipantsCard({
   const titleId = "unassigned-participants-title";
 
   return (
-    <aside className="xl:sticky xl:top-6" aria-labelledby={titleId}>
+    <aside className="self-start xl:sticky xl:top-6" aria-labelledby={titleId}>
       <Card className="gap-0 pb-3 pt-2">
         <CardHeader className="border-b !pb-0">
-          <CardTitle id={titleId} className="text-base">
+          <CardTitle id={titleId} className="text-center text-base">
             Participantes
           </CardTitle>
-          <CardAction>
-            <Badge variant={participants.length > 0 ? "secondary" : "outline"}>
-              {participants.length.toLocaleString("es-EC")}
-            </Badge>
-          </CardAction>
         </CardHeader>
 
         <CardContent className="border-b py-3">
