@@ -28,10 +28,14 @@ import { deleteCounselorAction } from "@/modules/counselors/server/actions";
 
 type DeleteCounselorButtonProps = {
   counselor: { id: string; name: string };
+  showLabel?: boolean;
+  onDeleted?: () => void;
 };
 
 export function DeleteCounselorButton({
   counselor,
+  showLabel = false,
+  onDeleted,
 }: DeleteCounselorButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -49,6 +53,7 @@ export function DeleteCounselorButton({
 
       toast.success(result.message);
       setOpen(false);
+      onDeleted?.();
       router.refresh();
     });
   }
@@ -68,12 +73,13 @@ export function DeleteCounselorButton({
               render={
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="icon-md"
+                  variant={showLabel ? "outline" : "ghost"}
+                  size={showLabel ? "sm" : "icon-md"}
                   className="text-destructive"
                   aria-label={`Eliminar ${counselor.name}`}
                 >
                   <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+                  {showLabel ? "Eliminar" : null}
                 </Button>
               }
             />

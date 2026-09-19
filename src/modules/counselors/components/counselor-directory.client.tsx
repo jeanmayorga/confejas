@@ -11,6 +11,7 @@ import ArrowUp02Icon from "@hugeicons/core-free-icons/ArrowUp02Icon";
 import ArrowUpDownIcon from "@hugeicons/core-free-icons/ArrowUpDownIcon";
 import Cancel01Icon from "@hugeicons/core-free-icons/Cancel01Icon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
+import UserEdit01Icon from "@hugeicons/core-free-icons/UserEdit01Icon";
 import UserGroup02Icon from "@hugeicons/core-free-icons/UserGroup02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -47,6 +48,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CounselorFormDialog } from "@/modules/counselors/components/counselor-form-dialog.client";
+import { CounselorForm } from "@/modules/counselors/components/counselor-form.client";
 import { DeleteCounselorButton } from "@/modules/counselors/components/delete-counselor-button.client";
 
 type CounselorSortField = "company";
@@ -70,6 +72,7 @@ type CounselorDirectoryProps = {
   counselors: CounselorDirectoryItem[];
   companies: { id: string; name: string }[];
   stakes: { id: number; name: string }[];
+  canManage: boolean;
   canDelete: boolean;
 };
 
@@ -181,12 +184,16 @@ export function CounselorDirectory({
   counselors,
   companies,
   stakes,
+  canManage,
   canDelete,
 }: CounselorDirectoryProps) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<CounselorSort>("company_asc");
   const [selectedCounselor, setSelectedCounselor] =
     useState<CounselorDirectoryItem | null>(null);
+  const [counselorSheetMode, setCounselorSheetMode] = useState<"view" | "edit">(
+    "view",
+  );
   const [selectedCompany, setSelectedCompany] =
     useState<CounselorCompany | null>(null);
   const normalizedSearch = normalizeSearch(search);
@@ -231,10 +238,16 @@ export function CounselorDirectory({
 
   function openCounselor(counselor: CounselorDirectoryItem) {
     setSelectedCounselor(counselor);
+    setCounselorSheetMode("view");
+  }
+
+  function openCounselorEdit() {
+    setCounselorSheetMode("edit");
   }
 
   function closeCounselorSheet() {
     setSelectedCounselor(null);
+    setCounselorSheetMode("view");
   }
 
   function openCompany(company: CounselorCompany) {
@@ -461,30 +474,82 @@ export function CounselorDirectory({
       >
         <SheetContent
           side="right"
-          className="data-[side=right]:w-full data-[side=right]:sm:max-w-lg"
+          className={
+            counselorSheetMode === "edit"
+              ? "data-[side=right]:w-full data-[side=right]:sm:max-w-2xl"
+              : "data-[side=right]:w-full data-[side=right]:sm:max-w-lg"
+          }
         >
-          {selectedCounselor ? (
+          <SheetHeader className="justify-center border-b py-4 pr-16">
+            <SheetTitle>
+              {counselorSheetMode === "edit"
+                ? "Editar consejero"
+                : "Consejero"}
+            </SheetTitle>
+          </SheetHeader>
+
+          {selectedCounselor && counselorSheetMode === "edit" ? (
+            <div className="flex-1 overflow-y-auto px-6 pb-6 pt-6">
+              <CounselorForm
+                counselor={selectedCounselor}
+                companies={companies}
+                stakes={stakes}
+                onCancel={() => setCounselorSheetMode("view")}
+                onSuccess={closeCounselorSheet}
+              />
+            </div>
+          ) : selectedCounselor ? (
             <>
-              <SheetHeader className="border-b pr-16">
-                <div className="flex items-center gap-3">
-                  <Avatar className="size-12" aria-hidden="true">
-                    <AvatarFallback className="font-medium">
+              <SheetTitle className="sr-only">{selectedCounselor.name}</SheetTitle>
+              <SheetDescription className="sr-only">
+                Detalle del consejero
+              </SheetDescription>
+
+              <div className="flex-1 overflow-y-auto px-6 pb-6">
+                <section className="mt-6 rounded-2xl bg-muted p-5">
+                  <Avatar
+                    size="lg"
+                    className="size-14 bg-background after:border-0"
+                    aria-hidden="true"
+                  >
+                    <AvatarFallback className="bg-background font-medium">
                       {getCounselorInitials(selectedCounselor)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <SheetTitle className="truncate text-xl">
-                      {selectedCounselor.name}
-                    </SheetTitle>
-                    <SheetDescription>
-                      Información del consejero
-                    </SheetDescription>
-                  </div>
-                </div>
-              </SheetHeader>
+                  <h2 className="mt-4 font-heading text-xl font-medium text-foreground">
+                    {selectedCounselor.name}
+                  </h2>
+                  {canManage || canDelete ? (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {canManage ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={openCounselorEdit}
+                        >
+                          <HugeiconsIcon
+                            icon={UserEdit01Icon}
+                            data-icon="inline-start"
+                          />
+                          Editar
+                        </Button>
+                      ) : null}
+                      {canDelete ? (
+                        <DeleteCounselorButton
+                          counselor={selectedCounselor}
+                          showLabel
+                          onDeleted={closeCounselorSheet}
+                        />
+                      ) : null}
+                    </div>
+                  ) : null}
+                </section>
 
-              <div className="flex-1 overflow-y-auto px-6 pb-6">
-                <section className="py-5" aria-labelledby="counselor-assignment-heading">
+                <section
+                  className="py-5"
+                  aria-labelledby="counselor-assignment-heading"
+                >
                   <div className="flex items-center justify-between gap-3">
                     <h2
                       id="counselor-assignment-heading"
@@ -506,7 +571,10 @@ export function CounselorDirectory({
                   </dl>
                 </section>
 
-                <section className="border-t py-5" aria-labelledby="counselor-contact-heading">
+                <section
+                  className="border-t py-5"
+                  aria-labelledby="counselor-contact-heading"
+                >
                   <h2
                     id="counselor-contact-heading"
                     className="text-sm font-semibold"
@@ -521,7 +589,9 @@ export function CounselorDirectory({
                       </dd>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <dt className="text-muted-foreground">Correo electrónico</dt>
+                      <dt className="text-muted-foreground">
+                        Correo electrónico
+                      </dt>
                       <dd className="font-medium">
                         {selectedCounselor.email ? (
                           <a
