@@ -241,7 +241,7 @@ function CompanyCard({
         <CardTitle id={titleId} className="text-lg">
           {companyLabel}
         </CardTitle>
-        <CardAction className="self-center">
+        <CardAction className="row-span-1 self-center">
           {canDelete ? (
             <DeleteCompanyButton
               company={company}
