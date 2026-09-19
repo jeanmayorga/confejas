@@ -135,7 +135,7 @@ export function CompaniesDirectory({
 
   return (
     <CompanyParticipantManagement companies={companies} canDelete={canDelete}>
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="flex min-w-0 flex-col gap-5">
           {companies.map((company, index) => (
             <CompanyCard
