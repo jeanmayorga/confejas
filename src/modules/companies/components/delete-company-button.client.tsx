@@ -37,6 +37,9 @@ type DeleteCompanyButtonProps = {
   };
 };
 
+const deleteButtonClassName =
+  "border-destructive/40 text-destructive hover:border-destructive hover:bg-destructive hover:text-destructive-foreground";
+
 export function DeleteCompanyButton({
   company,
   label,
@@ -67,22 +70,45 @@ export function DeleteCompanyButton({
 
   if (hasAssignments) {
     return (
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-xs"
-              disabled
-              aria-label={`No se puede eliminar ${companyLabel} porque tiene asignaciones`}
-            >
-              <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
-            </Button>
-          }
-        />
-        <TooltipContent>Primero reasigna sus participantes y consejeros</TooltipContent>
-      </Tooltip>
+      <AlertDialog>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <AlertDialogTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    className={deleteButtonClassName}
+                    disabled={disabled}
+                    aria-label={`No se puede eliminar ${companyLabel} porque tiene asignaciones`}
+                  >
+                    <HugeiconsIcon
+                      icon={Delete02Icon}
+                      strokeWidth={2}
+                      data-icon="inline-start"
+                    />
+                    Eliminar
+                  </Button>
+                }
+              />
+            }
+          />
+          <TooltipContent>Eliminar compañía</TooltipContent>
+        </Tooltip>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>No se puede eliminar esta compañía</AlertDialogTitle>
+            <AlertDialogDescription>
+              Primero reasigna sus participantes y consejeros a otra compañía.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Entendido</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     );
   }
 
@@ -102,12 +128,17 @@ export function DeleteCompanyButton({
                 <Button
                   type="button"
                   variant="outline"
-                  size="icon-xs"
-                  className="text-destructive"
+                  size="xs"
+                  className={deleteButtonClassName}
                   disabled={disabled}
                   aria-label={`Eliminar ${companyLabel}`}
                 >
-                  <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+                  <HugeiconsIcon
+                    icon={Delete02Icon}
+                    strokeWidth={2}
+                    data-icon="inline-start"
+                  />
+                  Eliminar
                 </Button>
               }
             />
