@@ -51,19 +51,6 @@ export type ParticipantLookupActionResult =
   | { success: true; participantId: string }
   | { success: false; message: string };
 
-export type QrCheckInParticipant = {
-  id: string;
-  firstNames: string;
-  lastNames: string;
-  companyName: string | null;
-  roomName: string | null;
-  checkedInAt: string | null;
-};
-
-export type ParticipantQrLookupActionResult =
-  | { success: true; participant: QrCheckInParticipant }
-  | { success: false; message: string };
-
 export type EcuadorianCitizenLookupActionResult =
   | { success: true; data: EcuadorianCitizen }
   | { success: false; message: string };
@@ -310,7 +297,7 @@ export async function findParticipantForCheckInAction(
 
 export async function findParticipantForQrCheckInAction(
   value: string,
-): Promise<ParticipantQrLookupActionResult> {
+): Promise<ParticipantLookupActionResult> {
   const session = await requireSession();
 
   if (!canCheckInParticipants(session.user.role)) {
@@ -342,13 +329,7 @@ export async function findParticipantForQrCheckInAction(
     };
   }
 
-  return {
-    success: true,
-    participant: {
-      ...participant,
-      checkedInAt: participant.checkedInAt?.toISOString() ?? null,
-    },
-  };
+  return { success: true, participantId: participant.id };
 }
 
 export async function getParticipantEditDataAction(participantId: string) {
