@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, count, eq, ilike, isNull, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
 import { stakes, wards } from "@/modules/church-units/server/schema";
 import { companies } from "@/modules/companies/server/schema";
@@ -9,11 +9,14 @@ import { db } from "@/server/db";
 import { participantMedicalProfiles, participants } from "./schema";
 import { normalizeGovernmentId } from "../identity";
 import { isParticipantId, parseParticipantQrValue } from "../qr";
+import {
+  DEFAULT_PARTICIPANT_SORT,
+  normalizeParticipantSort,
+  type ParticipantSort,
+} from "../sorting";
 import { isParticipantStatus, type ParticipantStatus } from "../status";
 
-export const PARTICIPANTS_PAGE_SIZE = 25;
-
-export type ParticipantSort = "name" | "age_asc" | "age_desc";
+export const PARTICIPANTS_PAGE_SIZE = 30;
 
 type ListParticipantsOptions = {
   page: number;
@@ -42,15 +45,14 @@ function getSafePositiveInteger(value: number | undefined) {
 
 function getParticipantDirectoryState({
   search = "",
-  sort = "name",
+  sort = DEFAULT_PARTICIPANT_SORT,
   companyId = "",
   wardId,
   stakeId,
   status = "",
 }: ParticipantDirectoryOptions) {
   const safeSearch = search.trim().slice(0, 100);
-  const safeSort: ParticipantSort =
-    sort === "age_asc" || sort === "age_desc" ? sort : "name";
+  const safeSort: ParticipantSort = normalizeParticipantSort(sort);
   const safeCompanyId =
     companyId === "unassigned" || isUuid(companyId) ? companyId : "";
   const safeWardId = getSafePositiveInteger(wardId);
@@ -93,26 +95,84 @@ function getParticipantDirectoryState({
     stakeFilter,
     statusFilter,
   );
+  const participantFirstNamesSort = sql`lower(translate(${participants.firstNames}, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN'))`;
+  const participantLastNamesSort = sql`lower(translate(${participants.lastNames}, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN'))`;
   const sortColumns =
-    safeSort === "age_asc"
+    safeSort === "id_asc"
       ? [
-          sql`${participants.birthDate} desc nulls last`,
-          asc(participants.firstNames),
-          asc(participants.lastNames),
+          sql`${participants.sourceRecordId} asc nulls last`,
           asc(participants.id),
         ]
-      : safeSort === "age_desc"
+      : safeSort === "id_desc"
         ? [
-            sql`${participants.birthDate} asc nulls last`,
-            asc(participants.firstNames),
-            asc(participants.lastNames),
+            sql`${participants.sourceRecordId} desc nulls last`,
             asc(participants.id),
           ]
-        : [
-            asc(participants.firstNames),
-            asc(participants.lastNames),
-            asc(participants.id),
-          ];
+        : safeSort === "status_asc"
+          ? [asc(participants.status), asc(participants.id)]
+          : safeSort === "status_desc"
+            ? [desc(participants.status), asc(participants.id)]
+            : safeSort === "participant_desc"
+              ? [
+                  desc(participantFirstNamesSort),
+                  desc(participantLastNamesSort),
+                  asc(participants.id),
+                ]
+              : safeSort === "age_asc"
+                ? [
+                    sql`${participants.birthDate} desc nulls last`,
+                    asc(participantFirstNamesSort),
+                    asc(participantLastNamesSort),
+                    asc(participants.id),
+                  ]
+                : safeSort === "age_desc"
+                  ? [
+                      sql`${participants.birthDate} asc nulls last`,
+                      asc(participantFirstNamesSort),
+                      asc(participantLastNamesSort),
+                      asc(participants.id),
+                    ]
+                  : safeSort === "company_asc"
+                    ? [
+                        sql`${companies.name} asc nulls last`,
+                        asc(participantFirstNamesSort),
+                        asc(participantLastNamesSort),
+                        asc(participants.id),
+                      ]
+                    : safeSort === "company_desc"
+                      ? [
+                          sql`${companies.name} desc nulls last`,
+                          asc(participantFirstNamesSort),
+                          asc(participantLastNamesSort),
+                          asc(participants.id),
+                        ]
+                      : safeSort === "room_asc"
+                        ? [
+                            sql`${participants.roomName} asc nulls last`,
+                            asc(participantFirstNamesSort),
+                            asc(participantLastNamesSort),
+                            asc(participants.id),
+                          ]
+                        : safeSort === "room_desc"
+                          ? [
+                              sql`${participants.roomName} desc nulls last`,
+                              asc(participantFirstNamesSort),
+                              asc(participantLastNamesSort),
+                              asc(participants.id),
+                            ]
+                          : safeSort === "stake_asc"
+                            ? [asc(stakes.name), asc(participants.id)]
+                            : safeSort === "stake_desc"
+                              ? [desc(stakes.name), asc(participants.id)]
+                              : safeSort === "ward_asc"
+                                ? [asc(wards.name), asc(participants.id)]
+                                : safeSort === "ward_desc"
+                                  ? [desc(wards.name), asc(participants.id)]
+                                  : [
+                                      asc(participantFirstNamesSort),
+                                      asc(participantLastNamesSort),
+                                      asc(participants.id),
+                                    ];
 
   return {
     filters,
@@ -161,12 +221,23 @@ export async function listParticipants({
         companyId: participants.companyId,
         companyName: companies.name,
         roomName: participants.roomName,
+        bloodType: participantMedicalProfiles.bloodType,
+        chronicCondition: participantMedicalProfiles.chronicCondition,
+        medicalTreatment: participantMedicalProfiles.medicalTreatment,
+        insuranceProvider: participantMedicalProfiles.insuranceProvider,
+        emergencyContactName: participantMedicalProfiles.emergencyContactName,
+        emergencyContactPhone: participantMedicalProfiles.emergencyContactPhone,
+        medicalNotes: participantMedicalProfiles.medicalNotes,
         checkedInAt: participants.checkedInAt,
       })
       .from(participants)
       .innerJoin(wards, eq(participants.wardId, wards.id))
       .innerJoin(stakes, eq(wards.stakeId, stakes.id))
       .leftJoin(companies, eq(participants.companyId, companies.id))
+      .leftJoin(
+        participantMedicalProfiles,
+        eq(participants.id, participantMedicalProfiles.participantId),
+      )
       .where(directory.filters)
       .orderBy(...directory.sortColumns)
       .limit(PARTICIPANTS_PAGE_SIZE)
@@ -294,31 +365,42 @@ export async function getParticipantById(participantId: string) {
   const [participant] = await db
     .select({
       id: participants.id,
+      sourceRecordId: participants.sourceRecordId,
       firstNames: participants.firstNames,
       lastNames: participants.lastNames,
       preferredName: participants.preferredName,
       governmentId: participants.governmentId,
       birthDate: participants.birthDate,
+      age: sql<number | null>`extract(year from age(current_date, ${participants.birthDate}))::integer`,
       sex: participants.sex,
       phone: participants.phone,
       email: participants.email,
       shirtSize: participants.shirtSize,
       isChurchMember: participants.isChurchMember,
+      status: participants.status,
       wardId: participants.wardId,
+      wardName: wards.name,
+      stakeName: stakes.name,
       companyId: participants.companyId,
+      companyName: companies.name,
       bloodType: participantMedicalProfiles.bloodType,
       chronicCondition: participantMedicalProfiles.chronicCondition,
       medicalTreatment: participantMedicalProfiles.medicalTreatment,
       insuranceProvider: participantMedicalProfiles.insuranceProvider,
       emergencyContactName: participantMedicalProfiles.emergencyContactName,
       emergencyContactPhone: participantMedicalProfiles.emergencyContactPhone,
+      medicalNotes: participantMedicalProfiles.medicalNotes,
       roomName: participants.roomName,
+      checkedInAt: participants.checkedInAt,
     })
     .from(participants)
     .leftJoin(
       participantMedicalProfiles,
       eq(participants.id, participantMedicalProfiles.participantId),
     )
+    .innerJoin(wards, eq(participants.wardId, wards.id))
+    .innerJoin(stakes, eq(wards.stakeId, stakes.id))
+    .leftJoin(companies, eq(participants.companyId, companies.id))
     .where(eq(participants.id, participantId))
     .limit(1);
 

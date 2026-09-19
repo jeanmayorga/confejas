@@ -7,7 +7,7 @@ import {
   useTransition,
 } from "react";
 import Cancel01Icon from "@hugeicons/core-free-icons/Cancel01Icon";
-import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
+import { parseAsString, useQueryStates } from "nuqs";
 import FilterHorizontalIcon from "@hugeicons/core-free-icons/FilterHorizontalIcon";
 import LiveStreaming02Icon from "@hugeicons/core-free-icons/LiveStreaming02Icon";
 import Pdf02Icon from "@hugeicons/core-free-icons/Pdf02Icon";
@@ -45,8 +45,11 @@ import {
   PARTICIPANT_STATUS_OPTIONS,
   type ParticipantStatus,
 } from "@/modules/participants/status";
-
-type ParticipantSort = "name" | "age_asc" | "age_desc";
+import {
+  DEFAULT_PARTICIPANT_SORT,
+  normalizeParticipantSort,
+  type ParticipantSort,
+} from "@/modules/participants/sorting";
 
 type ParticipantDirectoryFilterValues = {
   search: string;
@@ -78,7 +81,7 @@ function getDirectoryParams(filters: ParticipantDirectoryFilterValues) {
     params.set("query", filters.search);
   }
 
-  if (filters.sort !== "name") {
+  if (filters.sort !== DEFAULT_PARTICIPANT_SORT) {
     params.set("sort", filters.sort);
   }
 
@@ -116,12 +119,11 @@ export function ParticipantDirectoryFilters({
   const [queryState, setQueryState] = useQueryStates(
     {
       query: parseAsString.withDefault(""),
-      sort: parseAsString.withDefault("name"),
+      sort: parseAsString.withDefault(DEFAULT_PARTICIPANT_SORT),
       company: parseAsString.withDefault(""),
       ward: parseAsString.withDefault(""),
       stake: parseAsString.withDefault(""),
       status: parseAsString.withDefault("registered"),
-      page: parseAsInteger.withDefault(1),
     },
     {
       history: "replace",
@@ -140,7 +142,7 @@ export function ParticipantDirectoryFilters({
     }
 
     const timeoutId = window.setTimeout(() => {
-      void setQueryState({ query: normalizedQuery || null, page: 1 });
+      void setQueryState({ query: normalizedQuery || null });
     }, 350);
 
     return () => window.clearTimeout(timeoutId);
@@ -148,10 +150,7 @@ export function ParticipantDirectoryFilters({
 
   const selectedFilters: ParticipantDirectoryFilterValues = {
     search: queryState.query,
-    sort:
-      queryState.sort === "age_asc" || queryState.sort === "age_desc"
-        ? queryState.sort
-        : "name",
+    sort: normalizeParticipantSort(queryState.sort),
     companyId: queryState.company,
     wardId: queryState.ward,
     stakeId: queryState.stake,
@@ -173,29 +172,28 @@ export function ParticipantDirectoryFilters({
     const nextValue = value || null;
 
     if (field === "sort") {
-      void setQueryState({ sort: value, page: 1 });
+      void setQueryState({ sort: value });
     } else if (field === "companyId") {
-      void setQueryState({ company: nextValue, page: 1 });
+      void setQueryState({ company: nextValue });
     } else if (field === "wardId") {
-      void setQueryState({ ward: nextValue, page: 1 });
+      void setQueryState({ ward: nextValue });
     } else if (field === "stakeId") {
-      void setQueryState({ stake: nextValue, page: 1 });
+      void setQueryState({ stake: nextValue });
     } else {
       void setQueryState({
         status: value === "all" ? "all" : nextValue,
-        page: 1,
       });
     }
   }
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void setQueryState({ query: searchDraft.trim() || null, page: 1 });
+    void setQueryState({ query: searchDraft.trim() || null });
   }
 
   function clearSearch() {
     setSearchDraft("");
-    void setQueryState({ query: null, page: 1 });
+    void setQueryState({ query: null });
   }
 
   function clearDirectoryFilters() {
@@ -204,7 +202,6 @@ export function ParticipantDirectoryFilters({
       ward: null,
       stake: null,
       status: null,
-      page: 1,
     });
   }
 

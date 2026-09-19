@@ -1,6 +1,12 @@
 "use client";
 
-import { type FormEvent, useRef, useTransition } from "react";
+import {
+  type FormEvent,
+  type ReactNode,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import ArrowLeft02Icon from "@hugeicons/core-free-icons/ArrowLeft02Icon";
 import FloppyDiskIcon from "@hugeicons/core-free-icons/FloppyDiskIcon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
@@ -18,25 +24,44 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Field,
-  FieldDescription,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
-  NativeSelect,
-  NativeSelectOptGroup,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import type { LodgingBuildingOverview } from "@/modules/lodging/server/queries";
 import {
   createParticipantAction,
   lookupEcuadorianCitizenAction,
+  searchEcuadorianCitizensAction,
   updateParticipantAction,
 } from "@/modules/participants/server/actions";
+import { normalizeGovernmentId } from "@/modules/participants/identity";
 
 type ParticipantFormValue = {
   id: string;
@@ -59,23 +84,88 @@ type ParticipantFormValue = {
   insuranceProvider: string | null;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
+  medicalNotes: string | null;
 };
 
 type ParticipantFormProps = {
   participant?: ParticipantFormValue;
   lodgingBuildings: LodgingBuildingOverview[];
   companies: { id: string; name: string }[];
-  wards: { id: number; name: string }[];
+  wards: { id: number; name: string; stakeId: number }[];
+  stakes: { id: number; name: string }[];
   presentation?: "page" | "sheet";
   onCancel?: () => void;
   onSuccess?: () => void;
 };
 
+type FormSectionProps = {
+  presentation: "page" | "sheet";
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+  className?: string;
+  children: ReactNode;
+};
+
+type CitizenCompletionData = {
+  firstNames: string | null;
+  lastNames: string | null;
+  birthDate: string | null;
+  sex: "Masculino" | "Femenino" | null;
+};
+
+type CitizenSearchResult = {
+  id: string;
+  fullName: string | null;
+  age: number | null;
+  deathDate: string | null;
+};
+
+const SELECT_NONE_VALUE = "__none__";
+
+function FormSection({
+  presentation,
+  title,
+  description,
+  actions,
+  className,
+  children,
+}: FormSectionProps) {
+  if (presentation === "sheet") {
+    return (
+      <section className={cn("flex flex-col gap-4", className)}>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <h2 className="font-heading text-base font-medium">{title}</h2>
+            {description ? (
+              <p className="text-sm text-muted-foreground">{description}</p>
+            ) : null}
+          </div>
+          {actions}
+        </div>
+        {children}
+      </section>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className={actions ? "flex flex-row items-center justify-between gap-4" : undefined}>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <CardTitle>{title}</CardTitle>
+          {description ? <CardDescription>{description}</CardDescription> : null}
+        </div>
+        {actions}
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  );
+}
+
 export function ParticipantForm({
   participant,
-  lodgingBuildings,
-  companies,
   wards,
+  stakes,
   presentation = "page",
   onCancel,
   onSuccess,
@@ -84,59 +174,132 @@ export function ParticipantForm({
   const formRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
   const [lookupPending, startLookupTransition] = useTransition();
+  const [completeInfoOpen, setCompleteInfoOpen] = useState(false);
+  const [lookupMode, setLookupMode] = useState<"names" | "id">("names");
+  const [governmentId, setGovernmentId] = useState(participant?.governmentId ?? "");
+  const [givenNames, setGivenNames] = useState(participant?.firstNames ?? "");
+  const [familyNames, setFamilyNames] = useState(participant?.lastNames ?? "");
+  const [searchResults, setSearchResults] = useState<CitizenSearchResult[]>([]);
+  const [searchCompleted, setSearchCompleted] = useState(false);
+  const [idSearchResult, setIdSearchResult] = useState<{
+    id: string;
+    data: CitizenCompletionData;
+  } | null>(null);
+  const [sex, setSex] = useState(participant?.sex ?? SELECT_NONE_VALUE);
+  const [wardId, setWardId] = useState(
+    String(participant?.wardId ?? wards[0]?.id ?? ""),
+  );
+  const initialWard = wards.find(
+    (ward) => String(ward.id) === String(participant?.wardId ?? wards[0]?.id ?? ""),
+  );
+  const [stakeId, setStakeId] = useState(
+    String(initialWard?.stakeId ?? stakes[0]?.id ?? ""),
+  );
+  const [isChurchMember, setIsChurchMember] = useState(
+    participant?.isChurchMember == null
+      ? SELECT_NONE_VALUE
+      : String(participant.isChurchMember),
+  );
+  const [shirtSize, setShirtSize] = useState(
+    participant?.shirtSize ?? SELECT_NONE_VALUE,
+  );
+  const companyId = participant?.companyId ?? "";
+  const roomName = participant?.roomName ?? "";
   const editing = Boolean(participant);
 
-  function handleGovernmentIdLookup() {
-    const form = formRef.current;
-    const governmentIdField = form?.elements.namedItem("governmentId");
-
-    if (!(governmentIdField instanceof HTMLInputElement)) {
+  function applyCitizenData(id: string, data: CitizenCompletionData) {
+    const currentForm = formRef.current;
+    if (!currentForm) {
       return;
     }
 
+    const fieldValues = {
+      firstNames: data.firstNames,
+      lastNames: data.lastNames,
+      birthDate: data.birthDate,
+    };
+    let filledFields = 0;
+
+    for (const [name, value] of Object.entries(fieldValues)) {
+      if (!value) {
+        continue;
+      }
+
+      const field = currentForm.elements.namedItem(name);
+      if (field instanceof HTMLInputElement) {
+        field.value = value;
+        filledFields += 1;
+      }
+    }
+
+    if (data.sex) {
+      setSex(data.sex);
+      filledFields += 1;
+    }
+
+    if (filledFields === 0) {
+      toast.info("EcuadorAPI no devolvió datos para completar.");
+      return;
+    }
+
+    setGovernmentId(normalizeGovernmentId(id) ?? id);
+    setSearchResults([]);
+    setSearchCompleted(false);
+    setIdSearchResult(null);
+    setCompleteInfoOpen(false);
+    toast.success(
+      filledFields === 1
+        ? "Se completó 1 campo con EcuadorAPI."
+        : `Se completaron ${filledFields} campos con EcuadorAPI.`,
+    );
+  }
+
+  function handleLookupSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSearchResults([]);
+    setSearchCompleted(false);
+    setIdSearchResult(null);
+
     startLookupTransition(async () => {
-      const result = await lookupEcuadorianCitizenAction(governmentIdField.value);
+      if (lookupMode === "names") {
+        const result = await searchEcuadorianCitizensAction(givenNames, familyNames);
+
+        if (!result.success) {
+          toast.error(result.message);
+          return;
+        }
+
+        setSearchResults(result.data);
+        setSearchCompleted(true);
+        return;
+      }
+
+      const lookupValue = governmentId.trim();
+      const result = await lookupEcuadorianCitizenAction(lookupValue);
 
       if (!result.success) {
         toast.error(result.message);
         return;
       }
 
-      const currentForm = formRef.current;
-      if (!currentForm) {
+      setIdSearchResult({
+        id: normalizeGovernmentId(lookupValue) ?? lookupValue,
+        data: result.data,
+      });
+      setSearchCompleted(true);
+    });
+  }
+
+  function handleCompleteSearchResult(result: CitizenSearchResult) {
+    startLookupTransition(async () => {
+      const detail = await lookupEcuadorianCitizenAction(result.id);
+
+      if (!detail.success) {
+        toast.error(detail.message);
         return;
       }
 
-      const fieldValues = {
-        firstNames: result.data.firstNames,
-        lastNames: result.data.lastNames,
-        birthDate: result.data.birthDate,
-        sex: result.data.sex,
-      };
-      let filledFields = 0;
-
-      for (const [name, value] of Object.entries(fieldValues)) {
-        if (!value) {
-          continue;
-        }
-
-        const field = currentForm.elements.namedItem(name);
-        if (field instanceof HTMLInputElement || field instanceof HTMLSelectElement) {
-          field.value = value;
-          filledFields += 1;
-        }
-      }
-
-      if (filledFields === 0) {
-        toast.info("EcuadorAPI encontró la cédula, pero no devolvió datos para completar.");
-        return;
-      }
-
-      toast.success(
-        filledFields === 1
-          ? "Se completó 1 campo con EcuadorAPI."
-          : `Se completaron ${filledFields} campos con EcuadorAPI.`,
-      );
+      applyCitizenData(result.id, detail.data);
     });
   }
 
@@ -167,18 +330,70 @@ export function ParticipantForm({
   }
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-6">
-      <Card size={presentation === "sheet" ? "sm" : "default"}>
-        <CardHeader>
-          <CardTitle>Datos personales</CardTitle>
-          <CardDescription>
-            Los nombres y apellidos son los únicos campos obligatorios de esta sección.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+    <>
+      <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-6">
+        <input type="hidden" name="governmentId" value={governmentId} />
+        <input
+          type="hidden"
+          name="wardId"
+          value={wardId}
+        />
+        <input
+          type="hidden"
+          name="isChurchMember"
+          value={isChurchMember === SELECT_NONE_VALUE ? "" : isChurchMember}
+        />
+        <input
+          type="hidden"
+          name="shirtSize"
+          value={shirtSize === SELECT_NONE_VALUE ? "" : shirtSize}
+        />
+        <input
+          type="hidden"
+          name="companyId"
+          value={companyId}
+        />
+        <input
+          type="hidden"
+          name="roomName"
+          value={roomName}
+        />
+        <input
+          type="hidden"
+          name="sex"
+          value={sex === SELECT_NONE_VALUE ? "" : sex}
+        />
+        <FormSection
+          presentation={presentation}
+          title="Datos personales"
+          description="Nombres y apellidos."
+          className="rounded-2xl bg-muted p-4"
+          actions={
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={() => {
+                setLookupMode("names");
+                setSearchResults([]);
+                setIdSearchResult(null);
+                setCompleteInfoOpen(true);
+              }}
+            >
+              <HugeiconsIcon
+                icon={Search01Icon}
+                strokeWidth={2}
+                data-icon="inline-start"
+              />
+              Buscar info
+            </Button>
+          }
+        >
           <FieldGroup className="grid gap-5 md:grid-cols-2">
             <Field>
-              <FieldLabel htmlFor="firstNames">Nombres</FieldLabel>
+              <FieldLabel htmlFor="firstNames">
+                Nombres <span aria-hidden="true" className="text-destructive">*</span>
+              </FieldLabel>
               <Input
                 id="firstNames"
                 name="firstNames"
@@ -188,7 +403,9 @@ export function ParticipantForm({
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor="lastNames">Apellidos</FieldLabel>
+              <FieldLabel htmlFor="lastNames">
+                Apellidos <span aria-hidden="true" className="text-destructive">*</span>
+              </FieldLabel>
               <Input
                 id="lastNames"
                 name="lastNames"
@@ -207,43 +424,6 @@ export function ParticipantForm({
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor="governmentId">
-                Cédula o documento de identidad
-              </FieldLabel>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Input
-                  id="governmentId"
-                  name="governmentId"
-                  defaultValue={participant?.governmentId ?? ""}
-                  placeholder="Ej. 0912345678"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  maxLength={32}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={lookupPending || pending}
-                  onClick={handleGovernmentIdLookup}
-                >
-                  {lookupPending ? (
-                    <Spinner data-icon="inline-start" />
-                  ) : (
-                    <HugeiconsIcon
-                      icon={Search01Icon}
-                      strokeWidth={2}
-                      data-icon="inline-start"
-                    />
-                  )}
-                  {lookupPending ? "Consultando…" : "Consultar"}
-                </Button>
-              </div>
-              <FieldDescription>
-                Consulta una cédula ecuatoriana para completar nombres, apellidos,
-                fecha de nacimiento y sexo. El documento debe ser único.
-              </FieldDescription>
-            </Field>
-            <Field>
               <FieldLabel htmlFor="birthDate">Fecha de nacimiento</FieldLabel>
               <Input
                 id="birthDate"
@@ -254,17 +434,59 @@ export function ParticipantForm({
             </Field>
             <Field>
               <FieldLabel htmlFor="sex">Sexo</FieldLabel>
-              <NativeSelect
-                id="sex"
-                name="sex"
-                defaultValue={participant?.sex ?? ""}
-                className="w-full"
+              <Select
+                value={sex}
+                onValueChange={(value) => {
+                  if (value) setSex(value);
+                }}
               >
-                <NativeSelectOption value="">Sin especificar</NativeSelectOption>
-                <NativeSelectOption value="Masculino">Masculino</NativeSelectOption>
-                <NativeSelectOption value="Femenino">Femenino</NativeSelectOption>
-                <NativeSelectOption value="Otro">Otro</NativeSelectOption>
-              </NativeSelect>
+                <SelectTrigger
+                  id="sex"
+                  aria-label="Sexo"
+                  className="w-full border-input bg-background"
+                >
+                  <SelectValue>
+                    {sex === SELECT_NONE_VALUE ? "Sin especificar" : sex}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent align="start" alignItemWithTrigger={false}>
+                  <SelectGroup>
+                    <SelectItem value={SELECT_NONE_VALUE}>Sin especificar</SelectItem>
+                    <SelectItem value="Masculino">Masculino</SelectItem>
+                    <SelectItem value="Femenino">Femenino</SelectItem>
+                    <SelectItem value="Otro">Otro</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="shirtSize">Talla de camiseta</FieldLabel>
+              <Select
+                value={shirtSize}
+                onValueChange={(value) => {
+                  if (value) setShirtSize(value);
+                }}
+              >
+                <SelectTrigger
+                  id="shirtSize"
+                  aria-label="Talla de camiseta"
+                  className="w-full border-input bg-background"
+                >
+                  <SelectValue>
+                    {shirtSize === SELECT_NONE_VALUE ? "Sin especificar" : shirtSize}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent align="start" alignItemWithTrigger={false}>
+                  <SelectGroup>
+                    <SelectItem value={SELECT_NONE_VALUE}>Sin especificar</SelectItem>
+                    {['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'].map((size) => (
+                      <SelectItem key={size} value={size}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </Field>
             <Field>
               <FieldLabel htmlFor="phone">Celular</FieldLabel>
@@ -276,7 +498,7 @@ export function ParticipantForm({
                 maxLength={32}
               />
             </Field>
-            <Field className="md:col-span-2">
+            <Field>
               <FieldLabel htmlFor="email">Correo electrónico</FieldLabel>
               <Input
                 id="email"
@@ -287,125 +509,130 @@ export function ParticipantForm({
               />
             </Field>
           </FieldGroup>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card size={presentation === "sheet" ? "sm" : "default"}>
-        <CardHeader>
-          <CardTitle>Información del evento</CardTitle>
-          <CardDescription>Barrio, membresía y camiseta del participante.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FieldGroup className="grid gap-5 md:grid-cols-3">
+        <FormSection
+          presentation={presentation}
+          title="Conferencia"
+          description="Datos del evento."
+          className="rounded-2xl bg-muted p-4"
+        >
+          <FieldGroup className="grid gap-5 md:grid-cols-2">
             <Field>
-              <FieldLabel htmlFor="wardId">Barrio</FieldLabel>
-              <NativeSelect
-                id="wardId"
-                name="wardId"
-                defaultValue={String(participant?.wardId ?? wards[0]?.id ?? "")}
-                className="w-full"
-                required
+              <FieldLabel htmlFor="stakeId">Estaca</FieldLabel>
+              <Select
+                value={stakeId}
+                onValueChange={(value) => {
+                  if (!value) return;
+
+                  setStakeId(value);
+                  const nextWard = wards.find(
+                    (ward) => String(ward.stakeId) === value,
+                  );
+                  setWardId(nextWard ? String(nextWard.id) : "");
+                }}
               >
-                {wards.map((ward) => (
-                  <NativeSelectOption key={ward.id} value={ward.id}>
-                    {ward.name}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                <SelectTrigger
+                  id="stakeId"
+                  aria-label="Estaca"
+                  className="w-full border-input bg-background"
+                >
+                  <SelectValue>
+                    {stakes.find((stake) => String(stake.id) === stakeId)?.name ??
+                      "Selecciona una estaca"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent align="start" alignItemWithTrigger={false}>
+                  <SelectGroup>
+                    {stakes.map((stake) => (
+                      <SelectItem key={stake.id} value={String(stake.id)}>
+                        {stake.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="wardId">
+                Barrio <span aria-hidden="true" className="text-destructive">*</span>
+              </FieldLabel>
+              <Select
+                value={wardId}
+                onValueChange={(value) => {
+                  if (!value) return;
+
+                  setWardId(value);
+                  const selectedWard = wards.find(
+                    (ward) => String(ward.id) === value,
+                  );
+                  if (selectedWard) {
+                    setStakeId(String(selectedWard.stakeId));
+                  }
+                }}
+              >
+                <SelectTrigger
+                  id="wardId"
+                  aria-label="Barrio"
+                  className="w-full border-input bg-background"
+                >
+                  <SelectValue>
+                    {wards.find((ward) => String(ward.id) === wardId)?.name ??
+                      "Selecciona un barrio"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent align="start" alignItemWithTrigger={false}>
+                  <SelectGroup>
+                    {wards
+                      .filter((ward) => String(ward.stakeId) === stakeId)
+                      .map((ward) => (
+                      <SelectItem key={ward.id} value={String(ward.id)}>
+                        {ward.name}
+                      </SelectItem>
+                      ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </Field>
             <Field>
               <FieldLabel htmlFor="isChurchMember">Miembro de la Iglesia</FieldLabel>
-              <NativeSelect
-                id="isChurchMember"
-                name="isChurchMember"
-                defaultValue={
-                  participant?.isChurchMember == null
-                    ? ""
-                    : String(participant.isChurchMember)
-                }
-                className="w-full"
+              <Select
+                value={isChurchMember}
+                onValueChange={(value) => {
+                  if (value) setIsChurchMember(value);
+                }}
               >
-                <NativeSelectOption value="">Sin especificar</NativeSelectOption>
-                <NativeSelectOption value="true">Sí</NativeSelectOption>
-                <NativeSelectOption value="false">No</NativeSelectOption>
-              </NativeSelect>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="shirtSize">Talla de camiseta</FieldLabel>
-              <NativeSelect
-                id="shirtSize"
-                name="shirtSize"
-                defaultValue={participant?.shirtSize ?? ""}
-                className="w-full"
-              >
-                <NativeSelectOption value="">Sin especificar</NativeSelectOption>
-                {['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'].map((size) => (
-                  <NativeSelectOption key={size} value={size}>{size}</NativeSelectOption>
-                ))}
-              </NativeSelect>
-            </Field>
-            <Field className="md:col-span-3">
-              <FieldLabel htmlFor="companyId">Compañía</FieldLabel>
-              <NativeSelect
-                id="companyId"
-                name="companyId"
-                defaultValue={participant?.companyId ?? ""}
-                className="w-full"
-              >
-                <NativeSelectOption value="">Sin asignar</NativeSelectOption>
-                {companies.map((company) => (
-                  <NativeSelectOption key={company.id} value={company.id}>
-                    {company.name}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-            </Field>
-            <Field className="md:col-span-3">
-              <FieldLabel htmlFor="roomName">Edificio y dormitorio</FieldLabel>
-              <NativeSelect
-                id="roomName"
-                name="roomName"
-                defaultValue={participant?.roomName ?? ""}
-                className="w-full"
-              >
-                <NativeSelectOption value="">Sin asignar</NativeSelectOption>
-                {lodgingBuildings.map((building) => (
-                  <NativeSelectOptGroup
-                    key={building.id}
-                    label={`${building.name} · ${building.sex === "female" ? "Mujeres" : "Varones"}`}
-                  >
-                    {building.rooms.map((room) => (
-                      <NativeSelectOption
-                        key={room.id}
-                        value={room.name}
-                        disabled={
-                          room.availableParticipantCapacity === 0 &&
-                          participant?.roomName !== room.name
-                        }
-                      >
-                        Dormitorio {room.number} · {room.assignedParticipants}/
-                        {room.participantCapacity} asignados
-                      </NativeSelectOption>
-                    ))}
-                  </NativeSelectOptGroup>
-                ))}
-              </NativeSelect>
-              <FieldDescription>
-                La ocupación se actualiza automáticamente en Alojamiento.
-              </FieldDescription>
+                <SelectTrigger
+                  id="isChurchMember"
+                  aria-label="Miembro de la Iglesia"
+                  className="w-full border-input bg-background"
+                >
+                  <SelectValue>
+                    {isChurchMember === SELECT_NONE_VALUE
+                      ? "Sin especificar"
+                      : isChurchMember === "true"
+                        ? "Sí"
+                        : "No"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent align="start" alignItemWithTrigger={false}>
+                  <SelectGroup>
+                    <SelectItem value={SELECT_NONE_VALUE}>Sin especificar</SelectItem>
+                    <SelectItem value="true">Sí</SelectItem>
+                    <SelectItem value="false">No</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </Field>
           </FieldGroup>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card size={presentation === "sheet" ? "sm" : "default"}>
-        <CardHeader>
-          <CardTitle>Salud y emergencia</CardTitle>
-          <CardDescription>
-            Información sensible disponible únicamente durante la gestión del registro.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <FormSection
+          presentation={presentation}
+          title="Salud"
+          description="Información médica."
+          className="rounded-2xl bg-muted p-4"
+        >
           <FieldGroup className="grid gap-5 md:grid-cols-2">
             <Field>
               <FieldLabel htmlFor="bloodType">Tipo de sangre</FieldLabel>
@@ -443,6 +670,15 @@ export function ParticipantForm({
                 maxLength={2000}
               />
             </Field>
+            <Field className="md:col-span-2">
+              <FieldLabel htmlFor="medicalNotes">Notas médicas</FieldLabel>
+              <Textarea
+                id="medicalNotes"
+                name="medicalNotes"
+                defaultValue={participant?.medicalNotes ?? ""}
+                maxLength={4000}
+              />
+            </Field>
             <Field>
               <FieldLabel htmlFor="emergencyContactName">Contacto de emergencia</FieldLabel>
               <Input
@@ -463,10 +699,9 @@ export function ParticipantForm({
               />
             </Field>
           </FieldGroup>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <div className="flex flex-col-reverse gap-3 rounded-2xl bg-muted p-4 sm:flex-row sm:justify-end">
         {onCancel ? (
           <Button type="button" variant="outline" onClick={onCancel}>
             <HugeiconsIcon
@@ -497,7 +732,179 @@ export function ParticipantForm({
           <HugeiconsIcon icon={FloppyDiskIcon} strokeWidth={2} data-icon="inline-start" />
           {pending ? "Guardando…" : editing ? "Guardar cambios" : "Crear participante"}
         </Button>
-      </div>
-    </form>
+        </div>
+      </form>
+
+      <Dialog
+        open={completeInfoOpen}
+        onOpenChange={(open) => {
+          if (!lookupPending) {
+            setCompleteInfoOpen(open);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Buscar información</DialogTitle>
+            <DialogDescription>
+              Busca una persona en EcuadorAPI y completa sus datos en el formulario.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleLookupSearch}>
+            <Tabs
+              value={lookupMode}
+              onValueChange={(value) => {
+                if (value === "names" || value === "id") {
+                  setLookupMode(value);
+                  setSearchResults([]);
+                  setSearchCompleted(false);
+                  setIdSearchResult(null);
+                }
+              }}
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="names">Buscar por nombres</TabsTrigger>
+                <TabsTrigger value="id">Buscar por cédula</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="names" className="mt-4 flex flex-col gap-4">
+                <FieldGroup className="grid gap-5 md:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="search-given-names">
+                      Nombres <span aria-hidden="true" className="text-destructive">*</span>
+                    </FieldLabel>
+                    <Input
+                      id="search-given-names"
+                      value={givenNames}
+                      onChange={(event) => setGivenNames(event.target.value)}
+                      placeholder="Ej. Jean Paul"
+                      maxLength={120}
+                      disabled={lookupPending}
+                      autoFocus
+                      required
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="search-family-names">
+                      Apellidos <span aria-hidden="true" className="text-destructive">*</span>
+                    </FieldLabel>
+                    <Input
+                      id="search-family-names"
+                      value={familyNames}
+                      onChange={(event) => setFamilyNames(event.target.value)}
+                      placeholder="Ej. Mayorga Cobo"
+                      maxLength={120}
+                      disabled={lookupPending}
+                      required
+                    />
+                  </Field>
+                </FieldGroup>
+
+                {searchCompleted && searchResults.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No encontramos coincidencias para esos nombres.
+                  </p>
+                ) : null}
+
+                {searchResults.length > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    {searchResults.map((result) => (
+                      <div
+                        key={result.id}
+                        className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-background p-4"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">
+                            {result.fullName ?? "Sin nombre"}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Cédula {result.id}
+                            {result.age != null ? ` · ${result.age} años` : ""}
+                            {result.deathDate ? " · Persona fallecida" : ""}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={lookupPending}
+                          onClick={() => handleCompleteSearchResult(result)}
+                        >
+                          Completar
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </TabsContent>
+
+              <TabsContent value="id" className="mt-4 flex flex-col gap-4">
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="complete-government-id">
+                      Cédula <span aria-hidden="true" className="text-destructive">*</span>
+                    </FieldLabel>
+                    <Input
+                      id="complete-government-id"
+                      value={governmentId}
+                      onChange={(event) => setGovernmentId(event.target.value)}
+                      placeholder="Ej. 0912345678"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      maxLength={32}
+                      disabled={lookupPending}
+                      autoFocus
+                      required
+                    />
+                  </Field>
+                </FieldGroup>
+
+                {idSearchResult ? (
+                  <div className="flex items-start justify-between gap-4 rounded-2xl border border-border bg-background p-4">
+                    <div className="min-w-0">
+                      <p className="font-medium">
+                        {[idSearchResult.data.firstNames, idSearchResult.data.lastNames]
+                          .filter(Boolean)
+                          .join(" ") || "Sin nombre"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Cédula {idSearchResult.id}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={lookupPending}
+                      onClick={() =>
+                        applyCitizenData(idSearchResult.id, idSearchResult.data)
+                      }
+                    >
+                      Completar
+                    </Button>
+                  </div>
+                ) : null}
+              </TabsContent>
+            </Tabs>
+
+            <DialogFooter className="mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={lookupPending}
+                onClick={() => setCompleteInfoOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={lookupPending}>
+                {lookupPending ? <Spinner data-icon="inline-start" /> : null}
+                {lookupPending ? "Buscando…" : "Buscar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

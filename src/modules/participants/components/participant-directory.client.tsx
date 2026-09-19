@@ -1,8 +1,12 @@
 "use client";
 
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
-import { useState, useTransition } from "react";
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { parseAsString, useQueryStates } from "nuqs";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import PlusSignIcon from "@hugeicons/core-free-icons/PlusSignIcon";
 import UserMultiple02Icon from "@hugeicons/core-free-icons/UserMultiple02Icon";
@@ -17,22 +21,25 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Separator } from "@/components/ui/separator";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ParticipantDirectoryFilters } from "@/modules/participants/components/participant-directory-filters.client";
 import {
   ParticipantsTable,
   type ParticipantTableRow,
 } from "@/modules/participants/components/participants-table.client";
 import { isParticipantStatus, type ParticipantStatus } from "@/modules/participants/status";
+import {
+  DEFAULT_PARTICIPANT_SORT,
+  normalizeParticipantSort,
+} from "@/modules/participants/sorting";
 
 type ParticipantStatusCounts = Record<ParticipantStatus, number>;
 
@@ -74,7 +81,6 @@ function getDirectoryQueryString(queryState: {
   ward: string;
   stake: string;
   status: string;
-  page: number;
 }) {
   const params = new URLSearchParams();
   const status =
@@ -85,11 +91,11 @@ function getDirectoryQueryString(queryState: {
         : "registered";
 
   params.set("status", status);
-  params.set("page", String(queryState.page));
 
   if (queryState.query) params.set("query", queryState.query);
-  if (queryState.sort && queryState.sort !== "name") {
-    params.set("sort", queryState.sort);
+  const sort = normalizeParticipantSort(queryState.sort);
+  if (sort !== DEFAULT_PARTICIPANT_SORT) {
+    params.set("sort", sort);
   }
   if (queryState.company) params.set("company", queryState.company);
   if (queryState.ward) params.set("ward", queryState.ward);
@@ -100,64 +106,62 @@ function getDirectoryQueryString(queryState: {
 
 function ParticipantDirectoryLoading() {
   return (
-    <div className="flex flex-col gap-4 p-4">
-      {Array.from({ length: 6 }, (_, index) => (
-        <Skeleton key={index} className="h-10 w-full" />
-      ))}
-    </div>
-  );
-}
-
-function ParticipantDirectoryPagination({
-  page,
-  totalPages,
-  onPageChange,
-}: {
-  page: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-}) {
-  if (totalPages <= 1) return null;
-
-  return (
-    <Pagination className="mx-0 w-auto justify-end">
-      <PaginationContent>
-        {page > 1 ? (
-          <PaginationItem>
-            <PaginationPrevious
-              href="#"
-              text="Anterior"
-              onClick={(event) => {
-                event.preventDefault();
-                onPageChange(page - 1);
-              }}
-            />
-          </PaginationItem>
-        ) : null}
-        <PaginationItem>
-          <PaginationLink
-            href="#"
-            isActive
-            aria-label={`Página ${page} de ${totalPages}`}
-            onClick={(event) => event.preventDefault()}
-          >
-            {page}
-          </PaginationLink>
-        </PaginationItem>
-        {page < totalPages ? (
-          <PaginationItem>
-            <PaginationNext
-              href="#"
-              text="Siguiente"
-              onClick={(event) => {
-                event.preventDefault();
-                onPageChange(page + 1);
-              }}
-            />
-          </PaginationItem>
-        ) : null}
-      </PaginationContent>
-    </Pagination>
+    <Table className="min-w-[980px]" aria-label="Cargando participantes">
+      <TableHeader className="bg-muted/50">
+        <TableRow>
+          <TableHead className="w-16">ID</TableHead>
+          <TableHead className="min-w-28">Estado</TableHead>
+          <TableHead className="min-w-56">Participante</TableHead>
+          <TableHead className="min-w-20">Edad</TableHead>
+          <TableHead className="min-w-36">Compañía</TableHead>
+          <TableHead className="min-w-28">Alojamiento</TableHead>
+          <TableHead className="min-w-32">Estaca</TableHead>
+          <TableHead className="min-w-28">Barrio</TableHead>
+          <TableHead className="w-24">Acciones</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {Array.from({ length: 12 }, (_, index) => (
+          <TableRow key={index} className="h-9">
+            <TableCell className="w-16">
+              <Skeleton className="h-3 w-7" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-7 w-32 rounded-full" />
+            </TableCell>
+            <TableCell className="min-w-56">
+              <div className="flex items-center gap-2">
+                <Skeleton className="size-6 rounded-full" />
+                <Skeleton
+                  className={index % 3 === 0 ? "h-3 w-44" : "h-3 w-36"}
+                />
+              </div>
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-3 w-14" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-3 w-24" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-3 w-28" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-3 w-24" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-3 w-20" />
+            </TableCell>
+            <TableCell>
+              <div className="flex justify-start gap-1">
+                <Skeleton className="size-7 rounded-full" />
+                <Skeleton className="size-7 rounded-full" />
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }
 
@@ -169,17 +173,17 @@ export function ParticipantDirectory({
   stakes,
 }: ParticipantDirectoryProps) {
   const queryClient = useQueryClient();
+  const loadMoreRef = useRef<HTMLDivElement>(null);
   const [isLive, setIsLive] = useState(false);
   const [, startTransition] = useTransition();
   const [queryState, setQueryState] = useQueryStates(
     {
       query: parseAsString.withDefault(""),
-      sort: parseAsString.withDefault("name"),
+      sort: parseAsString.withDefault(DEFAULT_PARTICIPANT_SORT),
       company: parseAsString.withDefault(""),
       ward: parseAsString.withDefault(""),
       stake: parseAsString.withDefault(""),
       status: parseAsString.withDefault("registered"),
-      page: parseAsInteger.withDefault(1),
     },
     {
       history: "replace",
@@ -189,10 +193,12 @@ export function ParticipantDirectory({
     },
   );
   const queryString = getDirectoryQueryString(queryState);
-  const participantsQuery = useQuery({
+  const participantsQuery = useInfiniteQuery({
     queryKey: ["participants", queryString],
-    queryFn: async () => {
-      const response = await fetch(`/api/participants?${queryString}`, {
+    queryFn: async ({ pageParam }) => {
+      const params = new URLSearchParams(queryString);
+      params.set("page", String(pageParam));
+      const response = await fetch(`/api/participants?${params}`, {
         cache: "no-store",
       });
 
@@ -202,11 +208,21 @@ export function ParticipantDirectory({
 
       return (await response.json()) as ParticipantDirectoryResponse;
     },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
     placeholderData: keepPreviousData,
     refetchInterval: isLive ? 5000 : false,
     refetchIntervalInBackground: true,
   });
-  const data = participantsQuery.data;
+  const data = participantsQuery.data?.pages[0];
+  const participants =
+    participantsQuery.data?.pages.flatMap((page) => page.rows) ?? [];
+  const {
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = participantsQuery;
   const statusCounts = data?.statusCounts ?? emptyStatusCounts;
   const hasActiveCriteria = Boolean(
     queryState.query ||
@@ -217,13 +233,38 @@ export function ParticipantDirectory({
         queryState.status !== "registered"),
   );
 
-  function updatePage(page: number) {
-    void setQueryState({ page });
-  }
-
   function retryParticipants() {
     void participantsQuery.refetch();
   }
+
+  useEffect(() => {
+    const loadMoreNode = loadMoreRef.current;
+
+    if (
+      !loadMoreNode ||
+      !hasNextPage ||
+      isFetchingNextPage
+    ) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void fetchNextPage();
+        }
+      },
+      { rootMargin: "0px 0px 240px" },
+    );
+
+    observer.observe(loadMoreNode);
+
+    return () => observer.disconnect();
+  }, [
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  ]);
 
   return (
     <>
@@ -255,7 +296,7 @@ export function ParticipantDirectory({
         onLiveChange={setIsLive}
       />
 
-      <div className="flex min-h-[calc(100svh-12rem)] flex-1 flex-col overflow-hidden rounded-lg border border-border/50 bg-card">
+      <div className="flex flex-col overflow-hidden rounded-lg border border-border/50 bg-card">
         <div className="flex-1">
           {participantsQuery.isPending ? (
             <ParticipantDirectoryLoading />
@@ -304,7 +345,6 @@ export function ParticipantDirectory({
                         company: null,
                         ward: null,
                         stake: null,
-                        page: 1,
                       })
                     }
                   >
@@ -322,29 +362,23 @@ export function ParticipantDirectory({
               </EmptyHeader>
             </Empty>
           ) : (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col">
               <ParticipantsTable
-                participants={data.rows}
+                participants={participants}
                 canManage={canManage}
                 canDelete={canDelete}
+                isLoadingMore={isFetchingNextPage}
+                sort={normalizeParticipantSort(queryState.sort)}
+                onSortChange={(sort) => void setQueryState({ sort })}
                 onDataChanged={() =>
                   void queryClient.invalidateQueries({
                     queryKey: ["participants"],
                   })
                 }
               />
-              <Separator />
-              <div className="flex flex-col gap-3 px-4 pb-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-                <p>
-                  Mostrando {(data.page - 1) * data.pageSize + 1}–
-                  {Math.min(data.page * data.pageSize, data.total)} de {data.total}
-                </p>
-                <ParticipantDirectoryPagination
-                  page={data.page}
-                  totalPages={data.totalPages}
-                  onPageChange={updatePage}
-                />
-              </div>
+              {hasNextPage ? (
+                <div ref={loadMoreRef} className="h-1" aria-hidden="true" />
+              ) : null}
             </div>
           )}
         </div>

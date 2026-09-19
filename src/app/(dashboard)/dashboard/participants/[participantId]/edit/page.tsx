@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { requireParticipantManagementAccess } from "@/modules/auth/server/session";
-import { listWards } from "@/modules/church-units/server/queries";
+import { listStakes, listWards } from "@/modules/church-units/server/queries";
 import { listCompanyOptions } from "@/modules/companies/server/queries";
 import { getLodgingOverview } from "@/modules/lodging/server/queries";
 import { ParticipantForm } from "@/modules/participants/components/participant-form.client";
@@ -14,9 +14,10 @@ type EditParticipantPageProps = {
 export default async function EditParticipantPage({ params }: EditParticipantPageProps) {
   await requireParticipantManagementAccess();
   const { participantId } = await params;
-  const [participant, wards, lodging, companies] = await Promise.all([
+  const [participant, wards, stakes, lodging, companies] = await Promise.all([
     getParticipantById(participantId),
     listWards(),
+    listStakes(),
     getLodgingOverview(),
     listCompanyOptions(),
   ]);
@@ -37,6 +38,7 @@ export default async function EditParticipantPage({ params }: EditParticipantPag
         participant={participant}
         companies={companies}
         wards={wards}
+        stakes={stakes}
         lodgingBuildings={lodging.buildings}
       />
     </div>

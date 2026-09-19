@@ -16,7 +16,7 @@ export async function listStakes() {
 
 export async function listWards() {
   return db
-    .select({ id: wards.id, name: wards.name })
+    .select({ id: wards.id, name: wards.name, stakeId: wards.stakeId })
     .from(wards)
     .orderBy(asc(wards.name));
 }

@@ -86,6 +86,7 @@ export const participantMedicalProfiles = pgTable(
     insuranceProvider: varchar({ length: 160 }),
     emergencyContactName: varchar({ length: 200 }),
     emergencyContactPhone: varchar({ length: 32 }),
+    medicalNotes: text(),
     createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp({ withTimezone: true })
       .defaultNow()

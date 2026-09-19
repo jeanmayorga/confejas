@@ -28,12 +28,14 @@ import { deleteParticipantAction } from "@/modules/participants/server/actions";
 type DeleteParticipantButtonProps = {
   participantId: string;
   participantName: string;
+  showLabel?: boolean;
   onDeleted?: () => void;
 };
 
 export function DeleteParticipantButton({
   participantId,
   participantName,
+  showLabel = false,
   onDeleted,
 }: DeleteParticipantButtonProps) {
   const router = useRouter();
@@ -71,12 +73,12 @@ export function DeleteParticipantButton({
             <AlertDialogTrigger
               render={
                 <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-destructive"
+                  variant={showLabel ? "outline" : "destructive"}
+                  size={showLabel ? "sm" : "icon-md"}
                   aria-label={`Eliminar ${participantName}`}
                 >
                   <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+                  {showLabel ? "Eliminar" : null}
                 </Button>
               }
             />

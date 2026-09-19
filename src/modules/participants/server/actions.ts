@@ -11,7 +11,7 @@ import {
   canManageParticipants,
 } from "@/modules/auth/roles";
 import { requireSession } from "@/modules/auth/server/session";
-import { listWards } from "@/modules/church-units/server/queries";
+import { listStakes, listWards } from "@/modules/church-units/server/queries";
 import {
   getCompanyCapacityGuardQuery,
   getCompanyCapacityLockQuery,
@@ -36,7 +36,9 @@ import { isParticipantId } from "../qr";
 import { isParticipantStatus } from "../status";
 import {
   lookupEcuadorianCitizen,
+  searchEcuadorianCitizens,
   type EcuadorianCitizen,
+  type EcuadorianCitizenSearchResult,
 } from "./ecuador-api";
 import {
   findParticipantForQrCheckIn,
@@ -68,6 +70,10 @@ export type ParticipantQrLookupActionResult =
 
 export type EcuadorianCitizenLookupActionResult =
   | { success: true; data: EcuadorianCitizen }
+  | { success: false; message: string };
+
+export type EcuadorianCitizenSearchActionResult =
+  | { success: true; data: EcuadorianCitizenSearchResult[] }
   | { success: false; message: string };
 
 function requiredText(
@@ -227,6 +233,7 @@ function parseParticipantForm(formData: FormData) {
       insuranceProvider: optionalText(formData, "insuranceProvider", 160),
       emergencyContactName: optionalText(formData, "emergencyContactName", 200),
       emergencyContactPhone: optionalText(formData, "emergencyContactPhone", 32),
+      medicalNotes: optionalText(formData, "medicalNotes", 4_000),
     },
   };
 }
@@ -366,9 +373,10 @@ export async function getParticipantEditDataAction(participantId: string) {
       };
     }
 
-    const [participant, wards, lodging, companies] = await Promise.all([
+    const [participant, wards, stakes, lodging, companies] = await Promise.all([
       getParticipantById(participantId),
       listWards(),
+      listStakes(),
       getLodgingOverview(),
       listCompanyOptions(),
     ]);
@@ -384,6 +392,7 @@ export async function getParticipantEditDataAction(participantId: string) {
       success: true as const,
       participant,
       wards,
+      stakes,
       companies,
       lodgingBuildings: lodging.buildings,
     };
@@ -422,6 +431,46 @@ export async function lookupEcuadorianCitizenAction(
     return {
       success: false,
       message: "No se pudo consultar la cédula. Inténtalo nuevamente.",
+    };
+  }
+}
+
+export async function searchEcuadorianCitizensAction(
+  givenNamesValue: string,
+  familyNamesValue: string,
+): Promise<EcuadorianCitizenSearchActionResult> {
+  try {
+    const session = await requireSession();
+
+    if (!canManageParticipants(session.user.role)) {
+      return {
+        success: false,
+        message: "No tienes permiso para consultar datos de participantes.",
+      };
+    }
+
+    const givenNames = givenNamesValue.trim();
+    const familyNames = familyNamesValue.trim();
+
+    if (!givenNames || !familyNames) {
+      return {
+        success: false,
+        message: "Ingresa los nombres y apellidos para buscar.",
+      };
+    }
+
+    if (givenNames.length > 120 || familyNames.length > 120) {
+      return {
+        success: false,
+        message: "Los nombres y apellidos no pueden superar 120 caracteres.",
+      };
+    }
+
+    return await searchEcuadorianCitizens({ givenNames, familyNames });
+  } catch {
+    return {
+      success: false,
+      message: "No se pudo buscar por nombres. Inténtalo nuevamente.",
     };
   }
 }
@@ -565,6 +614,58 @@ export async function updateParticipantAction(
     return { success: true, message: "Participante actualizado correctamente." };
   } catch (error) {
     return { success: false, message: safeError(error) };
+  }
+}
+
+export async function updateParticipantMedicalNotesAction(
+  participantId: string,
+  notesValue: string,
+): Promise<ParticipantActionResult> {
+  try {
+    const session = await requireSession();
+
+    if (!canManageParticipants(session.user.role)) {
+      return {
+        success: false,
+        message: "No tienes permiso para actualizar las notas médicas.",
+      };
+    }
+
+    if (!isParticipantId(participantId)) {
+      return { success: false, message: "El participante no es válido." };
+    }
+
+    const medicalNotes = notesValue.trim();
+
+    if (medicalNotes.length > 4_000) {
+      return {
+        success: false,
+        message: "Las notas médicas no pueden superar 4000 caracteres.",
+      };
+    }
+
+    const now = new Date();
+
+    await db
+      .insert(participantMedicalProfiles)
+      .values({ participantId, medicalNotes: medicalNotes || null })
+      .onConflictDoUpdate({
+        target: participantMedicalProfiles.participantId,
+        set: { medicalNotes: medicalNotes || null, updatedAt: now },
+      });
+
+    revalidatePath("/dashboard/participants");
+    revalidatePath(`/dashboard/participants/${participantId}`);
+
+    return {
+      success: true,
+      message: "Notas médicas guardadas correctamente.",
+    };
+  } catch {
+    return {
+      success: false,
+      message: "No se pudieron guardar las notas médicas. Inténtalo nuevamente.",
+    };
   }
 }
 
