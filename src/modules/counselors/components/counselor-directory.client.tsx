@@ -10,6 +10,7 @@ import ArrowDown02Icon from "@hugeicons/core-free-icons/ArrowDown02Icon";
 import ArrowUp02Icon from "@hugeicons/core-free-icons/ArrowUp02Icon";
 import ArrowUpDownIcon from "@hugeicons/core-free-icons/ArrowUpDownIcon";
 import Cancel01Icon from "@hugeicons/core-free-icons/Cancel01Icon";
+import MailSend02Icon from "@hugeicons/core-free-icons/MailSend02Icon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import UserEdit01Icon from "@hugeicons/core-free-icons/UserEdit01Icon";
 import UserGroup02Icon from "@hugeicons/core-free-icons/UserGroup02Icon";
@@ -129,6 +130,19 @@ function getCounselorSearchText(counselor: CounselorDirectoryItem) {
       .filter(Boolean)
       .join(" "),
   );
+}
+
+function getCredentialsMailto(counselor: CounselorDirectoryItem) {
+  if (!counselor.email) {
+    return undefined;
+  }
+
+  const params = new URLSearchParams({
+    subject: `Credenciales de acceso - ${counselor.name}`,
+    body: `Hola ${counselor.name},\n\nAquí tienes la información de acceso a Conferencia JAS 2026.\n\n`,
+  });
+
+  return `mailto:${counselor.email}?${params.toString()}`;
 }
 
 function SortableTableHead({
@@ -347,12 +361,13 @@ export function CounselorDirectory({
             </EmptyHeader>
           </Empty>
         ) : (
-          <Table className="min-w-[1120px] table-fixed" aria-label="Lista de consejeros">
+          <Table className="min-w-[1250px] table-fixed" aria-label="Lista de consejeros">
             <colgroup>
               <col className="w-[220px]" />
               <col className="w-[280px]" />
               <col className="w-[170px]" />
               <col className="w-[280px]" />
+              <col className="w-[130px]" />
               <col className="w-[92px]" />
             </colgroup>
             <TableHeader className="bg-muted/50">
@@ -365,7 +380,8 @@ export function CounselorDirectory({
                 />
                 <TableHead>Consejero</TableHead>
                 <TableHead>Estaca</TableHead>
-                <TableHead>Contacto</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Credenciales</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -420,30 +436,40 @@ export function CounselorDirectory({
                       <span className="text-muted-foreground">Sin asignar</span>
                     )}
                   </TableCell>
-                  <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden">
-                    <div
-                      className="min-w-0 truncate"
-                      title={[counselor.email, counselor.whatsapp]
-                        .filter(Boolean)
-                        .join(" · ")}
+                  <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden truncate">
+                    {counselor.email ?? (
+                      <span className="text-muted-foreground">Sin registrar</span>
+                    )}
+                  </TableCell>
+                  <TableCell
+                    className="h-9 max-h-9"
+                    onClick={keepRowClosed}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  >
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      disabled={!counselor.email}
+                      aria-label={
+                        counselor.email
+                          ? `Enviar credenciales a ${counselor.name}`
+                          : `No hay email para ${counselor.name}`
+                      }
+                      onClick={() => {
+                        const mailto = getCredentialsMailto(counselor);
+                        if (mailto) {
+                          window.location.href = mailto;
+                        }
+                      }}
                     >
-                      {counselor.email ? (
-                        <a
-                          href={`mailto:${counselor.email}`}
-                          className="truncate text-primary underline-offset-4 hover:underline"
-                          onClick={(event) => event.stopPropagation()}
-                          onKeyDown={(event) => event.stopPropagation()}
-                        >
-                          {counselor.email}
-                        </a>
-                      ) : counselor.whatsapp ? (
-                        <span className="truncate text-muted-foreground">
-                          WhatsApp: {counselor.whatsapp}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">Sin registrar</span>
-                      )}
-                    </div>
+                      <HugeiconsIcon
+                        icon={MailSend02Icon}
+                        strokeWidth={2}
+                        data-icon="inline-start"
+                      />
+                      Enviar
+                    </Button>
                   </TableCell>
                   <TableCell
                     className="h-9 max-h-9"
@@ -573,43 +599,21 @@ export function CounselorDirectory({
 
                 <section
                   className="border-t py-5"
-                  aria-labelledby="counselor-contact-heading"
+                  aria-labelledby="counselor-email-heading"
                 >
                   <h2
-                    id="counselor-contact-heading"
+                    id="counselor-email-heading"
                     className="text-sm font-semibold"
                   >
-                    Contacto
+                    Email
                   </h2>
                   <dl className="mt-4 flex flex-col gap-4 text-sm">
-                    <div className="flex flex-col gap-1">
-                      <dt className="text-muted-foreground">Cédula</dt>
-                      <dd className="font-medium">
-                        {selectedCounselor.governmentId ?? "Sin registrar"}
-                      </dd>
-                    </div>
                     <div className="flex flex-col gap-1">
                       <dt className="text-muted-foreground">
                         Correo electrónico
                       </dt>
                       <dd className="font-medium">
-                        {selectedCounselor.email ? (
-                          <a
-                            href={`mailto:${selectedCounselor.email}`}
-                            className="text-primary underline-offset-4 hover:underline"
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            {selectedCounselor.email}
-                          </a>
-                        ) : (
-                          "Sin registrar"
-                        )}
-                      </dd>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <dt className="text-muted-foreground">WhatsApp</dt>
-                      <dd className="font-medium">
-                        {selectedCounselor.whatsapp ?? "Sin registrar"}
+                        {selectedCounselor.email ?? "Sin registrar"}
                       </dd>
                     </div>
                   </dl>
