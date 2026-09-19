@@ -1,10 +1,19 @@
 "use client";
 
-import { useDeferredValue, useEffect, useRef, useState } from "react";
+import {
+  type DragEvent,
+  useDeferredValue,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +65,7 @@ import {
   MALE_PARTICIPANT_SEX,
   type DistributionCapacity,
 } from "@/modules/companies/distribution";
+import { moveCompanyParticipantsAction } from "@/modules/companies/server/participant-management";
 import type {
   CompanyListItem,
   CompanyParticipant,
@@ -76,6 +86,12 @@ type UnassignedParticipantsPage = {
   total: number;
   totalPages: number;
   search: string;
+};
+
+type DraggedCompanyParticipant = {
+  participantId: string;
+  companyId: string;
+  name: string;
 };
 
 const participantStatusClassNames = {
@@ -121,6 +137,102 @@ export function CompaniesDirectory({
   canDelete,
   capacity,
 }: CompaniesDirectoryProps) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [draggedParticipant, setDraggedParticipant] =
+    useState<DraggedCompanyParticipant | null>(null);
+  const [isUnassignedDropTarget, setIsUnassignedDropTarget] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [refreshing, startTransition] = useTransition();
+  const dragDisabled = removing || refreshing;
+
+  function clearDragState() {
+    setDraggedParticipant(null);
+    setIsUnassignedDropTarget(false);
+  }
+
+  function handleParticipantDragStart(
+    event: DragEvent<HTMLTableRowElement>,
+    participant: CompanyParticipant,
+    company: CompanyDirectoryItem,
+  ) {
+    if (dragDisabled) {
+      event.preventDefault();
+      return;
+    }
+
+    const dragged = {
+      participantId: participant.id,
+      companyId: company.id,
+      name: getParticipantName(participant),
+    };
+
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", dragged.participantId);
+    setDraggedParticipant(dragged);
+  }
+
+  function handleUnassignedDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const participant = draggedParticipant;
+
+    clearDragState();
+
+    if (!participant || dragDisabled) {
+      return;
+    }
+
+    setRemoving(true);
+    const operation = moveCompanyParticipantsAction(
+      [
+        {
+          participantId: participant.participantId,
+          companyId: participant.companyId,
+        },
+      ],
+      null,
+    ).then(async (result) => {
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+
+      await queryClient.invalidateQueries({
+        queryKey: ["company-unassigned-participants"],
+      });
+      startTransition(() => {
+        router.refresh();
+      });
+      return result;
+    });
+
+    toast.promise(operation, {
+      loading: `Quitando a ${participant.name} de su compañía…`,
+      success: (result) => result.message,
+      error: (error) =>
+        error instanceof Error
+          ? error.message
+          : "No pudimos quitar al participante de su compañía.",
+    });
+
+    void operation
+      .catch(() => undefined)
+      .finally(() => setRemoving(false));
+  }
+
+  function handleUnassignedDragOver(event: DragEvent<HTMLDivElement>) {
+    if (!draggedParticipant || dragDisabled) return;
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setIsUnassignedDropTarget(true);
+  }
+
+  function handleUnassignedDragLeave(event: DragEvent<HTMLDivElement>) {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      setIsUnassignedDropTarget(false);
+    }
+  }
+
   if (companies.length === 0) {
     return (
       <Empty className="min-h-80">
@@ -150,18 +262,39 @@ export function CompaniesDirectory({
             position={index + 1}
             canDelete={canDelete}
             capacity={capacity}
+            draggedParticipantId={draggedParticipant?.participantId ?? null}
+            dragDisabled={dragDisabled}
+            onParticipantDragStart={handleParticipantDragStart}
+            onParticipantDragEnd={clearDragState}
           />
         ))}
       </div>
-      <UnassignedParticipantsCard capacity={capacity} />
+      <UnassignedParticipantsCard
+        capacity={capacity}
+        draggedParticipant={draggedParticipant}
+        isDropTarget={isUnassignedDropTarget}
+        onDragOver={handleUnassignedDragOver}
+        onDragLeave={handleUnassignedDragLeave}
+        onDrop={handleUnassignedDrop}
+      />
     </div>
   );
 }
 
 function UnassignedParticipantsCard({
   capacity,
+  draggedParticipant,
+  isDropTarget,
+  onDragOver,
+  onDragLeave,
+  onDrop,
 }: {
   capacity: DistributionCapacity;
+  draggedParticipant: DraggedCompanyParticipant | null;
+  isDropTarget: boolean;
+  onDragOver: (event: DragEvent<HTMLDivElement>) => void;
+  onDragLeave: (event: DragEvent<HTMLDivElement>) => void;
+  onDrop: (event: DragEvent<HTMLDivElement>) => void;
 }) {
   const titleId = "unassigned-participants-title";
   const queryClient = useQueryClient();
@@ -233,11 +366,32 @@ function UnassignedParticipantsCard({
 
   return (
     <aside className="self-start xl:sticky xl:top-6" aria-labelledby={titleId}>
-      <Card className="max-h-[calc(100dvh-3rem)] gap-0 py-3">
+      <Card
+        className={cn(
+          "max-h-[calc(100dvh-3rem)] gap-0 py-3 transition-[background-color,box-shadow]",
+          isDropTarget && "bg-primary/5 ring-2 ring-primary ring-offset-2",
+        )}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+      >
         <CardHeader className="border-b !pb-2">
           <CardTitle id={titleId} className="text-lg">
             Participantes sin compañía
           </CardTitle>
+          {draggedParticipant ? (
+            <p
+              className={cn(
+                "text-sm font-medium",
+                isDropTarget ? "text-primary" : "text-muted-foreground",
+              )}
+              aria-live="polite"
+            >
+              {isDropTarget
+                ? `Suelta para quitar a ${draggedParticipant.name} de su compañía.`
+                : "Arrastra aquí para quitarlo de su compañía."}
+            </p>
+          ) : null}
         </CardHeader>
 
         <CardContent className="border-b py-3">
@@ -419,11 +573,23 @@ function CompanyCard({
   position,
   canDelete,
   capacity,
+  draggedParticipantId,
+  dragDisabled,
+  onParticipantDragStart,
+  onParticipantDragEnd,
 }: {
   company: CompanyDirectoryItem;
   position: number;
   canDelete: boolean;
   capacity: DistributionCapacity;
+  draggedParticipantId: string | null;
+  dragDisabled: boolean;
+  onParticipantDragStart: (
+    event: DragEvent<HTMLTableRowElement>,
+    participant: CompanyParticipant,
+    company: CompanyDirectoryItem,
+  ) => void;
+  onParticipantDragEnd: () => void;
 }) {
   const titleId = `company-${company.id}-title`;
   const companyLabel = getCompanyDisplayName(company.name, position);
@@ -525,7 +691,20 @@ function CompanyCard({
                 </TableHeader>
                 <TableBody>
                 {company.participants.map((participant, index) => (
-                  <TableRow key={participant.id}>
+                  <TableRow
+                    key={participant.id}
+                    draggable={!dragDisabled}
+                    aria-grabbed={draggedParticipantId === participant.id}
+                    title="Arrastra a Participantes sin compañía para quitarlo de esta compañía."
+                    className={cn(
+                      "cursor-grab active:cursor-grabbing",
+                      draggedParticipantId === participant.id && "opacity-50",
+                    )}
+                    onDragStart={(event) =>
+                      onParticipantDragStart(event, participant, company)
+                    }
+                    onDragEnd={onParticipantDragEnd}
+                  >
                     <TableCell className="text-center tabular-nums text-muted-foreground">
                       {index + 1}
                     </TableCell>
