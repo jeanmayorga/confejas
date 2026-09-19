@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { normalizeGovernmentId } from "@/modules/participants/identity";
+import { normalizeParticipantCode } from "@/modules/participants/qr";
 import { findParticipantForCheckInAction } from "@/modules/participants/server/actions";
 
 export function ParticipantCodeLookup() {
@@ -36,19 +36,23 @@ export function ParticipantCodeLookup() {
     setError(null);
 
     if (!navigator.onLine) {
-      setError("No hay conexión a internet. Conéctate para buscar al participante.");
+      setError(
+        "No hay conexión a internet. Conéctate para buscar al participante.",
+      );
       return;
     }
 
-    const governmentId = normalizeGovernmentId(code);
+    const participantCode = normalizeParticipantCode(code);
 
-    if (!governmentId) {
-      setError("Ingresa una cédula válida.");
+    if (!participantCode) {
+      setError("Ingresa un código válido.");
       return;
     }
 
     startTransition(async () => {
-      const result = await findParticipantForCheckInAction(governmentId);
+      const result = await findParticipantForCheckInAction(
+        participantCode.toString(),
+      );
 
       if (!result.success) {
         setError(result.message);
@@ -68,16 +72,16 @@ export function ParticipantCodeLookup() {
         <div className="mb-3 flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
           <HugeiconsIcon icon={KeyboardIcon} strokeWidth={2} />
         </div>
-        <CardTitle>Escribir código</CardTitle>
+        <CardTitle>Ingresar código</CardTitle>
         <CardDescription>
-          El código del participante es su número de cédula.
+          Usa el código único asignado al participante.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit}>
           <FieldGroup>
             <Field data-invalid={Boolean(error)}>
-              <FieldLabel htmlFor="participant-code">Cédula</FieldLabel>
+              <FieldLabel htmlFor="participant-code">Código único</FieldLabel>
               <Input
                 id="participant-code"
                 name="participantCode"
@@ -86,7 +90,7 @@ export function ParticipantCodeLookup() {
                   setCode(event.target.value);
                   setError(null);
                 }}
-                placeholder="Ej. 0912345678"
+                placeholder="Ej. 123"
                 inputMode="numeric"
                 autoCapitalize="none"
                 autoComplete="off"
@@ -95,7 +99,7 @@ export function ParticipantCodeLookup() {
                 autoFocus
               />
               <FieldDescription>
-                Puedes escribirla con o sin espacios y guiones.
+                Lo encontrarás junto al nombre del participante.
               </FieldDescription>
               {error ? <FieldError>{error}</FieldError> : null}
             </Field>

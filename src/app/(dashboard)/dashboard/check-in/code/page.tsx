@@ -9,7 +9,7 @@ import { ParticipantCheckInSheetLoader } from "@/modules/participants/components
 import { ParticipantCodeLookup } from "@/modules/participants/components/participant-code-lookup.client";
 
 export const metadata: Metadata = {
-  title: "Escribir código | Confejas",
+  title: "Ingresar código | Confejas",
 };
 
 type CodeCheckInPageProps = {
@@ -37,10 +37,10 @@ export default async function CodeCheckInPage({
         <div>
           <p className="text-sm font-medium text-primary">Recepción</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-            Escribir código
+            Ingresar código
           </h1>
           <p className="mt-1 text-muted-foreground">
-            Ingresa la cédula para localizar al participante.
+            Ingresa el código único para localizar al participante.
           </p>
         </div>
         <Button

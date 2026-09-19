@@ -431,6 +431,20 @@ export async function findParticipantIdByGovernmentId(value: string) {
   return participant ?? null;
 }
 
+export async function findParticipantIdBySourceRecordId(value: number) {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    return null;
+  }
+
+  const [participant] = await db
+    .select({ id: participants.id })
+    .from(participants)
+    .where(eq(participants.sourceRecordId, value))
+    .limit(1);
+
+  return participant ?? null;
+}
+
 export async function findParticipantForQrCheckIn(value: string) {
   const lookup = parseParticipantQrValue(value);
 

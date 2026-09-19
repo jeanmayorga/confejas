@@ -28,7 +28,7 @@ import {
 import { db } from "@/server/db";
 
 import { normalizeGovernmentId } from "../identity";
-import { isParticipantId } from "../qr";
+import { isParticipantId, normalizeParticipantCode } from "../qr";
 import { isParticipantStatus } from "../status";
 import {
   lookupEcuadorianCitizen,
@@ -38,7 +38,7 @@ import {
 } from "./ecuador-api";
 import {
   findParticipantForQrCheckIn,
-  findParticipantIdByGovernmentId,
+  findParticipantIdBySourceRecordId,
   getParticipantById,
 } from "./queries";
 import { participantMedicalProfiles, participants } from "./schema";
@@ -278,19 +278,19 @@ export async function findParticipantForCheckInAction(
     return { success: false, message: "No tienes permiso para hacer check-in." };
   }
 
-  const governmentId = normalizeGovernmentId(value);
+  const participantCode = normalizeParticipantCode(value);
 
-  if (!governmentId) {
+  if (!participantCode) {
     return {
       success: false,
-      message: "Ingresa una cédula o documento de identidad válido.",
+      message: "Ingresa un código de participante válido.",
     };
   }
 
-  let participant: Awaited<ReturnType<typeof findParticipantIdByGovernmentId>>;
+  let participant: Awaited<ReturnType<typeof findParticipantIdBySourceRecordId>>;
 
   try {
-    participant = await findParticipantIdByGovernmentId(governmentId);
+    participant = await findParticipantIdBySourceRecordId(participantCode);
   } catch {
     return {
       success: false,
@@ -301,7 +301,7 @@ export async function findParticipantForCheckInAction(
   if (!participant) {
     return {
       success: false,
-      message: "No encontramos un participante con esa cédula.",
+      message: "No encontramos un participante con ese código.",
     };
   }
 
