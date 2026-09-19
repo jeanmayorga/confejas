@@ -11,6 +11,7 @@ import {
   Card,
   CardAction,
   CardContent,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -148,8 +149,8 @@ function UnassignedParticipantsCard({
 
   return (
     <aside className="xl:sticky xl:top-6" aria-labelledby={titleId}>
-      <Card className="gap-0">
-        <CardHeader className="border-b">
+      <Card className="gap-0 py-3">
+        <CardHeader className="border-b !pb-3">
           <CardTitle id={titleId} className="text-base">
             Participantes
           </CardTitle>
@@ -233,6 +234,13 @@ function UnassignedParticipantsCard({
             No hay participantes sin compañía.
           </CardContent>
         )}
+
+        <CardFooter className="justify-between border-t !pt-3">
+          <span className="font-medium">Total de participantes</span>
+          <Badge variant="secondary">
+            {participants.length.toLocaleString("es-EC")}
+          </Badge>
+        </CardFooter>
       </Card>
     </aside>
   );
