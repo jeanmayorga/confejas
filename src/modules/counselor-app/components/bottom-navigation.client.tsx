@@ -51,7 +51,8 @@ export function CounselorBottomNavigation() {
               aria-current={isActive ? "page" : undefined}
               className={cn(
                 "relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-2 text-[11px] font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-                isActive && "text-primary",
+                isActive &&
+                  "bg-primary text-primary-foreground shadow-sm hover:bg-primary hover:text-primary-foreground",
               )}
             >
               <HugeiconsIcon
@@ -61,12 +62,6 @@ export function CounselorBottomNavigation() {
                 aria-hidden
               />
               <span className="truncate">{item.label}</span>
-              {isActive ? (
-                <span
-                  aria-hidden
-                  className="absolute bottom-1.5 h-0.5 w-5 rounded-full bg-primary"
-                />
-              ) : null}
             </Link>
           );
         })}
