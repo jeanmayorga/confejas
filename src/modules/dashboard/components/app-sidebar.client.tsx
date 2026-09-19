@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
 import Building06Icon from "@hugeicons/core-free-icons/Building06Icon";
 import Logout01Icon from "@hugeicons/core-free-icons/Logout01Icon";
-import MapPinpoint01Icon from "@hugeicons/core-free-icons/MapPinpoint01Icon";
+import ChurchIcon from "@hugeicons/core-free-icons/ChurchIcon";
 import QrCodeScanIcon from "@hugeicons/core-free-icons/QrCodeScanIcon";
 import UnfoldMoreIcon from "@hugeicons/core-free-icons/UnfoldMoreIcon";
 import UserGroupIcon from "@hugeicons/core-free-icons/UserGroupIcon";
@@ -126,7 +126,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
           {
             title: "Unidades",
             href: "/dashboard/units",
-            icon: MapPinpoint01Icon,
+            icon: ChurchIcon,
             exact: false,
           },
         ]
