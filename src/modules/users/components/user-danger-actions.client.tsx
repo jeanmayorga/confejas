@@ -18,6 +18,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { deleteUserAction } from "@/modules/users/server/actions";
 
 type UserDangerActionsProps = {
@@ -31,6 +36,7 @@ export function UserDangerActions({
 }: UserDangerActionsProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [confirmationStep, setConfirmationStep] = useState<1 | 2>(1);
   const [pending, startTransition] = useTransition();
 
   function handleDelete() {
@@ -56,45 +62,59 @@ export function UserDangerActions({
     <AlertDialog
       open={open}
       onOpenChange={(nextOpen) => {
-        if (!pending) {
-          setOpen(nextOpen);
-        }
+        setOpen(nextOpen);
+        setConfirmationStep(1);
       }}
     >
-      <AlertDialogTrigger
-        render={
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="text-destructive hover:text-destructive"
-            aria-label={"Eliminar " + user.name}
-          >
-            <HugeiconsIcon
-              icon={Delete02Icon}
-              strokeWidth={2}
-              data-icon="inline-start"
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <AlertDialogTrigger
+              render={
+                <Button
+                  variant="destructive"
+                  size="icon-md"
+                  aria-label={`Eliminar ${user.name}`}
+                >
+                  <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+                </Button>
+              }
             />
-            Eliminar
-          </Button>
-        }
-      />
+          }
+        />
+        <TooltipContent>Eliminar usuario</TooltipContent>
+      </Tooltip>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {confirmationStep === 1
+              ? "¿Eliminar usuario?"
+              : "Última confirmación"}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            La cuenta de {user.name} y sus sesiones se eliminarán
-            permanentemente. Esta acción no se puede deshacer.
+            {confirmationStep === 1
+              ? `Esta acción eliminará permanentemente la cuenta de ${user.name} y sus sesiones. Selecciona continuar para revisar la confirmación final.`
+              : `Esta es la última confirmación. Se eliminará permanentemente la cuenta de ${user.name} y sus sesiones. Esta acción no se puede deshacer.`}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
             disabled={pending}
-            onClick={handleDelete}
+            onClick={() => {
+              if (confirmationStep === 1) {
+                setConfirmationStep(2);
+                return;
+              }
+              handleDelete();
+            }}
           >
-            {pending ? "Eliminando…" : "Eliminar definitivamente"}
+            {pending
+              ? "Eliminando…"
+              : confirmationStep === 1
+                ? "Continuar"
+                : "Eliminar definitivamente"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
