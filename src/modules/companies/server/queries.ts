@@ -38,6 +38,8 @@ export type CompanyCounselor = {
   name: string;
   firstNames: string | null;
   lastNames: string | null;
+  stakeId: number | null;
+  stakeName: string | null;
 };
 
 export type CompanyDetail = {
@@ -154,8 +156,11 @@ export async function listCompanies(): Promise<CompanyListItem[]> {
         firstNames: counselors.firstNames,
         lastNames: counselors.lastNames,
         companyId: counselors.companyId,
+        stakeId: counselors.stakeId,
+        stakeName: stakes.name,
       })
       .from(counselors)
+      .leftJoin(stakes, eq(counselors.stakeId, stakes.id))
       .orderBy(asc(counselors.name), asc(counselors.id)),
     db
       .select({
@@ -186,6 +191,8 @@ export async function listCompanies(): Promise<CompanyListItem[]> {
       name: counselor.name,
       firstNames: counselor.firstNames,
       lastNames: counselor.lastNames,
+      stakeId: counselor.stakeId,
+      stakeName: counselor.stakeName,
     });
     counselorsByCompany.set(counselor.companyId, assigned);
   }
@@ -258,8 +265,11 @@ export async function getCompanyDetail(
         name: counselors.name,
         firstNames: counselors.firstNames,
         lastNames: counselors.lastNames,
+        stakeId: counselors.stakeId,
+        stakeName: stakes.name,
       })
       .from(counselors)
+      .leftJoin(stakes, eq(counselors.stakeId, stakes.id))
       .where(eq(counselors.companyId, companyId))
       .orderBy(asc(counselors.name), asc(counselors.id)),
     db

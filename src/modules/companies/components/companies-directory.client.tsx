@@ -5,7 +5,6 @@ import Delete02Icon from "@hugeicons/core-free-icons/Delete02Icon";
 import FemaleSymbolIcon from "@hugeicons/core-free-icons/FemaleSymbolIcon";
 import MaleSymbolIcon from "@hugeicons/core-free-icons/MaleSymbolIcon";
 import UserEdit01Icon from "@hugeicons/core-free-icons/UserEdit01Icon";
-import UserGroupIcon from "@hugeicons/core-free-icons/UserGroupIcon";
 import UserRemove01Icon from "@hugeicons/core-free-icons/UserRemove01Icon";
 import ArrowDataTransferHorizontalIcon from "@hugeicons/core-free-icons/ArrowDataTransferHorizontalIcon";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -87,6 +86,16 @@ function getParticipantName(participant: CompanyParticipant) {
 
 function getParticipantAge(age: number | null) {
   return age === null ? "Edad no registrada" : `${age} años`;
+}
+
+function getCounselorInitials(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0))
+    .join("")
+    .toLocaleUpperCase("es");
 }
 
 function getParticipantSexLabel(value: string | null) {
@@ -191,19 +200,37 @@ function CompanyCard({
           </div>
 
           {company.counselors.length > 0 ? (
-            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+            <Table className="mt-3 min-w-[420px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Consejero</TableHead>
+                  <TableHead>Estaca</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
               {company.counselors.map((counselor) => (
-                <li
+                <TableRow
                   key={counselor.id}
-                  className="flex items-center gap-2 rounded-2xl border p-3"
                 >
-                  <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} />
-                  <span className="min-w-0 break-words font-medium">
-                    {counselor.name}
-                  </span>
-                </li>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Avatar size="sm" aria-hidden="true">
+                        <AvatarFallback className="bg-muted text-[9px] font-medium text-muted-foreground">
+                          {getCounselorInitials(counselor.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="min-w-0 break-words font-medium">
+                        {counselor.name}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {counselor.stakeName ?? "Sin estaca"}
+                  </TableCell>
+                </TableRow>
               ))}
-            </ul>
+              </TableBody>
+            </Table>
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">
               Sin consejeros asignados.
