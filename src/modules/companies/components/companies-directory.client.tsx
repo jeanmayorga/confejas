@@ -202,11 +202,6 @@ function UnassignedParticipantsCard({
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">
                       {getParticipantName(participant)}
-                      {participant.preferredName ? (
-                        <span className="ml-1 text-xs text-muted-foreground">
-                          ({participant.preferredName})
-                        </span>
-                      ) : null}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
                       {participant.wardName} · {participant.stakeName}
@@ -377,16 +372,11 @@ function CompanyCard({
                             )}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="min-w-0 truncate whitespace-nowrap">
-                          <span className="font-medium">
-                            {getParticipantName(participant)}
-                          </span>
-                          {participant.preferredName ? (
-                            <span className="ml-1 text-xs text-muted-foreground">
-                              ({participant.preferredName})
+                          <div className="min-w-0 truncate whitespace-nowrap">
+                            <span className="font-medium">
+                              {getParticipantName(participant)}
                             </span>
-                          ) : null}
-                        </div>
+                          </div>
                       </div>
                     </TableCell>
                     <TableCell>{getParticipantAge(participant.age)}</TableCell>
