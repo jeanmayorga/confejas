@@ -8,7 +8,7 @@ import {
   canManageParticipants,
 } from "@/modules/auth/roles";
 import { requireSession } from "@/modules/auth/server/session";
-import { stakes, wards } from "@/modules/church-units/server/schema";
+import { stakes } from "@/modules/church-units/server/schema";
 import { companies } from "@/modules/companies/server/schema";
 import { normalizeGovernmentId } from "@/modules/participants/identity";
 import {
@@ -153,52 +153,24 @@ function optionalPositiveInteger(
   return parsed;
 }
 
-async function getChurchUnitIds(formData: FormData) {
-  const requestedStakeId = optionalPositiveInteger(
-    formData,
-    "stakeId",
-    "estaca",
-  );
-  const requestedWardId = optionalPositiveInteger(
-    formData,
-    "wardId",
-    "barrio",
-  );
-  const [stakeRows, wardRows] = await Promise.all([
-    requestedStakeId
-      ? db
-          .select({ id: stakes.id })
-          .from(stakes)
-          .where(eq(stakes.id, requestedStakeId))
-          .limit(1)
-      : Promise.resolve([]),
-    requestedWardId
-      ? db
-          .select({ id: wards.id, stakeId: wards.stakeId })
-          .from(wards)
-          .where(eq(wards.id, requestedWardId))
-          .limit(1)
-      : Promise.resolve([]),
-  ]);
-  const stake = stakeRows[0];
-  const ward = wardRows[0];
+async function getStakeId(formData: FormData) {
+  const stakeId = optionalPositiveInteger(formData, "stakeId", "estaca");
 
-  if (requestedStakeId && !stake) {
+  if (!stakeId) {
+    return null;
+  }
+
+  const [stake] = await db
+    .select({ id: stakes.id })
+    .from(stakes)
+    .where(eq(stakes.id, stakeId))
+    .limit(1);
+
+  if (!stake) {
     throw new Error("La estaca seleccionada ya no existe.");
   }
 
-  if (requestedWardId && !ward) {
-    throw new Error("El barrio seleccionado ya no existe.");
-  }
-
-  if (stake && ward && stake.id !== ward.stakeId) {
-    throw new Error("El barrio seleccionado no pertenece a esa estaca.");
-  }
-
-  return {
-    stakeId: stake?.id ?? ward?.stakeId ?? null,
-    wardId: ward?.id ?? null,
-  };
+  return stake.id;
 }
 
 function getSafeError(error: unknown) {
@@ -218,8 +190,7 @@ function getSafeError(error: unknown) {
       error.message.includes("obligatorio") ||
       error.message.includes("superar") ||
       error.message.includes("válid") ||
-      error.message.includes("ya no existe") ||
-      error.message.includes("pertenece")
+      error.message.includes("ya no existe")
     ) {
       return error.message;
     }
@@ -292,11 +263,11 @@ export async function createCounselorAction(
 
     const counselorData = getCounselorData(formData);
     const companyId = await getCompanyId(formData);
-    const churchUnitIds = await getChurchUnitIds(formData);
+    const stakeId = await getStakeId(formData);
 
     await db
       .insert(counselors)
-      .values({ ...counselorData, companyId, ...churchUnitIds });
+      .values({ ...counselorData, companyId, stakeId });
     revalidateCounselorPaths();
     return { success: true, message: "Consejero creado correctamente." };
   } catch (error) {
@@ -320,13 +291,13 @@ export async function updateCounselorAction(
 
     const counselorData = getCounselorData(formData);
     const companyId = await getCompanyId(formData);
-    const churchUnitIds = await getChurchUnitIds(formData);
+    const stakeId = await getStakeId(formData);
     const [updated] = await db
       .update(counselors)
       .set({
         ...counselorData,
         companyId,
-        ...churchUnitIds,
+        stakeId,
         updatedAt: new Date(),
       })
       .where(eq(counselors.id, counselorId))

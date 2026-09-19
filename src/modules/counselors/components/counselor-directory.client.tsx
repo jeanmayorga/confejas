@@ -62,15 +62,12 @@ type CounselorDirectoryItem = {
   companyName: string | null;
   stakeId: number | null;
   stakeName: string | null;
-  wardId: number | null;
-  wardName: string | null;
 };
 
 type CounselorDirectoryProps = {
   counselors: CounselorDirectoryItem[];
   companies: { id: string; name: string }[];
   stakes: { id: number; name: string }[];
-  wards: { id: number; name: string; stakeId: number }[];
   canDelete: boolean;
 };
 
@@ -118,7 +115,6 @@ function getCounselorSearchText(counselor: CounselorDirectoryItem) {
       counselor.email,
       counselor.whatsapp,
       counselor.stakeName,
-      counselor.wardName,
     ]
       .filter(Boolean)
       .join(" "),
@@ -164,7 +160,6 @@ export function CounselorDirectory({
   counselors,
   companies,
   stakes,
-  wards,
   canDelete,
 }: CounselorDirectoryProps) {
   const [search, setSearch] = useState("");
@@ -241,7 +236,6 @@ export function CounselorDirectory({
           <CounselorFormDialog
             companies={companies}
             stakes={stakes}
-            wards={wards}
           />
         }
       />
@@ -301,7 +295,6 @@ export function CounselorDirectory({
                 <CounselorFormDialog
                   companies={companies}
                   stakes={stakes}
-                  wards={wards}
                 />
               )}
             </EmptyHeader>
@@ -312,7 +305,6 @@ export function CounselorDirectory({
               <col className="w-[220px]" />
               <col className="w-[280px]" />
               <col className="w-[170px]" />
-              <col className="w-[190px]" />
               <col className="w-[280px]" />
               <col className="w-[92px]" />
             </colgroup>
@@ -331,7 +323,6 @@ export function CounselorDirectory({
                   onSortChange={setSort}
                 />
                 <TableHead>Estaca</TableHead>
-                <TableHead>Barrio</TableHead>
                 <TableHead>Contacto</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
@@ -355,11 +346,6 @@ export function CounselorDirectory({
                   </TableCell>
                   <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden truncate">
                     {counselor.stakeName ?? (
-                      <span className="text-muted-foreground">Sin asignar</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden truncate">
-                    {counselor.wardName ?? (
                       <span className="text-muted-foreground">Sin asignar</span>
                     )}
                   </TableCell>
@@ -409,7 +395,6 @@ export function CounselorDirectory({
                       <CounselorFormDialog
                         companies={companies}
                         stakes={stakes}
-                        wards={wards}
                         counselor={counselor}
                       />
                       {canDelete ? (
@@ -469,17 +454,11 @@ export function CounselorDirectory({
                       {selectedCounselor.companyName ?? "Sin compañía"}
                     </Badge>
                   </div>
-                  <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
+                  <dl className="mt-4 grid grid-cols-1 gap-y-4 text-sm">
                     <div className="flex flex-col gap-1">
                       <dt className="text-muted-foreground">Estaca</dt>
                       <dd className="font-medium">
                         {selectedCounselor.stakeName ?? "Sin asignar"}
-                      </dd>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <dt className="text-muted-foreground">Barrio</dt>
-                      <dd className="font-medium">
-                        {selectedCounselor.wardName ?? "Sin asignar"}
                       </dd>
                     </div>
                   </dl>
