@@ -1,7 +1,6 @@
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import {
@@ -38,7 +37,6 @@ export default async function CompaniesPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Compañías"
-        badge={<Badge variant="secondary">{companies.length}</Badge>}
         description={
           <>
             <p>
