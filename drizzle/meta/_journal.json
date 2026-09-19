@@ -92,6 +92,13 @@
       "when": 1789685902738,
       "tag": "0012_seed_coordinator_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1789812638907,
+      "tag": "0013_round_rumiko_fujikawa",
+      "breakpoints": true
     }
   ]
 }

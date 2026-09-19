@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { requireAdmin } from "@/modules/auth/server/session";
 import { canManageUsers, getRoleLabel } from "@/modules/auth/roles";
+import { listCompanyOptions } from "@/modules/companies/server/queries";
 import { UserDangerActions } from "@/modules/users/components/user-danger-actions.client";
 import { UserFormDialog } from "@/modules/users/components/user-form-dialog.client";
 import { listUsers } from "@/modules/users/server/queries";
@@ -26,12 +27,22 @@ const dateFormatter = new Intl.DateTimeFormat("es-EC", {
   timeStyle: "short",
 });
 
+function formatDate(value: Date | string | null) {
+  if (!value) return "Nunca";
+
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? "Nunca" : dateFormatter.format(date);
+}
+
 export default async function UsersPage({ searchParams }: UsersPageProps) {
   const session = await requireAdmin();
   const params = await searchParams;
   const pageValue = Array.isArray(params.page) ? params.page[0] : params.page;
   const requestedPage = Number(pageValue ?? "1");
-  const result = await listUsers(requestedPage);
+  const [result, companies] = await Promise.all([
+    listUsers(requestedPage),
+    listCompanyOptions(),
+  ]);
 
   if (result.total > 0 && result.page > result.totalPages) {
     redirect(`/dashboard/users?page=${result.totalPages}`);
@@ -45,19 +56,20 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
       <PageHeader
         title="Usuarios"
         description="Cuentas autorizadas para ingresar al panel de Confejas."
-        actions={<UserFormDialog />}
+        actions={<UserFormDialog companies={companies} />}
       />
 
       <div className="flex flex-col overflow-hidden rounded-lg border border-border/50 bg-card">
-        <Table className="min-w-[900px]" aria-label="Usuarios autorizados">
+        <Table className="min-w-[1100px]" aria-label="Usuarios autorizados">
           <TableHeader className="bg-muted/50">
             <TableRow>
               <TableHead>Nombre</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Rol</TableHead>
+              <TableHead>Compañía</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead>Creado</TableHead>
-              <TableHead>Conectado?</TableHead>
+              <TableHead>Última conexión</TableHead>
               <TableHead className="w-28 text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -75,7 +87,8 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                     {getRoleLabel(user.role)}
                   </Badge>
                 </TableCell>
-                <TableCell className="hidden md:table-cell">
+                <TableCell>{user.companyName ?? "Sin asignar"}</TableCell>
+                <TableCell>
                   <Badge variant={user.banned ? "destructive" : "outline"}>
                     {user.banned ? "Bloqueado" : "Activo"}
                   </Badge>
@@ -84,9 +97,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                   {dateFormatter.format(user.createdAt)}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={user.connected ? "default" : "outline"}>
-                    {user.connected ? "Sí" : "No"}
-                  </Badge>
+                  {formatDate(user.lastConnectionAt)}
                 </TableCell>
                 <TableCell className="text-right">
                   <UserDangerActions

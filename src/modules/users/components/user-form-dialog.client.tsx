@@ -34,19 +34,34 @@ type EditableUser = {
   name: string;
   email: string;
   role: string | null;
+  companyId: string | null;
 };
 
 type UserFormDialogProps = {
+  companies: { id: string; name: string }[];
   user?: EditableUser;
 };
 
 const roles = Object.entries(roleLabels) as [AppRole, string][];
 
-export function UserFormDialog({ user }: UserFormDialogProps) {
+export function UserFormDialog({ companies, user }: UserFormDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [role, setRole] = useState<AppRole>(
+    (user?.role as AppRole | null) ?? "participant",
+  );
+  const [companyId, setCompanyId] = useState(user?.companyId ?? "");
   const editing = Boolean(user);
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+
+    if (nextOpen) {
+      setRole((user?.role as AppRole | null) ?? "participant");
+      setCompanyId(user?.companyId ?? "");
+    }
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,7 +84,7 @@ export function UserFormDialog({ user }: UserFormDialogProps) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         render={
           <Button
@@ -126,8 +141,15 @@ export function UserFormDialog({ user }: UserFormDialogProps) {
               <NativeSelect
                 id={`user-role-${user?.id ?? "new"}`}
                 name="role"
-                defaultValue={user?.role ?? "participant"}
+                value={role}
                 className="w-full"
+                onChange={(event) => {
+                  const nextRole = event.target.value as AppRole;
+                  setRole(nextRole);
+                  if (nextRole !== "counselor") {
+                    setCompanyId("");
+                  }
+                }}
                 required
               >
                 {roles.map(([value, label]) => (
@@ -137,6 +159,30 @@ export function UserFormDialog({ user }: UserFormDialogProps) {
                 ))}
               </NativeSelect>
             </Field>
+            {role === "counselor" ? (
+              <Field>
+                <FieldLabel htmlFor={`user-company-${user?.id ?? "new"}`}>
+                  Compañía
+                </FieldLabel>
+                <NativeSelect
+                  id={`user-company-${user?.id ?? "new"}`}
+                  name="companyId"
+                  value={companyId}
+                  onChange={(event) => setCompanyId(event.target.value)}
+                  className="w-full"
+                  required
+                >
+                  <NativeSelectOption value="">
+                    Selecciona una compañía
+                  </NativeSelectOption>
+                  {companies.map((company) => (
+                    <NativeSelectOption key={company.id} value={company.id}>
+                      {company.name}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </Field>
+            ) : null}
             <Field>
               <FieldLabel htmlFor={`user-password-${user?.id ?? "new"}`}>
                 {editing ? "Nueva contraseña (opcional)" : "Contraseña temporal"}

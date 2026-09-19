@@ -1,11 +1,12 @@
 import "server-only";
 
-import { and, asc, count, eq, exists, gt } from "drizzle-orm";
+import { asc, count, eq, sql } from "drizzle-orm";
 
 import {
   session as sessions,
   user as users,
 } from "@/modules/auth/server/schema";
+import { companies } from "@/modules/companies/server/schema";
 import { db } from "@/server/db";
 
 export const USERS_PAGE_SIZE = 25;
@@ -21,22 +22,18 @@ export async function listUsers(page: number) {
         name: users.name,
         email: users.email,
         role: users.role,
+        companyId: users.companyId,
+        companyName: companies.name,
         banned: users.banned,
         createdAt: users.createdAt,
-        connected: exists(
-          db
-            .select({ id: sessions.id })
-            .from(sessions)
-            .where(
-              and(
-                eq(sessions.userId, users.id),
-                gt(sessions.expiresAt, new Date()),
-              ),
-            )
-            .limit(1),
-        ),
+        lastConnectionAt: sql<string | null>`(
+          select max(${sessions.updatedAt})
+          from ${sessions}
+          where ${sessions.userId} = ${users.id}
+        )`,
       })
       .from(users)
+      .leftJoin(companies, eq(users.companyId, companies.id))
       .orderBy(asc(users.name), asc(users.id))
       .limit(USERS_PAGE_SIZE)
       .offset(offset),
