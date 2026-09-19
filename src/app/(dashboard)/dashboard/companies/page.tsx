@@ -15,7 +15,6 @@ import { requireParticipantManagementAccess } from "@/modules/auth/server/sessio
 import { CompaniesDirectory } from "@/modules/companies/components/companies-directory.client";
 import { CompanyDistributionDialog } from "@/modules/companies/components/company-distribution-dialog.client";
 import { CompanyFormDialog } from "@/modules/companies/components/company-form-dialog.client";
-import { COMPANY_PARTICIPANT_LIMIT } from "@/modules/companies/distribution";
 import {
   getCompanyDistributionOverview,
   listCompanies,
@@ -28,28 +27,12 @@ export default async function CompaniesPage() {
     getCompanyDistributionOverview(),
   ]);
   const canDelete = canDeleteParticipants(session.user.role);
-  const assignedCount = companies.reduce(
-    (total, company) => total + company.participantCount,
-    0,
-  );
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Compañías"
-        description={
-          <>
-            <p>
-              Edita tus compañías y mueve, quita o elimina participantes, uno a uno
-              o en grupo.
-            </p>
-            <p className="mt-1">
-              {assignedCount.toLocaleString("es-EC")} asignados ·{" "}
-              {distributionOverview.unassigned.total.toLocaleString("es-EC")} sin compañía · hasta{" "}
-              {COMPANY_PARTICIPANT_LIMIT} por compañía
-            </p>
-          </>
-        }
+        description="Administra tus compañías y sus participantes."
         actions={
           <>
           <CompanyDistributionDialog
