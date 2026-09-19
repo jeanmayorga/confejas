@@ -428,11 +428,6 @@ export function CounselorDirectory({
                     onKeyDown={(event) => event.stopPropagation()}
                   >
                     <div className="flex justify-start gap-1">
-                      <CounselorFormDialog
-                        companies={companies}
-                        stakes={stakes}
-                        counselor={counselor}
-                      />
                       {canDelete ? (
                         <DeleteCounselorButton counselor={counselor} />
                       ) : null}
