@@ -137,13 +137,3 @@
     @apply font-sans;
   }
 }
-
-.login-error-toast[data-type="error"] {
-  border-color: var(--border) !important;
-  background: var(--popover) !important;
-  color: var(--popover-foreground) !important;
-}
-
-.login-error-toast[data-type="error"] svg {
-  color: var(--muted-foreground) !important;
-}

@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import EyeIcon from "@hugeicons/core-free-icons/EyeIcon";
 import EyeOffIcon from "@hugeicons/core-free-icons/EyeOffIcon";
 import LockPasswordIcon from "@hugeicons/core-free-icons/LockPasswordIcon";
+import Loading03Icon from "@hugeicons/core-free-icons/Loading03Icon";
 import Login02Icon from "@hugeicons/core-free-icons/Login02Icon";
 import Mail02Icon from "@hugeicons/core-free-icons/Mail02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -17,7 +18,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/modules/auth/client/auth-client";
 
 type LoginFormProps = {
@@ -44,18 +44,14 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
       });
 
       if (result.error) {
-        toast.error("El correo o la contraseña no son correctos.", {
-          className: "login-error-toast",
-        });
+        toast.error("El correo o la contraseña no son correctos.");
         return;
       }
 
       router.replace(callbackUrl);
       router.refresh();
     } catch {
-      toast.error("No pudimos iniciar sesión. Intenta nuevamente.", {
-        className: "login-error-toast",
-      });
+      toast.error("No pudimos iniciar sesión. Intenta nuevamente.");
     } finally {
       setIsPending(false);
     }
@@ -132,13 +128,22 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
             className="w-full"
             disabled={isPending}
           >
-            <HugeiconsIcon
-              icon={Login02Icon}
-              strokeWidth={2}
-              data-icon="inline-start"
-              aria-hidden
-            />
-            {isPending ? <Spinner data-icon="inline-start" /> : null}
+            {isPending ? (
+              <HugeiconsIcon
+                icon={Loading03Icon}
+                strokeWidth={2}
+                data-icon="inline-start"
+                aria-hidden
+                className="size-4 animate-spin"
+              />
+            ) : (
+              <HugeiconsIcon
+                icon={Login02Icon}
+                strokeWidth={2}
+                data-icon="inline-start"
+                aria-hidden
+              />
+            )}
             {isPending ? "Ingresando..." : "Ingresar"}
           </Button>
         </Field>
