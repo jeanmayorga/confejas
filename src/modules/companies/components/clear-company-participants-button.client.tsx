@@ -22,9 +22,6 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { clearCompanyParticipantsAction } from "@/modules/companies/server/actions";
 
-const destructiveOutlineClassName =
-  "border-destructive/40 text-destructive hover:border-destructive hover:bg-destructive hover:text-destructive-foreground";
-
 export function ClearCompanyParticipantsButton({
   participantCount,
 }: {
@@ -70,8 +67,7 @@ export function ClearCompanyParticipantsButton({
         render={
           <Button
             type="button"
-            variant="outline"
-            className={destructiveOutlineClassName}
+            variant="destructive"
           >
             <HugeiconsIcon
               icon={UserRemove01Icon}
