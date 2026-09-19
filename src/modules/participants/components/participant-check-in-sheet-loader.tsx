@@ -1,17 +1,13 @@
 import { ParticipantCheckInSheet } from "@/modules/participants/components/participant-check-in-sheet.client";
-import { listCompanyOptions } from "@/modules/companies/server/queries";
-import { getLodgingOverview } from "@/modules/lodging/server/queries";
 import { getParticipantForCheckIn } from "@/modules/participants/server/queries";
 
 type ParticipantCheckInSheetLoaderProps = {
-  assignmentError?: boolean;
   participantId?: string;
   returnPath: "/dashboard/check-in/scan" | "/dashboard/check-in/code";
   saved?: boolean;
 };
 
 export async function ParticipantCheckInSheetLoader({
-  assignmentError,
   participantId,
   returnPath,
   saved,
@@ -20,11 +16,7 @@ export async function ParticipantCheckInSheetLoader({
     return null;
   }
 
-  const [participant, lodging, companies] = await Promise.all([
-    getParticipantForCheckIn(participantId),
-    getLodgingOverview(),
-    listCompanyOptions(),
-  ]);
+  const participant = await getParticipantForCheckIn(participantId);
 
   if (!participant) {
     return null;
@@ -34,14 +26,20 @@ export async function ParticipantCheckInSheetLoader({
     <ParticipantCheckInSheet
       key={`${participant.id}-${saved ? "saved" : "review"}`}
       participant={{
-        ...participant,
+        id: participant.id,
+        sourceRecordId: participant.sourceRecordId,
+        firstNames: participant.firstNames,
+        lastNames: participant.lastNames,
+        preferredName: participant.preferredName,
+        wardName: participant.wardName,
+        stakeName: participant.stakeName,
+        shirtSize: participant.shirtSize,
+        companyName: participant.companyName,
+        roomName: participant.roomName,
         checkedInAt: participant.checkedInAt?.toISOString() ?? null,
       }}
-      companies={companies}
-      lodgingBuildings={lodging.buildings}
       returnPath={returnPath}
       saved={saved}
-      assignmentError={assignmentError}
     />
   );
 }

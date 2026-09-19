@@ -103,8 +103,8 @@ function getLabelledIdentityCandidate(value: string) {
   return match?.[1]?.trim() ?? null;
 }
 
-function normalizeSourceRecordId(value: string) {
-  const candidate = value.trim();
+export function normalizeParticipantCode(value: string) {
+  const candidate = value.trim().replace(/^#\s*/, "");
 
   if (!SOURCE_RECORD_ID_PATTERN.test(candidate)) {
     return null;
@@ -140,7 +140,7 @@ export function parseParticipantQrValue(
 
   for (const candidate of candidates) {
     governmentId ??= normalizeGovernmentId(candidate);
-    sourceRecordId ??= normalizeSourceRecordId(candidate);
+    sourceRecordId ??= normalizeParticipantCode(candidate);
 
     if (governmentId && sourceRecordId) {
       break;

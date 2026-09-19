@@ -331,18 +331,13 @@ export async function getParticipantForCheckIn(participantId: string) {
   const [participant] = await db
     .select({
       id: participants.id,
+      sourceRecordId: participants.sourceRecordId,
       firstNames: participants.firstNames,
       lastNames: participants.lastNames,
       preferredName: participants.preferredName,
-      governmentId: participants.governmentId,
-      birthDate: participants.birthDate,
-      sex: participants.sex,
-      phone: participants.phone,
-      email: participants.email,
       wardName: wards.name,
       stakeName: stakes.name,
       shirtSize: participants.shirtSize,
-      companyId: participants.companyId,
       companyName: companies.name,
       roomName: participants.roomName,
       checkedInAt: participants.checkedInAt,
@@ -426,6 +421,20 @@ export async function findParticipantIdByGovernmentId(value: string) {
     .select({ id: participants.id })
     .from(participants)
     .where(eq(participants.governmentId, governmentId))
+    .limit(1);
+
+  return participant ?? null;
+}
+
+export async function findParticipantIdBySourceRecordId(value: number) {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    return null;
+  }
+
+  const [participant] = await db
+    .select({ id: participants.id })
+    .from(participants)
+    .where(eq(participants.sourceRecordId, value))
     .limit(1);
 
   return participant ?? null;

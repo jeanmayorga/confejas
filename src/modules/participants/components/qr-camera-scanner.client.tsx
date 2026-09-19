@@ -9,15 +9,13 @@ import {
 } from "react";
 import Camera01Icon from "@hugeicons/core-free-icons/Camera01Icon";
 import CameraOff01Icon from "@hugeicons/core-free-icons/CameraOff01Icon";
-import CheckmarkCircle02Icon from "@hugeicons/core-free-icons/CheckmarkCircle02Icon";
 import FlashlightIcon from "@hugeicons/core-free-icons/FlashlightIcon";
 import FlashlightOffIcon from "@hugeicons/core-free-icons/FlashlightOffIcon";
 import QrCodeScanIcon from "@hugeicons/core-free-icons/QrCodeScanIcon";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { useRouter } from "next/navigation";
 import type { IScannerControls } from "@zxing/browser";
 
-import { completeParticipantQrCheckInAction } from "@/app/(dashboard)/dashboard/check-in/actions";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,20 +24,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
-import {
-  findParticipantForQrCheckInAction,
-  type QrCheckInParticipant,
-} from "@/modules/participants/server/actions";
+import { findParticipantForQrCheckInAction } from "@/modules/participants/server/actions";
 
 type ScannerStatus = "idle" | "starting" | "scanning" | "searching";
 
@@ -84,65 +71,30 @@ function getCameraErrorMessage(error: unknown) {
   return "No pudimos iniciar la cámara. Puedes cerrarla e intentarlo nuevamente.";
 }
 
-function getLodgingDetails(roomName: string | null) {
-  if (!roomName) {
-    return {
-      hasAssignedBed: false,
-      buildingName: "Sin asignar",
-      roomLabel: "Sin asignar",
-    };
-  }
+type QrCameraScannerProps = {
+  initialCameraEnabled?: boolean;
+};
 
-  const [buildingName, ...roomParts] = roomName
-    .split(/·/)
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  return {
-    hasAssignedBed: true,
-    buildingName: buildingName || "No especificado",
-    roomLabel: roomParts.join(" · ") || roomName,
-  };
-}
-
-function launchConfetti() {
-  void import("canvas-confetti")
-    .then(({ default: confetti }) =>
-      confetti({
-        particleCount: 110,
-        spread: 78,
-        startVelocity: 34,
-        ticks: 160,
-        origin: { x: 0.5, y: 0.68 },
-        disableForReducedMotion: true,
-      }),
-    )
-    .catch(() => undefined);
-}
-
-export function QrCameraScanner() {
+export function QrCameraScanner({
+  initialCameraEnabled = true,
+}: QrCameraScannerProps) {
+  const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
   const retryTimerRef = useRef<number | null>(null);
-  const successTimerRef = useRef<number | null>(null);
   const hasScannedRef = useRef(false);
   const lastQrValueRef = useRef<string | null>(null);
   const waitingForQrRemovalRef = useRef(false);
-  const [status, setStatus] = useState<ScannerStatus>("starting");
+  const [status, setStatus] = useState<ScannerStatus>(
+    initialCameraEnabled ? "starting" : "idle",
+  );
   const [message, setMessage] = useState<string | null>(null);
-  const [cameraEnabled, setCameraEnabled] = useState(true);
+  const [cameraEnabled, setCameraEnabled] = useState(initialCameraEnabled);
   const [scannerRun, setScannerRun] = useState(0);
   const [torchAvailable, setTorchAvailable] = useState(false);
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [torchPending, setTorchPending] = useState(false);
-  const [participant, setParticipant] =
-    useState<QrCheckInParticipant | null>(null);
-  const [celebrating, setCelebrating] = useState(false);
-  const [confirmationError, setConfirmationError] = useState<string | null>(
-    null,
-  );
   const [isLookingUp, startLookupTransition] = useTransition();
-  const [isConfirming, startCheckInTransition] = useTransition();
 
   const activateScanner = useCallback(() => {
     if (retryTimerRef.current !== null) {
@@ -150,15 +102,7 @@ export function QrCameraScanner() {
       retryTimerRef.current = null;
     }
 
-    if (successTimerRef.current !== null) {
-      window.clearTimeout(successTimerRef.current);
-      successTimerRef.current = null;
-    }
-
     hasScannedRef.current = false;
-    setParticipant(null);
-    setCelebrating(false);
-    setConfirmationError(null);
     setMessage(null);
 
     waitingForQrRemovalRef.current = lastQrValueRef.current !== null;
@@ -230,9 +174,17 @@ export function QrCameraScanner() {
           }
 
           navigator.vibrate?.(80);
+          safelyStopScanner(controlsRef.current);
+          controlsRef.current = null;
+          setCameraEnabled(false);
+          setTorchAvailable(false);
+          setTorchEnabled(false);
           setStatus("idle");
           setMessage(null);
-          setParticipant(result.participant);
+          router.replace(
+            `/dashboard/check-in/scan?participantId=${result.participantId}`,
+            { scroll: false },
+          );
         } catch {
           resumeScannerAfterMessage(
             "No pudimos buscar al participante. Inténtalo nuevamente.",
@@ -240,7 +192,7 @@ export function QrCameraScanner() {
         }
       });
     },
-    [resumeScannerAfterMessage],
+    [resumeScannerAfterMessage, router],
   );
 
   useEffect(() => {
@@ -364,10 +316,6 @@ export function QrCameraScanner() {
         window.clearTimeout(retryTimerRef.current);
       }
 
-      if (successTimerRef.current !== null) {
-        window.clearTimeout(successTimerRef.current);
-      }
-
       safelyStopScanner(controlsRef.current);
       controlsRef.current = null;
     };
@@ -413,66 +361,7 @@ export function QrCameraScanner() {
     }
   }
 
-  function cancelParticipantConfirmation() {
-    if (isConfirming || celebrating) {
-      return;
-    }
-
-    activateScanner();
-  }
-
-  function celebrateArrival() {
-    setCelebrating(true);
-    navigator.vibrate?.([80, 40, 120]);
-    launchConfetti();
-
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    successTimerRef.current = window.setTimeout(
-      activateScanner,
-      prefersReducedMotion ? 500 : 1_250,
-    );
-  }
-
-  function confirmParticipantArrival() {
-    if (!participant || isConfirming || celebrating) {
-      return;
-    }
-
-    if (participant.checkedInAt) {
-      celebrateArrival();
-      return;
-    }
-
-    setConfirmationError(null);
-
-    startCheckInTransition(async () => {
-      try {
-        const result = await completeParticipantQrCheckInAction(participant.id);
-
-        if (!result.success) {
-          setConfirmationError(result.message);
-          return;
-        }
-
-        setParticipant((currentParticipant) =>
-          currentParticipant
-            ? { ...currentParticipant, checkedInAt: result.checkedInAt }
-            : null,
-        );
-        celebrateArrival();
-      } catch {
-        setConfirmationError(
-          "No pudimos confirmar la llegada. Inténtalo nuevamente.",
-        );
-      }
-    });
-  }
-
   const cameraActive = status === "starting" || status === "scanning";
-  const lodging = getLodgingDetails(participant?.roomName ?? null);
-  const participantAlreadyCheckedIn = Boolean(participant?.checkedInAt);
 
   return (
     <>
@@ -608,124 +497,6 @@ export function QrCameraScanner() {
           )}
         </CardContent>
       </Card>
-
-      <Dialog
-        open={Boolean(participant)}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen) {
-            cancelParticipantConfirmation();
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-lg" showCloseButton={false}>
-          {celebrating ? (
-            <DialogHeader className="items-center py-6 text-center">
-              <div className="mb-2 flex size-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} />
-              </div>
-              <DialogTitle className="text-xl">¡Llegada confirmada!</DialogTitle>
-              <DialogDescription>
-                La cámara queda lista para escanear al siguiente participante.
-              </DialogDescription>
-            </DialogHeader>
-          ) : participant ? (
-            <>
-              <DialogHeader>
-                <div className="mb-1 flex items-center gap-2">
-                  <Badge
-                    variant={
-                      participantAlreadyCheckedIn ? "default" : "secondary"
-                    }
-                  >
-                    {participantAlreadyCheckedIn
-                      ? "Llegada registrada"
-                      : "Por confirmar"}
-                  </Badge>
-                </div>
-                <DialogTitle className="text-xl leading-tight">
-                  {participant.firstNames} {participant.lastNames}
-                </DialogTitle>
-                <DialogDescription>
-                  {participantAlreadyCheckedIn
-                    ? "Este participante ya hizo check-in."
-                    : "Confirma que esta es la persona que acaba de llegar."}
-                </DialogDescription>
-              </DialogHeader>
-
-              <dl className="grid gap-3 sm:grid-cols-2">
-                <div className="flex flex-col gap-1 rounded-2xl bg-muted/40 p-4">
-                  <dt className="text-xs font-medium text-muted-foreground">
-                    Compañía
-                  </dt>
-                  <dd className="font-medium">
-                    {participant.companyName ?? "Sin asignar"}
-                  </dd>
-                </div>
-                <div className="flex flex-col gap-1 rounded-2xl bg-muted/40 p-4">
-                  <dt className="text-xs font-medium text-muted-foreground">
-                    Cama asignada
-                  </dt>
-                  <dd>
-                    <Badge
-                      variant={
-                        lodging.hasAssignedBed ? "default" : "secondary"
-                      }
-                    >
-                      {lodging.hasAssignedBed ? "Asignada" : "Sin asignar"}
-                    </Badge>
-                  </dd>
-                </div>
-                <div className="flex flex-col gap-1 rounded-2xl bg-muted/40 p-4">
-                  <dt className="text-xs font-medium text-muted-foreground">
-                    Edificio
-                  </dt>
-                  <dd className="font-medium">{lodging.buildingName}</dd>
-                </div>
-                <div className="flex flex-col gap-1 rounded-2xl bg-muted/40 p-4">
-                  <dt className="text-xs font-medium text-muted-foreground">
-                    Habitación
-                  </dt>
-                  <dd className="font-medium">{lodging.roomLabel}</dd>
-                </div>
-              </dl>
-
-              {confirmationError ? (
-                <p className="text-sm text-destructive" role="alert">
-                  {confirmationError}
-                </p>
-              ) : null}
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xl"
-                  onClick={cancelParticipantConfirmation}
-                  disabled={isConfirming}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="button"
-                  size="xl"
-                  onClick={confirmParticipantArrival}
-                  disabled={isConfirming}
-                >
-                  {isConfirming ? (
-                    <Spinner data-icon="inline-start" />
-                  ) : (
-                    <HugeiconsIcon
-                      icon={CheckmarkCircle02Icon}
-                      data-icon="inline-start"
-                    />
-                  )}
-                  {isConfirming ? "Confirmando…" : "Llego"}
-                </Button>
-              </DialogFooter>
-            </>
-          ) : null}
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

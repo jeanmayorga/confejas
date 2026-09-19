@@ -79,7 +79,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const actionNavigation = canCheckInParticipants(user.role)
     ? [
         {
-          title: "Check-in",
+          title: "Bienvenida",
           href: "/dashboard/check-in",
           icon: QrCodeScanIcon,
           exact: false,

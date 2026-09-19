@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  normalizeParticipantCode,
   normalizeParticipantQrValue,
   parseParticipantQrValue,
 } from "./qr";
@@ -40,6 +41,13 @@ describe("participant QR values", () => {
     expect(
       parseParticipantQrValue("https://registro.example/pase?recordId=123"),
     ).toEqual({ uuid: null, governmentId: null, sourceRecordId: 123 });
+  });
+
+  test("normalizes the unique participant code with or without its prefix", () => {
+    expect(normalizeParticipantCode("123")).toBe(123);
+    expect(normalizeParticipantCode(" # 123 ")).toBe(123);
+    expect(normalizeParticipantCode("0")).toBeNull();
+    expect(normalizeParticipantCode("091-234-5678")).toBeNull();
   });
 
   test("rejects empty or unrelated QR content", () => {
