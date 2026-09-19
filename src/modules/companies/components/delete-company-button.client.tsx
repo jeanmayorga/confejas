@@ -72,7 +72,7 @@ export function DeleteCompanyButton({
           render={
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               size="icon-xs"
               disabled
               aria-label={`No se puede eliminar ${companyLabel} porque tiene asignaciones`}
@@ -101,7 +101,7 @@ export function DeleteCompanyButton({
               render={
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   size="icon-xs"
                   className="text-destructive"
                   disabled={disabled}
