@@ -6,7 +6,13 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { parseAsString, useQueryStates } from "nuqs";
-import { useEffect, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import Link from "next/link";
 import PlusSignIcon from "@hugeicons/core-free-icons/PlusSignIcon";
 import UserMultiple02Icon from "@hugeicons/core-free-icons/UserMultiple02Icon";
@@ -30,7 +36,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ParticipantDirectoryFilters } from "@/modules/participants/components/participant-directory-filters.client";
+import {
+  ParticipantDirectoryFilters,
+  type ParticipantDirectoryQueryUpdate,
+} from "@/modules/participants/components/participant-directory-filters.client";
 import {
   ParticipantsTable,
   type ParticipantTableRow,
@@ -175,7 +184,7 @@ export function ParticipantDirectory({
   const queryClient = useQueryClient();
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [isLive, setIsLive] = useState(false);
-  const [, startTransition] = useTransition();
+  const [isQueryUpdating, startTransition] = useTransition();
   const [queryState, setQueryState] = useQueryStates(
     {
       query: parseAsString.withDefault(""),
@@ -191,6 +200,12 @@ export function ParticipantDirectory({
       shallow: true,
       startTransition,
     },
+  );
+  const updateQueryState = useCallback(
+    (updates: ParticipantDirectoryQueryUpdate) => {
+      void setQueryState(updates);
+    },
+    [setQueryState],
   );
   const queryString = getDirectoryQueryString(queryState);
   const participantsQuery = useInfiniteQuery({
@@ -292,8 +307,11 @@ export function ParticipantDirectory({
         statusCounts={statusCounts}
         isRefreshing={participantsQuery.isFetching}
         isLive={isLive}
+        isPending={isQueryUpdating}
+        queryState={queryState}
         onRefresh={retryParticipants}
         onLiveChange={setIsLive}
+        onQueryStateChange={updateQueryState}
       />
 
       <div className="flex flex-col overflow-hidden rounded-lg border border-border/50 bg-card">
@@ -345,6 +363,7 @@ export function ParticipantDirectory({
                         company: null,
                         ward: null,
                         stake: null,
+                        status: null,
                       })
                     }
                   >

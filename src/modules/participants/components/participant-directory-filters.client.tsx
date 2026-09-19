@@ -1,13 +1,7 @@
 "use client";
 
-import {
-  type FormEvent,
-  useEffect,
-  useState,
-  useTransition,
-} from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import Cancel01Icon from "@hugeicons/core-free-icons/Cancel01Icon";
-import { parseAsString, useQueryStates } from "nuqs";
 import FilterHorizontalIcon from "@hugeicons/core-free-icons/FilterHorizontalIcon";
 import LiveStreaming02Icon from "@hugeicons/core-free-icons/LiveStreaming02Icon";
 import Pdf02Icon from "@hugeicons/core-free-icons/Pdf02Icon";
@@ -60,6 +54,24 @@ type ParticipantDirectoryFilterValues = {
   status: ParticipantStatus | "";
 };
 
+export type ParticipantDirectoryQueryState = {
+  query: string;
+  sort: string;
+  company: string;
+  ward: string;
+  stake: string;
+  status: string;
+};
+
+export type ParticipantDirectoryQueryUpdate = Partial<{
+  query: string | null;
+  sort: string | null;
+  company: string | null;
+  ward: string | null;
+  stake: string | null;
+  status: string | null;
+}>;
+
 type ParticipantStatusCounts = Record<ParticipantStatus, number>;
 
 type ParticipantDirectoryFiltersProps = {
@@ -70,8 +82,11 @@ type ParticipantDirectoryFiltersProps = {
   statusCounts: ParticipantStatusCounts;
   isRefreshing: boolean;
   isLive: boolean;
+  isPending: boolean;
+  queryState: ParticipantDirectoryQueryState;
   onRefresh: () => void;
   onLiveChange: (enabled: boolean) => void;
+  onQueryStateChange: (updates: ParticipantDirectoryQueryUpdate) => void;
 };
 
 function getDirectoryParams(filters: ParticipantDirectoryFilterValues) {
@@ -112,26 +127,13 @@ export function ParticipantDirectoryFilters({
   statusCounts,
   isRefreshing,
   isLive,
+  isPending,
+  queryState,
   onRefresh,
   onLiveChange,
+  onQueryStateChange,
 }: ParticipantDirectoryFiltersProps) {
-  const [pending, startTransition] = useTransition();
-  const [queryState, setQueryState] = useQueryStates(
-    {
-      query: parseAsString.withDefault(""),
-      sort: parseAsString.withDefault(DEFAULT_PARTICIPANT_SORT),
-      company: parseAsString.withDefault(""),
-      ward: parseAsString.withDefault(""),
-      stake: parseAsString.withDefault(""),
-      status: parseAsString.withDefault("registered"),
-    },
-    {
-      history: "replace",
-      scroll: false,
-      shallow: true,
-      startTransition,
-    },
-  );
+  const pending = isPending;
   const [searchDraft, setSearchDraft] = useState(queryState.query);
 
   useEffect(() => {
@@ -142,11 +144,11 @@ export function ParticipantDirectoryFilters({
     }
 
     const timeoutId = window.setTimeout(() => {
-      void setQueryState({ query: normalizedQuery || null });
+      onQueryStateChange({ query: normalizedQuery || null });
     }, 350);
 
     return () => window.clearTimeout(timeoutId);
-  }, [queryState.query, searchDraft, setQueryState]);
+  }, [onQueryStateChange, queryState.query, searchDraft]);
 
   const selectedFilters: ParticipantDirectoryFilterValues = {
     search: queryState.query,
@@ -172,15 +174,15 @@ export function ParticipantDirectoryFilters({
     const nextValue = value || null;
 
     if (field === "sort") {
-      void setQueryState({ sort: value });
+      onQueryStateChange({ sort: value });
     } else if (field === "companyId") {
-      void setQueryState({ company: nextValue });
+      onQueryStateChange({ company: nextValue });
     } else if (field === "wardId") {
-      void setQueryState({ ward: nextValue });
+      onQueryStateChange({ ward: nextValue });
     } else if (field === "stakeId") {
-      void setQueryState({ stake: nextValue });
+      onQueryStateChange({ stake: nextValue });
     } else {
-      void setQueryState({
+      onQueryStateChange({
         status: value === "all" ? "all" : nextValue,
       });
     }
@@ -188,16 +190,16 @@ export function ParticipantDirectoryFilters({
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void setQueryState({ query: searchDraft.trim() || null });
+    onQueryStateChange({ query: searchDraft.trim() || null });
   }
 
   function clearSearch() {
     setSearchDraft("");
-    void setQueryState({ query: null });
+    onQueryStateChange({ query: null });
   }
 
   function clearDirectoryFilters() {
-    void setQueryState({
+    onQueryStateChange({
       company: null,
       ward: null,
       stake: null,
