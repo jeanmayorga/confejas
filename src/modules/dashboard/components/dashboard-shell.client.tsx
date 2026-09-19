@@ -68,7 +68,7 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
   return (
     <SidebarProvider>
       <AppSidebar user={user} />
-      <SidebarInset className="min-w-0 md:my-2 md:mr-2 md:overflow-hidden md:rounded-3xl md:border md:shadow-sm">
+      <SidebarInset className="min-w-0 md:my-2 md:mr-2 md:overflow-clip md:rounded-3xl md:border md:shadow-sm">
         <header className="flex min-h-16 items-center justify-between gap-2 border-b bg-background px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden" aria-label="Abrir menú" />
