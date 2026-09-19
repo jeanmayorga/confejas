@@ -65,7 +65,7 @@ export function SendCounselorCredentialsButton({
       {sent ? (
         <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} data-icon="inline-start" />
       ) : pending ? (
-        <Spinner data-icon="inline-start" />
+        <Spinner className="size-3" data-icon="inline-start" />
       ) : (
         <HugeiconsIcon
           icon={MailSend02Icon}
