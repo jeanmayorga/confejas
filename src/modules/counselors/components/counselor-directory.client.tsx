@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import ArrowDown02Icon from "@hugeicons/core-free-icons/ArrowDown02Icon";
+import ArrowUp02Icon from "@hugeicons/core-free-icons/ArrowUp02Icon";
 import ArrowUpDownIcon from "@hugeicons/core-free-icons/ArrowUpDownIcon";
 import Cancel01Icon from "@hugeicons/core-free-icons/Cancel01Icon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
@@ -48,7 +49,14 @@ import {
 import { CounselorFormDialog } from "@/modules/counselors/components/counselor-form-dialog.client";
 import { DeleteCounselorButton } from "@/modules/counselors/components/delete-counselor-button.client";
 
-type CounselorSort = "company" | "name";
+type CounselorSortField = "company" | "name" | "stake";
+type CounselorSort =
+  | "company_asc"
+  | "company_desc"
+  | "name_asc"
+  | "name_desc"
+  | "stake_asc"
+  | "stake_desc";
 
 type CounselorDirectoryItem = {
   id: string;
@@ -128,12 +136,20 @@ function SortableTableHead({
   onSortChange,
 }: {
   label: string;
-  field: CounselorSort;
+  field: CounselorSortField;
   sort: CounselorSort;
   onSortChange: (sort: CounselorSort) => void;
 }) {
-  const isActive = sort === field;
-  const icon = isActive ? ArrowDown02Icon : ArrowUpDownIcon;
+  const isActive = sort.startsWith(`${field}_`);
+  const isDescending = sort.endsWith("_desc");
+  const nextSort = `${field}_${
+    isActive && !isDescending ? "desc" : "asc"
+  }` as CounselorSort;
+  const icon = isActive
+    ? isDescending
+      ? ArrowUp02Icon
+      : ArrowDown02Icon
+    : ArrowUpDownIcon;
 
   return (
     <TableHead>
@@ -146,8 +162,14 @@ function SortableTableHead({
             ? "h-6 gap-1 px-0 text-foreground hover:bg-transparent"
             : "h-6 gap-1 px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
         }
-        aria-label={`${label}: ${isActive ? "orden activo" : "ordenar"}`}
-        onClick={() => onSortChange(field)}
+        aria-label={`${label}: ${
+          isActive
+            ? isDescending
+              ? "orden descendente"
+              : "orden ascendente"
+            : "ordenar"
+        }`}
+        onClick={() => onSortChange(nextSort)}
       >
         {label}
         <HugeiconsIcon icon={icon} strokeWidth={2} />
@@ -163,7 +185,7 @@ export function CounselorDirectory({
   canDelete,
 }: CounselorDirectoryProps) {
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<CounselorSort>("company");
+  const [sort, setSort] = useState<CounselorSort>("company_asc");
   const [selectedCounselor, setSelectedCounselor] =
     useState<CounselorDirectoryItem | null>(null);
   const normalizedSearch = normalizeSearch(search);
@@ -174,30 +196,39 @@ export function CounselorDirectory({
         )
       : counselors;
 
+    const field = sort.slice(0, -4) as CounselorSortField;
+    const isDescending = sort.endsWith("_desc");
+    const direction = isDescending ? -1 : 1;
+
     return [...filteredCounselors].sort((left, right) => {
-      if (sort === "company") {
-        if (left.companyName === null && right.companyName !== null) {
-          return 1;
-        }
+      const leftValue =
+        field === "company"
+          ? left.companyName
+          : field === "stake"
+            ? left.stakeName
+            : left.name;
+      const rightValue =
+        field === "company"
+          ? right.companyName
+          : field === "stake"
+            ? right.stakeName
+            : right.name;
+      const leftIsMissing = !leftValue;
+      const rightIsMissing = !rightValue;
 
-        if (left.companyName !== null && right.companyName === null) {
-          return -1;
-        }
-
-        const byCompany = companyNameCollator.compare(
-          left.companyName ?? "",
-          right.companyName ?? "",
-        );
-
-        if (byCompany !== 0) {
-          return byCompany;
-        }
+      if (leftIsMissing !== rightIsMissing) {
+        return leftIsMissing ? 1 : -1;
       }
 
-      return (
-        counselorNameCollator.compare(left.name, right.name) ||
-        left.id.localeCompare(right.id)
-      );
+      const collator = field === "name" ? counselorNameCollator : companyNameCollator;
+      const primary = collator.compare(leftValue ?? "", rightValue ?? "");
+
+      if (primary !== 0) {
+        return primary * direction;
+      }
+
+      return counselorNameCollator.compare(left.name, right.name) ||
+        left.id.localeCompare(right.id);
     });
   }, [counselors, normalizedSearch, sort]);
 
@@ -322,7 +353,12 @@ export function CounselorDirectory({
                   sort={sort}
                   onSortChange={setSort}
                 />
-                <TableHead>Estaca</TableHead>
+                <SortableTableHead
+                  label="Estaca"
+                  field="stake"
+                  sort={sort}
+                  onSortChange={setSort}
+                />
                 <TableHead>Contacto</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
@@ -345,11 +381,6 @@ export function CounselorDirectory({
                     )}
                   </TableCell>
                   <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden truncate">
-                    {counselor.stakeName ?? (
-                      <span className="text-muted-foreground">Sin asignar</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden">
                     <div className="flex items-center gap-2">
                       <Avatar size="sm" className="!size-5" aria-hidden="true">
                         <AvatarFallback className="!text-[9px] font-medium">
@@ -360,6 +391,11 @@ export function CounselorDirectory({
                         {counselor.name}
                       </span>
                     </div>
+                  </TableCell>
+                  <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden truncate">
+                    {counselor.stakeName ?? (
+                      <span className="text-muted-foreground">Sin asignar</span>
+                    )}
                   </TableCell>
                   <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden">
                     <div
