@@ -13,13 +13,12 @@ import {
   useState,
   useTransition,
 } from "react";
-import Link from "next/link";
 import PlusSignIcon from "@hugeicons/core-free-icons/PlusSignIcon";
 import UserMultiple02Icon from "@hugeicons/core-free-icons/UserMultiple02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { PageHeader } from "@/components/page-header";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Empty,
   EmptyDescription,
@@ -28,6 +27,13 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -44,6 +50,7 @@ import {
   ParticipantsTable,
   type ParticipantTableRow,
 } from "@/modules/participants/components/participants-table.client";
+import { ParticipantForm } from "@/modules/participants/components/participant-form.client";
 import { isParticipantStatus, type ParticipantStatus } from "@/modules/participants/status";
 import {
   DEFAULT_PARTICIPANT_SORT,
@@ -71,7 +78,7 @@ type ParticipantDirectoryProps = {
   canManage: boolean;
   canDelete: boolean;
   companies: { id: string; name: string }[];
-  wards: { id: number; name: string }[];
+  wards: { id: number; name: string; stakeId: number }[];
   stakes: { id: number; name: string }[];
 };
 
@@ -184,6 +191,7 @@ export function ParticipantDirectory({
   const queryClient = useQueryClient();
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [isLive, setIsLive] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isQueryUpdating, startTransition] = useTransition();
   const [queryState, setQueryState] = useQueryStates(
     {
@@ -252,6 +260,12 @@ export function ParticipantDirectory({
     void participantsQuery.refetch();
   }
 
+  function handleDataChanged() {
+    void queryClient.invalidateQueries({
+      queryKey: ["participants"],
+    });
+  }
+
   useEffect(() => {
     const loadMoreNode = loadMoreRef.current;
 
@@ -288,13 +302,10 @@ export function ParticipantDirectory({
         description="Una lista de todos los participantes"
         actions={
           canManage ? (
-            <Link
-              href="/dashboard/participants/new"
-              className={buttonVariants()}
-            >
+            <Button type="button" onClick={() => setIsCreateOpen(true)}>
               <HugeiconsIcon icon={PlusSignIcon} data-icon="inline-start" />
               Nuevo participante
-            </Link>
+            </Button>
           ) : null
         }
       />
@@ -370,13 +381,10 @@ export function ParticipantDirectory({
                     Ver inscritos
                   </button>
                 ) : canManage ? (
-                  <Link
-                    href="/dashboard/participants/new"
-                    className={buttonVariants()}
-                  >
+                  <Button type="button" onClick={() => setIsCreateOpen(true)}>
                     <HugeiconsIcon icon={PlusSignIcon} data-icon="inline-start" />
                     Nuevo participante
-                  </Link>
+                  </Button>
                 ) : null}
               </EmptyHeader>
             </Empty>
@@ -389,11 +397,7 @@ export function ParticipantDirectory({
                 isLoadingMore={isFetchingNextPage}
                 sort={normalizeParticipantSort(queryState.sort)}
                 onSortChange={(sort) => void setQueryState({ sort })}
-                onDataChanged={() =>
-                  void queryClient.invalidateQueries({
-                    queryKey: ["participants"],
-                  })
-                }
+                onDataChanged={handleDataChanged}
               />
               {hasNextPage ? (
                 <div ref={loadMoreRef} className="h-1" aria-hidden="true" />
@@ -402,6 +406,34 @@ export function ParticipantDirectory({
           )}
         </div>
       </div>
+
+      <Sheet open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <SheetContent
+          side="right"
+          className="data-[side=right]:w-full data-[side=right]:sm:max-w-2xl"
+        >
+          <SheetHeader className="pr-16">
+            <SheetTitle>Nuevo participante</SheetTitle>
+            <SheetDescription>
+              Registra su información personal, de la conferencia y de salud.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
+            <ParticipantForm
+              companies={companies}
+              wards={wards}
+              stakes={stakes}
+              lodgingBuildings={[]}
+              presentation="sheet"
+              onCancel={() => setIsCreateOpen(false)}
+              onSuccess={() => {
+                setIsCreateOpen(false);
+                handleDataChanged();
+              }}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
