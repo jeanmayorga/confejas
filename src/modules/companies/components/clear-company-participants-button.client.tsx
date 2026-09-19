@@ -50,7 +50,9 @@ export function ClearCompanyParticipantsButton({
       void queryClient.invalidateQueries({
         queryKey: ["company-unassigned-participants"],
       });
-      router.refresh();
+      startTransition(() => {
+        router.refresh();
+      });
     });
   }
 

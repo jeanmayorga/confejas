@@ -203,7 +203,9 @@ export function CompanyDistributionDialog({
       setOpen(false);
       resetPreview();
       onDistributed?.();
-      router.refresh();
+      startTransition(() => {
+        router.refresh();
+      });
     });
   }
 
