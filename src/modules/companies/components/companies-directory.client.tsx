@@ -32,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Progress, ProgressLabel } from "@/components/ui/progress";
+import { Progress, ProgressLabel, ProgressTrack } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { getParticipantInitials } from "@/modules/participants/components/participant-details.client";
 import {
@@ -446,22 +446,41 @@ function CapacityProgress({
   const progress = totalCapacity > 0
     ? Math.min(100, (assigned / totalCapacity) * 100)
     : 0;
+  const maleProgress = totalCapacity > 0
+    ? Math.min(100, (male / totalCapacity) * 100)
+    : 0;
+  const femaleProgress = totalCapacity > 0
+    ? Math.min(100 - maleProgress, (female / totalCapacity) * 100)
+    : 0;
 
   return (
     <Progress
       value={progress}
+      renderTrack={false}
       aria-label={`Ocupación de ${total.toLocaleString("es-EC")} participantes`}
     >
       <ProgressLabel className="flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <span className="inline-flex items-center gap-1.5">
+        <span className="inline-flex items-center gap-1.5 text-primary">
           <HugeiconsIcon icon={MaleSymbolIcon} strokeWidth={2} />
           Hombres {male.toLocaleString("es-EC")}/{capacity.male}
         </span>
-        <span className="inline-flex items-center gap-1.5">
+        <span className="inline-flex items-center gap-1.5 text-company-female">
           <HugeiconsIcon icon={FemaleSymbolIcon} strokeWidth={2} />
           Mujeres {female.toLocaleString("es-EC")}/{capacity.female}
         </span>
       </ProgressLabel>
+      <ProgressTrack>
+        <span
+          aria-hidden="true"
+          className="h-full shrink-0 bg-primary transition-[width]"
+          style={{ width: `${maleProgress}%` }}
+        />
+        <span
+          aria-hidden="true"
+          className="h-full shrink-0 bg-company-female transition-[width]"
+          style={{ width: `${femaleProgress}%` }}
+        />
+      </ProgressTrack>
       {unsupported > 0 ? (
         <span className="text-sm text-muted-foreground">
           Otro o sin registrar {unsupported.toLocaleString("es-EC")}
