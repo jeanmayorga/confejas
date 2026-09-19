@@ -191,7 +191,6 @@ export function ParticipantDirectory({
   const queryClient = useQueryClient();
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [isLive, setIsLive] = useState(false);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isQueryUpdating, startTransition] = useTransition();
   const [queryState, setQueryState] = useQueryStates(
     {
@@ -201,6 +200,7 @@ export function ParticipantDirectory({
       ward: parseAsString.withDefault(""),
       stake: parseAsString.withDefault(""),
       status: parseAsString.withDefault("registered"),
+      newParticipant: parseAsString.withDefault(""),
     },
     {
       history: "replace",
@@ -216,6 +216,7 @@ export function ParticipantDirectory({
     [setQueryState],
   );
   const queryString = getDirectoryQueryString(queryState);
+  const isCreateOpen = queryState.newParticipant === "1";
   const participantsQuery = useInfiniteQuery({
     queryKey: ["participants", queryString],
     queryFn: async ({ pageParam }) => {
@@ -302,7 +303,10 @@ export function ParticipantDirectory({
         description="Una lista de todos los participantes"
         actions={
           canManage ? (
-            <Button type="button" onClick={() => setIsCreateOpen(true)}>
+            <Button
+              type="button"
+              onClick={() => void setQueryState({ newParticipant: "1" })}
+            >
               <HugeiconsIcon icon={PlusSignIcon} data-icon="inline-start" />
               Nuevo participante
             </Button>
@@ -381,7 +385,10 @@ export function ParticipantDirectory({
                     Ver inscritos
                   </button>
                 ) : canManage ? (
-                  <Button type="button" onClick={() => setIsCreateOpen(true)}>
+                  <Button
+                    type="button"
+                    onClick={() => void setQueryState({ newParticipant: "1" })}
+                  >
                     <HugeiconsIcon icon={PlusSignIcon} data-icon="inline-start" />
                     Nuevo participante
                   </Button>
@@ -407,7 +414,14 @@ export function ParticipantDirectory({
         </div>
       </div>
 
-      <Sheet open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+      <Sheet
+        open={isCreateOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            void setQueryState({ newParticipant: null });
+          }
+        }}
+      >
         <SheetContent
           side="right"
           className="data-[side=right]:w-full data-[side=right]:sm:max-w-2xl"
@@ -425,9 +439,9 @@ export function ParticipantDirectory({
               stakes={stakes}
               lodgingBuildings={[]}
               presentation="sheet"
-              onCancel={() => setIsCreateOpen(false)}
+              onCancel={() => void setQueryState({ newParticipant: null })}
               onSuccess={() => {
-                setIsCreateOpen(false);
+                void setQueryState({ newParticipant: null });
                 handleDataChanged();
               }}
             />
