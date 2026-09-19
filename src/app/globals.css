@@ -140,3 +140,7 @@
     @apply font-sans;
   }
 }
+
+body:has([data-counselor-app]) {
+  background-color: var(--background) !important;
+}
