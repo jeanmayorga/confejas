@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/tooltip";
 import { DeleteStakeButton } from "@/modules/church-units/components/delete-stake-button.client";
 import { DeleteWardButton } from "@/modules/church-units/components/delete-ward-button.client";
+import { MergeWardDialog } from "@/modules/church-units/components/merge-ward-dialog.client";
 import { WardFormDialog } from "@/modules/church-units/components/ward-form-dialog.client";
 import { updateStakeAction } from "@/modules/church-units/server/actions";
 import type { UnitConfiguration } from "@/modules/church-units/server/queries";
@@ -161,6 +162,12 @@ export function StakeEditSheet({ stake, stakes }: StakeEditSheetProps) {
                       <WardFormDialog
                         stakes={stakes}
                         ward={{ ...ward, stakeId: stake.id }}
+                      />
+                      <MergeWardDialog
+                        ward={ward}
+                        candidates={stake.wards.filter(
+                          (candidate) => candidate.id !== ward.id,
+                        )}
                       />
                       <DeleteWardButton ward={ward} />
                     </div>

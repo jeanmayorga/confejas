@@ -303,6 +303,92 @@ export async function updateWardAction(
   }
 }
 
+export async function mergeWardAction(
+  sourceWardId: number,
+  targetWardId: number,
+): Promise<UnitActionResult> {
+  try {
+    const session = await requireSession();
+    if (!canManageParticipants(session.user.role)) {
+      return {
+        success: false,
+        message: "No tienes permiso para fusionar barrios.",
+      };
+    }
+
+    const sourceId = positiveId(sourceWardId, "barrio");
+    const targetId = positiveId(targetWardId, "barrio");
+
+    if (sourceId === targetId) {
+      return {
+        success: false,
+        message: "Selecciona un barrio diferente como destino.",
+      };
+    }
+
+    const [sourceWard, targetWard] = await Promise.all([
+      db
+        .select({ id: wards.id, name: wards.name, stakeId: wards.stakeId })
+        .from(wards)
+        .where(eq(wards.id, sourceId))
+        .limit(1),
+      db
+        .select({ id: wards.id, name: wards.name, stakeId: wards.stakeId })
+        .from(wards)
+        .where(eq(wards.id, targetId))
+        .limit(1),
+    ]);
+
+    const source = sourceWard[0];
+    const target = targetWard[0];
+
+    if (!source) {
+      return { success: false, message: "El barrio de origen ya no existe." };
+    }
+
+    if (!target) {
+      return { success: false, message: "El barrio destino ya no existe." };
+    }
+
+    if (source.stakeId !== target.stakeId) {
+      return {
+        success: false,
+        message: "Solo puedes fusionar barrios de la misma estaca.",
+      };
+    }
+
+    const [participantAssignment] = await db
+      .select({ value: count() })
+      .from(participants)
+      .where(eq(participants.wardId, source.id));
+
+    const participantCount = Number(participantAssignment?.value ?? 0);
+
+    const [, deletedWards] = await db.batch([
+      db
+        .update(participants)
+        .set({ wardId: target.id })
+        .where(eq(participants.wardId, source.id)),
+      db
+        .delete(wards)
+        .where(eq(wards.id, source.id))
+        .returning({ id: wards.id }),
+    ]);
+
+    if (deletedWards.length === 0) {
+      return { success: false, message: "El barrio de origen ya no existe." };
+    }
+
+    revalidateUnitPaths();
+    return {
+      success: true,
+      message: `${source.name} se fusionó con ${target.name}. Se movieron ${participantCount} ${participantCount === 1 ? "participante" : "participantes"}.`,
+    };
+  } catch (error) {
+    return { success: false, message: getSafeError(error) };
+  }
+}
+
 export async function deleteWardAction(
   wardId: number,
 ): Promise<UnitActionResult> {
