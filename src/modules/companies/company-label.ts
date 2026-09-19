@@ -1,6 +1,10 @@
 const companyNumberPattern = /(\d+)\s*$/u;
+const companyNameCollator = new Intl.Collator("es", {
+  numeric: true,
+  sensitivity: "base",
+});
 
-function getCompanyNumber(value: string) {
+export function getCompanyNumber(value: string) {
   const match = value.trim().match(companyNumberPattern);
 
   if (!match) {
@@ -9,6 +13,25 @@ function getCompanyNumber(value: string) {
 
   const number = Number(match[1]);
   return Number.isSafeInteger(number) && number > 0 ? number : null;
+}
+
+export function compareCompanyNames(left: string, right: string) {
+  const leftNumber = getCompanyNumber(left);
+  const rightNumber = getCompanyNumber(right);
+
+  if (leftNumber !== null && rightNumber !== null) {
+    return leftNumber - rightNumber;
+  }
+
+  if (leftNumber !== null) {
+    return -1;
+  }
+
+  if (rightNumber !== null) {
+    return 1;
+  }
+
+  return companyNameCollator.compare(left, right);
 }
 
 export function formatCompanyName(number: number) {

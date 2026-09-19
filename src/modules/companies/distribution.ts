@@ -1,3 +1,7 @@
+import { compareCompanyNames } from "./company-label";
+
+export { compareCompanyNames } from "./company-label";
+
 export const DISTRIBUTION_DIRECTIONS = [
   "youngest_to_oldest",
   "oldest_to_youngest",
@@ -139,15 +143,6 @@ export function isDistributionCapacity(
     (capacity.male ?? 0) >= 1 &&
     (capacity.male ?? 0) <= COMPANY_PARTICIPANT_SEX_LIMIT
   );
-}
-
-const companyNameCollator = new Intl.Collator("es", {
-  numeric: true,
-  sensitivity: "base",
-});
-
-export function compareCompanyNames(left: string, right: string) {
-  return companyNameCollator.compare(left, right);
 }
 
 export function isDistributionDirection(
