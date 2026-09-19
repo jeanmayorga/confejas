@@ -89,7 +89,7 @@
   --foreground: oklch(0.145 0 0);
   --participant-arrived: oklch(0.52 0.15 151);
   --participant-pending: oklch(0.62 0.15 75);
-  --company-female: oklch(0.62 0.2 350);
+  --company-female: oklch(0.656 0.241 354.308);
 }
 
 .dark {
@@ -97,7 +97,7 @@
   --foreground: oklch(0.985 0 0);
   --participant-arrived: oklch(0.72 0.16 151);
   --participant-pending: oklch(0.78 0.15 75);
-  --company-female: oklch(0.72 0.18 350);
+  --company-female: oklch(0.73 0.2 354.308);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);

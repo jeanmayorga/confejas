@@ -457,7 +457,7 @@ function CapacityProgress({
       renderTrack={false}
       aria-label={`Ocupación de ${total.toLocaleString("es-EC")} participantes: ${male.toLocaleString("es-EC")} hombres de ${capacity.male} y ${female.toLocaleString("es-EC")} mujeres de ${capacity.female}`}
     >
-      <ProgressTrack className="h-8">
+      <ProgressTrack className="h-7">
         <span
           aria-hidden="true"
           className="h-full shrink-0 bg-primary transition-[width]"
@@ -468,11 +468,14 @@ function CapacityProgress({
           className="h-full shrink-0 bg-company-female transition-[width]"
           style={{ width: `${femaleProgress}%` }}
         />
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-between gap-3 px-3 text-xs font-medium text-primary-foreground">
-          <span className="whitespace-nowrap">
+        <div className="pointer-events-none absolute inset-0 text-xs font-medium text-primary-foreground">
+          <span className="absolute top-1/2 left-3 -translate-y-1/2 whitespace-nowrap">
             Hombres {male.toLocaleString("es-EC")}/{capacity.male}
           </span>
-          <span className="whitespace-nowrap">
+          <span
+            className="absolute top-1/2 -translate-y-1/2 whitespace-nowrap"
+            style={{ left: `calc(${maleProgress}% + 0.75rem)` }}
+          >
             Mujeres {female.toLocaleString("es-EC")}/{capacity.female}
           </span>
         </div>
