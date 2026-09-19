@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import AlertCircleIcon from "@hugeicons/core-free-icons/AlertCircleIcon";
 import EyeIcon from "@hugeicons/core-free-icons/EyeIcon";
 import EyeOffIcon from "@hugeicons/core-free-icons/EyeOffIcon";
 import LockPasswordIcon from "@hugeicons/core-free-icons/LockPasswordIcon";
@@ -10,9 +11,9 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Field,
-  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
@@ -124,9 +125,14 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
           </div>
         </Field>
         {error ? (
-          <Field data-invalid="true">
-            <FieldError id="login-error">{error}</FieldError>
-          </Field>
+          <Alert variant="destructive">
+            <HugeiconsIcon
+              icon={AlertCircleIcon}
+              strokeWidth={2}
+              aria-hidden
+            />
+            <AlertDescription id="login-error">{error}</AlertDescription>
+          </Alert>
         ) : null}
         <Field data-disabled={isPending || undefined}>
           <Button
