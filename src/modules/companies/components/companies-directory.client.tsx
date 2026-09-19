@@ -148,11 +148,8 @@ function UnassignedParticipantsCard({
   const titleId = "unassigned-participants-title";
 
   return (
-    <aside
-      className="self-start xl:sticky xl:top-6 xl:max-h-[calc(100dvh-3rem)]"
-      aria-labelledby={titleId}
-    >
-      <Card className="gap-0 pb-3 pt-0">
+    <aside className="self-start xl:sticky xl:top-6" aria-labelledby={titleId}>
+      <Card className="max-h-[calc(100dvh-3rem)] gap-0 pb-3 pt-0">
         <CardHeader className="h-9 items-center border-b !pb-0">
           <CardTitle id={titleId} className="text-base">
             Participantes sin compañía
@@ -164,7 +161,7 @@ function UnassignedParticipantsCard({
         </CardContent>
 
         {participants.length > 0 ? (
-          <CardContent className="max-h-[calc(100dvh-12rem)] overflow-y-auto p-0">
+          <CardContent className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-0">
             <TableFrame className="rounded-none border-0">
               <Table className="min-w-[440px] table-fixed">
                 <colgroup>
