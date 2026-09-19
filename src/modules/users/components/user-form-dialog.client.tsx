@@ -28,9 +28,13 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { roleLabels, type AppRole } from "@/modules/auth/roles";
 import {
   createUserAction,
@@ -52,6 +56,7 @@ type UserFormDialogProps = {
 };
 
 const roles = Object.entries(roleLabels) as [AppRole, string][];
+const EMPTY_COMPANY_VALUE = "__none__";
 
 export function UserFormDialog({
   companies,
@@ -155,49 +160,77 @@ export function UserFormDialog({
             </Field>
             <Field>
               <FieldLabel htmlFor={`user-role-${user?.id ?? "new"}`}>Rol</FieldLabel>
-              <NativeSelect
-                id={`user-role-${user?.id ?? "new"}`}
-                name="role"
+              <Select
                 value={role}
-                className="w-full"
-                onChange={(event) => {
-                  const nextRole = event.target.value as AppRole;
+                onValueChange={(value) => {
+                  if (!value) return;
+
+                  const nextRole = value as AppRole;
                   setRole(nextRole);
                   if (nextRole !== "counselor") {
                     setCompanyId("");
                   }
                 }}
-                required
               >
-                {roles.map(([value, label]) => (
-                  <NativeSelectOption key={value} value={value}>
-                    {label}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                <SelectTrigger
+                  id={`user-role-${user?.id ?? "new"}`}
+                  aria-label="Rol"
+                  className="w-full border-input bg-background"
+                >
+                  <SelectValue>{roleLabels[role]}</SelectValue>
+                </SelectTrigger>
+                <SelectContent align="start" alignItemWithTrigger={false}>
+                  <SelectGroup>
+                    {roles.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <input type="hidden" name="role" value={role} />
             </Field>
             {role === "counselor" ? (
               <Field>
                 <FieldLabel htmlFor={`user-company-${user?.id ?? "new"}`}>
                   Compañía
                 </FieldLabel>
-                <NativeSelect
-                  id={`user-company-${user?.id ?? "new"}`}
-                  name="companyId"
-                  value={companyId}
-                  onChange={(event) => setCompanyId(event.target.value)}
-                  className="w-full"
-                  required
+                <Select
+                  value={companyId || EMPTY_COMPANY_VALUE}
+                  onValueChange={(value) => {
+                    if (!value || value === EMPTY_COMPANY_VALUE) {
+                      setCompanyId("");
+                      return;
+                    }
+
+                    setCompanyId(value);
+                  }}
                 >
-                  <NativeSelectOption value="">
-                    Selecciona una compañía
-                  </NativeSelectOption>
-                  {companies.map((company) => (
-                    <NativeSelectOption key={company.id} value={company.id}>
-                      {company.name}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
+                  <SelectTrigger
+                    id={`user-company-${user?.id ?? "new"}`}
+                    aria-label="Compañía"
+                    className="w-full border-input bg-background"
+                  >
+                    <SelectValue>
+                      {companies.find((company) => company.id === companyId)
+                        ?.name ?? "Selecciona una compañía"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent align="start" alignItemWithTrigger={false}>
+                    <SelectGroup>
+                      <SelectItem value={EMPTY_COMPANY_VALUE}>
+                        Selecciona una compañía
+                      </SelectItem>
+                      {companies.map((company) => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                <input type="hidden" name="companyId" value={companyId} />
               </Field>
             ) : null}
             <Field>
