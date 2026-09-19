@@ -69,7 +69,7 @@ function CheckInSubmitButton({ confirmed }: { confirmed: boolean }) {
       ) : (
         <HugeiconsIcon icon={CheckmarkCircle02Icon} data-icon="inline-start" />
       )}
-      {confirmed ? "Confirmado" : pending ? "Confirmando…" : "Confirmar"}
+      {confirmed ? "Llegó" : pending ? "Registrando llegada…" : "Ya llegó"}
     </Button>
   );
 }
