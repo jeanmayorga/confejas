@@ -126,8 +126,27 @@ export type DistributionProposalInput = {
   previewKey: string;
 };
 
+export type DistributionPreview = Pick<
+  DistributionProposal,
+  | "previewKey"
+  | "direction"
+  | "strategy"
+  | "stakeDiversity"
+  | "limits"
+  | "summary"
+  | "canSave"
+> & {
+  companies: Array<
+    Pick<
+      DistributionProposalCompany,
+      "companyId" | "companyName" | "status" | "final"
+    >
+  >;
+  pending: Pick<DistributionProposal["pending"], "totalCount">;
+};
+
 export type DistributionPreviewActionResult =
-  | { success: true; proposal: DistributionProposal }
+  | { success: true; proposal: DistributionPreview }
   | { success: false; message: string };
 
 export type DistributionSaveActionResult =
@@ -700,6 +719,29 @@ async function buildDistributionProposal(
   return proposal;
 }
 
+function toDistributionPreview(
+  proposal: DistributionProposal,
+): DistributionPreview {
+  return {
+    previewKey: proposal.previewKey,
+    direction: proposal.direction,
+    strategy: proposal.strategy,
+    stakeDiversity: proposal.stakeDiversity,
+    limits: proposal.limits,
+    summary: proposal.summary,
+    canSave: proposal.canSave,
+    companies: proposal.companies.map((company) => ({
+      companyId: company.companyId,
+      companyName: company.companyName,
+      status: company.status,
+      final: company.final,
+    })),
+    pending: {
+      totalCount: proposal.pending.totalCount,
+    },
+  };
+}
+
 export async function getCompanyDetailAction(
   companyId: string,
 ): Promise<CompanyDetailActionResult> {
@@ -821,7 +863,7 @@ export async function previewParticipantDistributionAction(
       stakeDiversity,
     );
 
-    return { success: true, proposal };
+    return { success: true, proposal: toDistributionPreview(proposal) };
   } catch {
     return {
       success: false,
