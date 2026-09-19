@@ -1,6 +1,8 @@
 "use client";
 
 import { type FormEvent, useState, useTransition } from "react";
+import EyeIcon from "@hugeicons/core-free-icons/EyeIcon";
+import EyeOffIcon from "@hugeicons/core-free-icons/EyeOffIcon";
 import UserAdd01Icon from "@hugeicons/core-free-icons/UserAdd01Icon";
 import UserEdit01Icon from "@hugeicons/core-free-icons/UserEdit01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -19,6 +21,12 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   NativeSelect,
   NativeSelectOption,
@@ -57,6 +65,7 @@ export function UserFormDialog({
     (user?.role as AppRole | null) ?? "participant",
   );
   const [companyId, setCompanyId] = useState(user?.companyId ?? "");
+  const [showPassword, setShowPassword] = useState(false);
   const editing = Boolean(user);
 
   function handleOpenChange(nextOpen: boolean) {
@@ -66,6 +75,7 @@ export function UserFormDialog({
       setRole((user?.role as AppRole | null) ?? "participant");
       setCompanyId(user?.companyId ?? "");
     }
+    setShowPassword(false);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -194,15 +204,37 @@ export function UserFormDialog({
               <FieldLabel htmlFor={`user-password-${user?.id ?? "new"}`}>
                 {editing ? "Nueva contraseña (opcional)" : "Contraseña temporal"}
               </FieldLabel>
-              <Input
-                id={`user-password-${user?.id ?? "new"}`}
-                name="password"
-                type="password"
-                minLength={12}
-                maxLength={128}
-                autoComplete="new-password"
-                required={!editing}
-              />
+              <InputGroup>
+                <InputGroupInput
+                  id={`user-password-${user?.id ?? "new"}`}
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  minLength={12}
+                  maxLength={128}
+                  autoComplete="new-password"
+                  required={!editing}
+                />
+                <InputGroupAddon align="inline-end">
+                  <InputGroupButton
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={
+                      showPassword
+                        ? "Ocultar contraseña"
+                        : "Mostrar contraseña"
+                    }
+                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword((visible) => !visible)}
+                  >
+                    <HugeiconsIcon
+                      icon={showPassword ? EyeOffIcon : EyeIcon}
+                      strokeWidth={2}
+                      aria-hidden
+                    />
+                  </InputGroupButton>
+                </InputGroupAddon>
+              </InputGroup>
             </Field>
           </FieldGroup>
 
