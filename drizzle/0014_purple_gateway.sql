@@ -1,0 +1,1 @@
+ALTER TABLE "participant_medical_profiles" ADD COLUMN "medical_notes" text;

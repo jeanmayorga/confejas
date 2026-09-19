@@ -1,7 +1,6 @@
 "use client";
 
 import { type FormEvent, useRef, useState, useTransition } from "react";
-import PencilIcon from "@hugeicons/core-free-icons/PencilIcon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import UserAdd01Icon from "@hugeicons/core-free-icons/UserAdd01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -29,41 +28,32 @@ import { Spinner } from "@/components/ui/spinner";
 import {
   createCounselorAction,
   lookupCounselorGovernmentIdAction,
-  updateCounselorAction,
 } from "@/modules/counselors/server/actions";
-
-type EditableCounselor = {
-  id: string;
-  name: string;
-  governmentId: string | null;
-  firstNames: string | null;
-  lastNames: string | null;
-  whatsapp: string | null;
-  email: string | null;
-  companyId: string | null;
-};
 
 type CounselorFormDialogProps = {
   companies: { id: string; name: string }[];
-  counselor?: EditableCounselor;
+  stakes: { id: number; name: string }[];
 };
 
 export function CounselorFormDialog({
   companies,
-  counselor,
+  stakes,
 }: CounselorFormDialogProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [lookupPending, startLookupTransition] = useTransition();
-  const editing = Boolean(counselor);
+  const [stakeId, setStakeId] = useState("");
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
 
-    if (!nextOpen) {
+    if (nextOpen) {
+      setStakeId("");
+    } else {
       formRef.current?.reset();
+      setStakeId("");
     }
   }
 
@@ -124,9 +114,7 @@ export function CounselorFormDialog({
     const formData = new FormData(event.currentTarget);
 
     startTransition(async () => {
-      const result = counselor
-        ? await updateCounselorAction(counselor.id, formData)
-        : await createCounselorAction(formData);
+      const result = await createCounselorAction(formData);
 
       if (!result.success) {
         toast.error(result.message);
@@ -135,6 +123,7 @@ export function CounselorFormDialog({
 
       toast.success(result.message);
       formRef.current?.reset();
+      setStakeId("");
       setOpen(false);
       router.refresh();
     });
@@ -145,28 +134,27 @@ export function CounselorFormDialog({
       <DialogTrigger
         render={
           <Button
-            variant={editing ? "ghost" : "default"}
-            size={editing ? "icon-sm" : "default"}
-            aria-label={editing ? `Editar ${counselor?.name}` : undefined}
+            variant="default"
+            size="default"
           />
         }
       >
         <HugeiconsIcon
-          icon={editing ? PencilIcon : UserAdd01Icon}
+          icon={UserAdd01Icon}
           strokeWidth={2}
           data-icon="inline-start"
         />
-        {editing ? <span className="sr-only">Editar consejero</span> : "Nuevo consejero"}
+        Nuevo consejero
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>
-            {editing ? "Editar consejero" : "Nuevo consejero"}
+            Nuevo consejero
           </DialogTitle>
           <DialogDescription>
-            Registra al consejero y asígnalo a una compañía. Habitualmente cada
-            compañía cuenta con dos.
+            Registra al consejero y asígnalo a su compañía y estaca.
+            Habitualmente cada compañía cuenta con dos.
           </DialogDescription>
         </DialogHeader>
 
@@ -174,21 +162,20 @@ export function CounselorFormDialog({
           <FieldGroup className="grid gap-5 sm:grid-cols-2">
             <Field className="sm:col-span-2">
               <FieldLabel
-                htmlFor={`counselor-government-id-${counselor?.id ?? "new"}`}
+                htmlFor="counselor-government-id"
               >
                 Cédula
               </FieldLabel>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
-                  id={`counselor-government-id-${counselor?.id ?? "new"}`}
+                  id="counselor-government-id"
                   name="governmentId"
-                  defaultValue={counselor?.governmentId ?? ""}
                   placeholder="Ej. 0912345678"
                   inputMode="numeric"
                   autoComplete="off"
                   maxLength={10}
                   pattern="[0-9]{10}"
-                  autoFocus={!editing}
+                  autoFocus
                   required
                 />
                 <Button
@@ -215,73 +202,88 @@ export function CounselorFormDialog({
             </Field>
             <Field>
               <FieldLabel
-                htmlFor={`counselor-first-names-${counselor?.id ?? "new"}`}
+                htmlFor="counselor-first-names"
               >
                 Nombres
               </FieldLabel>
               <Input
-                id={`counselor-first-names-${counselor?.id ?? "new"}`}
+                id="counselor-first-names"
                 name="firstNames"
-                defaultValue={
-                  counselor?.firstNames ??
-                  (counselor?.lastNames ? "" : counselor?.name)
-                }
                 maxLength={160}
                 required
               />
             </Field>
             <Field>
               <FieldLabel
-                htmlFor={`counselor-last-names-${counselor?.id ?? "new"}`}
+                htmlFor="counselor-last-names"
               >
                 Apellidos
               </FieldLabel>
               <Input
-                id={`counselor-last-names-${counselor?.id ?? "new"}`}
+                id="counselor-last-names"
                 name="lastNames"
-                defaultValue={counselor?.lastNames ?? ""}
                 maxLength={160}
                 required
               />
             </Field>
             <Field>
               <FieldLabel
-                htmlFor={`counselor-whatsapp-${counselor?.id ?? "new"}`}
+                htmlFor="counselor-whatsapp"
               >
                 WhatsApp
               </FieldLabel>
               <Input
-                id={`counselor-whatsapp-${counselor?.id ?? "new"}`}
+                id="counselor-whatsapp"
                 name="whatsapp"
                 type="tel"
-                defaultValue={counselor?.whatsapp ?? ""}
                 placeholder="Ej. 0991234567"
                 autoComplete="tel"
                 maxLength={32}
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor={`counselor-email-${counselor?.id ?? "new"}`}>
+              <FieldLabel htmlFor="counselor-email">
                 Correo electrónico
               </FieldLabel>
               <Input
-                id={`counselor-email-${counselor?.id ?? "new"}`}
+                id="counselor-email"
                 name="email"
                 type="email"
-                defaultValue={counselor?.email ?? ""}
                 placeholder="nombre@correo.com"
                 autoComplete="email"
                 maxLength={254}
               />
             </Field>
+            <Field>
+              <FieldLabel htmlFor="counselor-stake">
+                Estaca
+              </FieldLabel>
+              <NativeSelect
+                id="counselor-stake"
+                name="stakeId"
+                value={stakeId}
+                onChange={(event) => {
+                  setStakeId(event.currentTarget.value);
+                }}
+                className="w-full"
+              >
+                <NativeSelectOption value="">Sin asignar</NativeSelectOption>
+                <NativeSelectOptGroup label="Estacas">
+                  {stakes.map((stake) => (
+                    <NativeSelectOption key={stake.id} value={String(stake.id)}>
+                      {stake.name}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelectOptGroup>
+              </NativeSelect>
+            </Field>
             <Field className="sm:col-span-2">
-              <FieldLabel htmlFor={`counselor-company-${counselor?.id ?? "new"}`}>
+              <FieldLabel htmlFor="counselor-company">
                 Compañía
               </FieldLabel>
               <NativeSelect
-                id={`counselor-company-${counselor?.id ?? "new"}`}
+                id="counselor-company"
                 name="companyId"
-                defaultValue={counselor?.companyId ?? ""}
                 className="w-full"
               >
                 <NativeSelectOption value="">Sin asignar</NativeSelectOption>
@@ -310,11 +312,7 @@ export function CounselorFormDialog({
             </Button>
             <Button type="submit" disabled={pending || lookupPending}>
               {pending ? <Spinner data-icon="inline-start" /> : null}
-              {pending
-                ? "Guardando…"
-                : editing
-                  ? "Guardar cambios"
-                  : "Crear consejero"}
+              {pending ? "Guardando…" : "Crear consejero"}
             </Button>
           </DialogFooter>
         </form>

@@ -2,8 +2,6 @@
 
 import { useState, useTransition } from "react";
 import Delete02Icon from "@hugeicons/core-free-icons/Delete02Icon";
-import LockIcon from "@hugeicons/core-free-icons/LockIcon";
-import UserUnlock01Icon from "@hugeicons/core-free-icons/UserUnlock01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -21,26 +19,29 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
-  deleteUserAction,
-  setUserBlockedAction,
-} from "@/modules/users/server/actions";
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { deleteUserAction } from "@/modules/users/server/actions";
 
 type UserDangerActionsProps = {
-  user: { id: string; name: string; banned: boolean | null };
+  user: { id: string; name: string };
   isCurrentUser: boolean;
 };
 
-export function UserDangerActions({ user, isCurrentUser }: UserDangerActionsProps) {
+export function UserDangerActions({
+  user,
+  isCurrentUser,
+}: UserDangerActionsProps) {
   const router = useRouter();
-  const [dialog, setDialog] = useState<"status" | "delete" | null>(null);
+  const [open, setOpen] = useState(false);
+  const [confirmationStep, setConfirmationStep] = useState<1 | 2>(1);
   const [pending, startTransition] = useTransition();
 
-  function runAction(kind: "status" | "delete") {
+  function handleDelete() {
     startTransition(async () => {
-      const result =
-        kind === "delete"
-          ? await deleteUserAction(user.id)
-          : await setUserBlockedAction(user.id, !user.banned);
+      const result = await deleteUserAction(user.id);
 
       if (!result.success) {
         toast.error(result.message);
@@ -48,7 +49,7 @@ export function UserDangerActions({ user, isCurrentUser }: UserDangerActionsProp
       }
 
       toast.success(result.message);
-      setDialog(null);
+      setOpen(false);
       router.refresh();
     });
   }
@@ -58,81 +59,65 @@ export function UserDangerActions({ user, isCurrentUser }: UserDangerActionsProp
   }
 
   return (
-    <>
-      <AlertDialog
-        open={dialog === "status"}
-        onOpenChange={(open) => setDialog(open ? "status" : null)}
-      >
-        <AlertDialogTrigger
+    <AlertDialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        setConfirmationStep(1);
+      }}
+    >
+      <Tooltip>
+        <TooltipTrigger
           render={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={user.banned ? `Desbloquear ${user.name}` : `Bloquear ${user.name}`}
+            <AlertDialogTrigger
+              render={
+                <Button
+                  variant="destructive"
+                  size="icon-md"
+                  aria-label={`Eliminar ${user.name}`}
+                >
+                  <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+                </Button>
+              }
             />
           }
-        >
-          <HugeiconsIcon icon={user.banned ? UserUnlock01Icon : LockIcon} strokeWidth={2} />
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {user.banned ? "¿Desbloquear usuario?" : "¿Bloquear usuario?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {user.banned
-                ? `${user.name} podrá volver a iniciar sesión.`
-                : `${user.name} perderá el acceso y sus sesiones activas se cerrarán.`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              variant={user.banned ? "default" : "destructive"}
-              disabled={pending}
-              onClick={() => runAction("status")}
-            >
-              {pending ? "Procesando…" : user.banned ? "Desbloquear" : "Bloquear"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        open={dialog === "delete"}
-        onOpenChange={(open) => setDialog(open ? "delete" : null)}
-      >
-        <AlertDialogTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="text-destructive"
-              aria-label={`Eliminar ${user.name}`}
-            />
-          }
-        >
-          <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
-            <AlertDialogDescription>
-              La cuenta de {user.name} y sus sesiones se eliminarán permanentemente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={pending}
-              onClick={() => runAction("delete")}
-            >
-              {pending ? "Eliminando…" : "Eliminar"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+        />
+        <TooltipContent>Eliminar usuario</TooltipContent>
+      </Tooltip>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {confirmationStep === 1
+              ? "¿Eliminar usuario?"
+              : "Última confirmación"}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {confirmationStep === 1
+              ? `Esta acción eliminará permanentemente la cuenta de ${user.name} y sus sesiones. Selecciona continuar para revisar la confirmación final.`
+              : `Esta es la última confirmación. Se eliminará permanentemente la cuenta de ${user.name} y sus sesiones. Esta acción no se puede deshacer.`}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            disabled={pending}
+            onClick={() => {
+              if (confirmationStep === 1) {
+                setConfirmationStep(2);
+                return;
+              }
+              handleDelete();
+            }}
+          >
+            {pending
+              ? "Eliminando…"
+              : confirmationStep === 1
+                ? "Continuar"
+                : "Eliminar definitivamente"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

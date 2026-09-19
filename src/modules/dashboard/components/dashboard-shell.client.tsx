@@ -77,18 +77,18 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            <InputGroup className="hidden w-56 sm:flex lg:w-64">
-              <InputGroupAddon className="[&>svg]:size-3">
+            <InputGroup className="hidden h-8 w-56 sm:flex lg:w-64">
+              <InputGroupAddon>
                 <HugeiconsIcon icon={Search01Icon} strokeWidth={2} aria-hidden />
               </InputGroupAddon>
               <InputGroupInput
                 aria-label="Buscar en el dashboard"
                 placeholder="Buscar aquí..."
-                className="pr-1 text-xs"
+                className="h-8 text-xs"
               />
-              <kbd className="mr-3 hidden text-[10px] text-muted-foreground lg:block">
-                ⌘K
-              </kbd>
+              <InputGroupAddon align="inline-end" className="hidden lg:flex">
+                <kbd className="text-[10px] text-muted-foreground">⌘K</kbd>
+              </InputGroupAddon>
             </InputGroup>
             <Button variant="outline" size="icon-sm" aria-label="Mensajes">
               <HugeiconsIcon icon={Message01Icon} strokeWidth={2} />

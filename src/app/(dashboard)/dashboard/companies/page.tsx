@@ -1,8 +1,8 @@
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 import {
   Empty,
   EmptyDescription,
@@ -15,51 +15,25 @@ import { requireParticipantManagementAccess } from "@/modules/auth/server/sessio
 import { CompaniesDirectory } from "@/modules/companies/components/companies-directory.client";
 import { CompanyDistributionDialog } from "@/modules/companies/components/company-distribution-dialog.client";
 import { CompanyFormDialog } from "@/modules/companies/components/company-form-dialog.client";
-import { COMPANY_PARTICIPANT_LIMIT } from "@/modules/companies/distribution";
-import {
-  getCompanyDistributionOverview,
-  listCompanies,
-} from "@/modules/companies/server/queries";
+import { listCompanies } from "@/modules/companies/server/queries";
 
 export default async function CompaniesPage() {
   const session = await requireParticipantManagementAccess();
-  const [companies, distributionOverview] = await Promise.all([
-    listCompanies(),
-    getCompanyDistributionOverview(),
-  ]);
+  const companies = await listCompanies();
   const canDelete = canDeleteParticipants(session.user.role);
-  const assignedCount = companies.reduce(
-    (total, company) => total + company.participantCount,
-    0,
-  );
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight">Compañías</h1>
-            <Badge variant="secondary">{companies.length}</Badge>
-          </div>
-          <p className="mt-1 text-muted-foreground">
-            Edita tus compañías y mueve, quita o elimina participantes, uno a uno
-            o en grupo.
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {assignedCount.toLocaleString("es-EC")} asignados ·{" "}
-            {distributionOverview.unassigned.total.toLocaleString("es-EC")} sin compañía · hasta {" "}
-            {COMPANY_PARTICIPANT_LIMIT} por compañía
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <CompanyDistributionDialog
-            companyCount={companies.length}
-            overview={distributionOverview}
-          />
-          <CompanyFormDialog />
-        </div>
-      </div>
+      <PageHeader
+        title="Compañías"
+        description="Administra tus compañías y sus participantes."
+        actions={
+          <>
+            <CompanyDistributionDialog />
+            <CompanyFormDialog />
+          </>
+        }
+      />
 
       {companies.length === 0 ? (
         <Card>

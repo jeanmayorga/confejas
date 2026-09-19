@@ -8,6 +8,7 @@ import {
   canManageParticipants,
 } from "@/modules/auth/roles";
 import { requireSession } from "@/modules/auth/server/session";
+import { stakes } from "@/modules/church-units/server/schema";
 import { companies } from "@/modules/companies/server/schema";
 import { normalizeGovernmentId } from "@/modules/participants/identity";
 import {
@@ -133,6 +134,45 @@ async function getCompanyId(formData: FormData) {
   return companyId;
 }
 
+function optionalPositiveInteger(
+  formData: FormData,
+  field: string,
+  label: string,
+) {
+  const value = String(formData.get(field) ?? "");
+
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error(`Selecciona un ${label} válido.`);
+  }
+
+  return parsed;
+}
+
+async function getStakeId(formData: FormData) {
+  const stakeId = optionalPositiveInteger(formData, "stakeId", "estaca");
+
+  if (!stakeId) {
+    return null;
+  }
+
+  const [stake] = await db
+    .select({ id: stakes.id })
+    .from(stakes)
+    .where(eq(stakes.id, stakeId))
+    .limit(1);
+
+  if (!stake) {
+    throw new Error("La estaca seleccionada ya no existe.");
+  }
+
+  return stake.id;
+}
+
 function getSafeError(error: unknown) {
   const databaseError = error as {
     constraint?: unknown;
@@ -223,8 +263,11 @@ export async function createCounselorAction(
 
     const counselorData = getCounselorData(formData);
     const companyId = await getCompanyId(formData);
+    const stakeId = await getStakeId(formData);
 
-    await db.insert(counselors).values({ ...counselorData, companyId });
+    await db
+      .insert(counselors)
+      .values({ ...counselorData, companyId, stakeId });
     revalidateCounselorPaths();
     return { success: true, message: "Consejero creado correctamente." };
   } catch (error) {
@@ -248,9 +291,15 @@ export async function updateCounselorAction(
 
     const counselorData = getCounselorData(formData);
     const companyId = await getCompanyId(formData);
+    const stakeId = await getStakeId(formData);
     const [updated] = await db
       .update(counselors)
-      .set({ ...counselorData, companyId, updatedAt: new Date() })
+      .set({
+        ...counselorData,
+        companyId,
+        stakeId,
+        updatedAt: new Date(),
+      })
       .where(eq(counselors.id, counselorId))
       .returning({ id: counselors.id });
 

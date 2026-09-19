@@ -2,6 +2,7 @@ import "server-only";
 
 import { eq } from "drizzle-orm";
 
+import { stakes } from "@/modules/church-units/server/schema";
 import { companies } from "@/modules/companies/server/schema";
 import { db } from "@/server/db";
 
@@ -29,9 +30,12 @@ export async function listCounselors(sort: CounselorSort = "company") {
       email: counselors.email,
       companyId: counselors.companyId,
       companyName: companies.name,
+      stakeId: counselors.stakeId,
+      stakeName: stakes.name,
     })
     .from(counselors)
-    .leftJoin(companies, eq(counselors.companyId, companies.id));
+    .leftJoin(companies, eq(counselors.companyId, companies.id))
+    .leftJoin(stakes, eq(counselors.stakeId, stakes.id));
 
   return rows.sort((left, right) => {
     if (sort === "company") {

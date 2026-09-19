@@ -1,4 +1,4 @@
-import { listWards } from "@/modules/church-units/server/queries";
+import { listStakes, listWards } from "@/modules/church-units/server/queries";
 import { listCompanyOptions } from "@/modules/companies/server/queries";
 import { requireParticipantManagementAccess } from "@/modules/auth/server/session";
 import { getLodgingOverview } from "@/modules/lodging/server/queries";
@@ -6,8 +6,9 @@ import { ParticipantForm } from "@/modules/participants/components/participant-f
 
 export default async function NewParticipantPage() {
   await requireParticipantManagementAccess();
-  const [wards, lodging, companies] = await Promise.all([
+  const [wards, stakes, lodging, companies] = await Promise.all([
     listWards(),
+    listStakes(),
     getLodgingOverview(),
     listCompanyOptions(),
   ]);
@@ -22,6 +23,7 @@ export default async function NewParticipantPage() {
       </div>
       <ParticipantForm
         wards={wards}
+        stakes={stakes}
         companies={companies}
         lodgingBuildings={lodging.buildings}
       />

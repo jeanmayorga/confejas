@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
 import Building06Icon from "@hugeicons/core-free-icons/Building06Icon";
 import Logout01Icon from "@hugeicons/core-free-icons/Logout01Icon";
+import ChurchIcon from "@hugeicons/core-free-icons/ChurchIcon";
 import QrCodeScanIcon from "@hugeicons/core-free-icons/QrCodeScanIcon";
 import UnfoldMoreIcon from "@hugeicons/core-free-icons/UnfoldMoreIcon";
 import UserGroupIcon from "@hugeicons/core-free-icons/UserGroupIcon";
@@ -118,20 +119,33 @@ export function AppSidebar({ user }: AppSidebarProps) {
           },
         ]
       : []),
-    ...(canManageUsers(user.role)
+  ];
+  const configurationNavigation = [
+    ...(canManageParticipants(user.role)
       ? [
           {
-            title: "Usuarios",
-            href: "/dashboard/users",
-            icon: UserGroupIcon,
+            title: "Unidades",
+            href: "/dashboard/units",
+            icon: ChurchIcon,
             exact: false,
           },
         ]
+      : []),
+    ...(canManageUsers(user.role)
+      ? [
+        {
+          title: "Usuarios",
+          href: "/dashboard/users",
+          icon: UserGroupIcon,
+          exact: false,
+        },
+      ]
       : []),
   ];
   const navigationSections = [
     { label: "Acciones", items: actionNavigation },
     { label: "Gestión", items: managementNavigation },
+    { label: "Configuración", items: configurationNavigation },
   ].filter((section) => section.items.length > 0);
 
   async function handleSignOut() {

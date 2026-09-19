@@ -5,6 +5,7 @@ import { and, asc, count, eq, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { stakes, wards } from "@/modules/church-units/server/schema";
 import { counselors } from "@/modules/counselors/server/schema";
 import { participants } from "@/modules/participants/server/schema";
+import type { ParticipantStatus } from "@/modules/participants/status";
 import { db } from "@/server/db";
 
 import {
@@ -26,6 +27,7 @@ export type CompanyParticipant = {
   birthDate: string | null;
   age: number | null;
   sex: string | null;
+  status: ParticipantStatus;
   wardName: string;
   stakeId: number;
   stakeName: string;
@@ -36,6 +38,8 @@ export type CompanyCounselor = {
   name: string;
   firstNames: string | null;
   lastNames: string | null;
+  stakeId: number | null;
+  stakeName: string | null;
 };
 
 export type CompanyDetail = {
@@ -98,6 +102,7 @@ const companyParticipantSelection = {
   birthDate: participants.birthDate,
   age: sql<number | null>`extract(year from age(current_date, ${participants.birthDate}))::integer`,
   sex: participants.sex,
+  status: participants.status,
   wardName: wards.name,
   stakeId: wards.stakeId,
   stakeName: stakes.name,
@@ -151,8 +156,11 @@ export async function listCompanies(): Promise<CompanyListItem[]> {
         firstNames: counselors.firstNames,
         lastNames: counselors.lastNames,
         companyId: counselors.companyId,
+        stakeId: counselors.stakeId,
+        stakeName: stakes.name,
       })
       .from(counselors)
+      .leftJoin(stakes, eq(counselors.stakeId, stakes.id))
       .orderBy(asc(counselors.name), asc(counselors.id)),
     db
       .select({
@@ -183,6 +191,8 @@ export async function listCompanies(): Promise<CompanyListItem[]> {
       name: counselor.name,
       firstNames: counselor.firstNames,
       lastNames: counselor.lastNames,
+      stakeId: counselor.stakeId,
+      stakeName: counselor.stakeName,
     });
     counselorsByCompany.set(counselor.companyId, assigned);
   }
@@ -255,8 +265,11 @@ export async function getCompanyDetail(
         name: counselors.name,
         firstNames: counselors.firstNames,
         lastNames: counselors.lastNames,
+        stakeId: counselors.stakeId,
+        stakeName: stakes.name,
       })
       .from(counselors)
+      .leftJoin(stakes, eq(counselors.stakeId, stakes.id))
       .where(eq(counselors.companyId, companyId))
       .orderBy(asc(counselors.name), asc(counselors.id)),
     db

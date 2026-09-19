@@ -8,13 +8,19 @@ import {
   type KeyboardEvent,
   type MouseEvent,
 } from "react";
-import UserEdit01Icon from "@hugeicons/core-free-icons/UserEdit01Icon";
+import Link from "next/link";
+import ArrowDown02Icon from "@hugeicons/core-free-icons/ArrowDown02Icon";
+import ArrowUpDownIcon from "@hugeicons/core-free-icons/ArrowUpDownIcon";
+import ArrowUp02Icon from "@hugeicons/core-free-icons/ArrowUp02Icon";
+import ExternalLinkIcon from "@hugeicons/core-free-icons/ExternalLinkIcon";
+import UserGroupIcon from "@hugeicons/core-free-icons/UserGroupIcon";
+import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Empty,
   EmptyContent,
@@ -22,7 +28,6 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -36,11 +41,15 @@ import {
   Sheet,
   SheetContent,
   SheetDescription,
-  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -50,7 +59,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DeleteParticipantButton } from "@/modules/participants/components/delete-participant-button.client";
+import {
+  getParticipantInitials,
+  ParticipantDetails,
+} from "@/modules/participants/components/participant-details.client";
 import { ParticipantForm } from "@/modules/participants/components/participant-form.client";
+import { getCompanyDetailAction } from "@/modules/companies/server/actions";
 import {
   getParticipantEditDataAction,
   updateParticipantStatusAction,
@@ -60,10 +74,15 @@ import {
   PARTICIPANT_STATUS_OPTIONS,
   type ParticipantStatus,
 } from "@/modules/participants/status";
+import type {
+  ParticipantSort,
+  ParticipantSortField,
+} from "@/modules/participants/sorting";
 import { cn } from "@/lib/utils";
 
 export type ParticipantTableRow = {
   id: string;
+  sourceRecordId: number | null;
   firstNames: string;
   lastNames: string;
   preferredName: string | null;
@@ -78,8 +97,16 @@ export type ParticipantTableRow = {
   status: ParticipantStatus;
   wardName: string;
   stakeName: string;
+  companyId: string | null;
   companyName: string | null;
   roomName: string | null;
+  bloodType: string | null;
+  chronicCondition: string | null;
+  medicalTreatment: string | null;
+  insuranceProvider: string | null;
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+  medicalNotes: string | null;
   checkedInAt: string | null;
 };
 
@@ -87,6 +114,10 @@ type ParticipantsTableProps = {
   participants: ParticipantTableRow[];
   canManage: boolean;
   canDelete: boolean;
+  isLoadingMore?: boolean;
+  sort: ParticipantSort;
+  onSortChange: (sort: ParticipantSort) => void;
+  onDataChanged?: () => void;
 };
 
 type ParticipantEditData = Extract<
@@ -96,19 +127,101 @@ type ParticipantEditData = Extract<
 
 type ParticipantSheetMode = "view" | "edit";
 
-const birthDateFormatter = new Intl.DateTimeFormat("es-EC", {
-  dateStyle: "long",
-  timeZone: "UTC",
-});
+type CompanyDetail = Extract<
+  Awaited<ReturnType<typeof getCompanyDetailAction>>,
+  { success: true }
+>["company"];
 
-const checkInDateFormatter = new Intl.DateTimeFormat("es-EC", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "America/Guayaquil",
-});
+function ParticipantTableLoadingRows() {
+  return Array.from({ length: 30 }, (_, index) => (
+    <TableRow key={`loading-${index}`} className="h-9">
+      <TableCell className="w-16">
+        <Skeleton className="h-3 w-7" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-7 w-32 rounded-full" />
+      </TableCell>
+      <TableCell className="min-w-56">
+        <div className="flex items-center gap-2">
+          <Skeleton className="size-6 rounded-full" />
+          <Skeleton className="h-3 w-40" />
+        </div>
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-3 w-14" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-3 w-24" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-3 w-28" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-3 w-24" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-3 w-20" />
+      </TableCell>
+      <TableCell>
+        <div className="flex justify-start gap-1">
+          <Skeleton className="size-7 rounded-full" />
+          <Skeleton className="size-7 rounded-full" />
+        </div>
+      </TableCell>
+    </TableRow>
+  ));
+}
+
+function SortableTableHead({
+  label,
+  field,
+  className,
+  sort,
+  onSortChange,
+}: {
+  label: string;
+  field: ParticipantSortField;
+  className?: string;
+  sort: ParticipantSort;
+  onSortChange: (sort: ParticipantSort) => void;
+}) {
+  const isActive = sort.startsWith(`${field}_`);
+  const isDescending = sort.endsWith("_desc");
+  const nextSort = `${field}_${isActive && !isDescending ? "desc" : "asc"}` as ParticipantSort;
+  const icon = isActive
+    ? isDescending
+      ? ArrowUp02Icon
+      : ArrowDown02Icon
+    : ArrowUpDownIcon;
+
+  return (
+    <TableHead className={className}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="xs"
+        className={cn(
+          "h-6 gap-1 px-0 hover:bg-transparent hover:text-foreground",
+          isActive ? "text-foreground" : "text-muted-foreground",
+        )}
+        aria-label={`${label}: ${
+          isActive
+            ? isDescending
+              ? "orden descendente"
+              : "orden ascendente"
+            : "ordenar"
+        }`}
+        onClick={() => onSortChange(nextSort)}
+      >
+        {label}
+        <HugeiconsIcon icon={icon} strokeWidth={2} />
+      </Button>
+    </TableHead>
+  );
+}
 
 const participantStatusClassNames = {
-  registered: "bg-muted text-foreground",
+  registered: "bg-muted text-muted-foreground",
   confirmed: "bg-participant-confirmed/10 text-participant-confirmed",
   arrived: "bg-participant-arrived/10 text-participant-arrived",
   cancelled: "bg-participant-cancelled/10 text-participant-cancelled",
@@ -127,44 +240,9 @@ const participantRowClassNames = {
   registered: "",
   confirmed: "",
   arrived: "",
-  cancelled: "bg-participant-cancelled/10 hover:bg-participant-cancelled/20",
-  pending: "bg-participant-pending/10 hover:bg-participant-pending/20",
+  cancelled: "bg-participant-cancelled/5 hover:bg-participant-cancelled/10",
+  pending: "bg-participant-pending/5 hover:bg-participant-pending/10",
 } satisfies Record<ParticipantStatus, string>;
-
-function present(value: string | null, fallback = "No registrado") {
-  return value?.trim() || fallback;
-}
-
-function formatBirthDate(value: string | null) {
-  if (!value) {
-    return "No registrada";
-  }
-
-  return birthDateFormatter.format(new Date(`${value}T00:00:00Z`));
-}
-
-function membershipLabel(value: boolean | null) {
-  if (value === null) {
-    return "No registrado";
-  }
-
-  return value ? "Sí" : "No";
-}
-
-function getParticipantInitials(firstNames: string, lastNames: string) {
-  return `${firstNames.trim().charAt(0)}${lastNames.trim().charAt(0)}`.toLocaleUpperCase(
-    "es",
-  );
-}
-
-function DetailItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-      <dd className="mt-1 break-words text-sm text-foreground">{value}</dd>
-    </div>
-  );
-}
 
 function ParticipantStatusControl({
   participantId,
@@ -211,10 +289,10 @@ function ParticipantStatusControl({
       }}
     >
       <SelectTrigger
-        size="sm"
+        size="xs"
         aria-label={`Estado de ${participantName}`}
         className={cn(
-          "w-32 px-2.5 shadow-none",
+          "w-32 px-2.5 text-xs font-medium shadow-none [&>svg]:!size-3",
           participantStatusClassNames[status],
         )}
       >
@@ -258,13 +336,21 @@ export function ParticipantsTable({
   participants,
   canManage,
   canDelete,
+  isLoadingMore = false,
+  sort,
+  onSortChange,
+  onDataChanged,
 }: ParticipantsTableProps) {
   const [selectedParticipant, setSelectedParticipant] =
     useState<ParticipantTableRow | null>(null);
+  const [selectedCompany, setSelectedCompany] =
+    useState<CompanyDetail | null>(null);
   const [sheetMode, setSheetMode] = useState<ParticipantSheetMode>("view");
   const [editData, setEditData] = useState<ParticipantEditData | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
+  const [companyError, setCompanyError] = useState<string | null>(null);
   const [isLoadingEdit, startLoadingEdit] = useTransition();
+  const [isLoadingCompany, startLoadingCompany] = useTransition();
   const [, startUpdatingStatus] = useTransition();
   const [updatingStatusIds, setUpdatingStatusIds] = useState<Set<string>>(
     () => new Set(),
@@ -282,6 +368,7 @@ export function ParticipantsTable({
       ),
   );
   const editRequestId = useRef(0);
+  const companyRequestId = useRef(0);
 
   function changeParticipantStatus(
     participantId: string,
@@ -301,17 +388,28 @@ export function ParticipantsTable({
     startUpdatingStatus(async () => {
       try {
         setOptimisticStatus({ participantId, status: nextStatus });
+        setSelectedParticipant((currentParticipant) =>
+          currentParticipant?.id === participantId
+            ? { ...currentParticipant, status: nextStatus }
+            : currentParticipant,
+        );
         const result = await updateParticipantStatusAction(
           participantId,
           nextStatus,
         );
 
         if (!result.success) {
+          setSelectedParticipant((currentParticipant) =>
+            currentParticipant?.id === participantId
+              ? { ...currentParticipant, status: currentStatus }
+              : currentParticipant,
+          );
           toast.error(result.message);
           return;
         }
 
         toast.success(result.message);
+        onDataChanged?.();
       } finally {
         setUpdatingStatusIds((currentIds) => {
           const nextIds = new Set(currentIds);
@@ -328,6 +426,28 @@ export function ParticipantsTable({
     setSheetMode("view");
     setEditData(null);
     setEditError(null);
+  }
+
+  function openCompany(companyId: string) {
+    const requestId = companyRequestId.current + 1;
+    companyRequestId.current = requestId;
+    setSelectedCompany(null);
+    setCompanyError(null);
+
+    startLoadingCompany(async () => {
+      const result = await getCompanyDetailAction(companyId);
+
+      if (companyRequestId.current !== requestId) {
+        return;
+      }
+
+      if (!result.success) {
+        setCompanyError(result.message);
+        return;
+      }
+
+      setSelectedCompany(result.company);
+    });
   }
 
   function openParticipantEdit(participant: ParticipantTableRow) {
@@ -362,6 +482,12 @@ export function ParticipantsTable({
     setEditError(null);
   }
 
+  function closeCompanySheet() {
+    companyRequestId.current += 1;
+    setSelectedCompany(null);
+    setCompanyError(null);
+  }
+
   function returnToParticipantView() {
     editRequestId.current += 1;
     setSheetMode("view");
@@ -391,22 +517,78 @@ export function ParticipantsTable({
 
   return (
     <>
-      <Table className="min-w-[980px]">
+      <Table className="min-w-[1420px] table-fixed">
+        <colgroup>
+          <col className="w-[65px]" />
+          <col className="w-[177px]" />
+          <col className="w-[347px]" />
+          <col className="w-[93px]" />
+          <col className="w-[168px]" />
+          <col className="w-[130px]" />
+          <col className="w-[148px]" />
+          <col className="w-[195px]" />
+          <col className="w-[98px]" />
+        </colgroup>
         <TableHeader className="bg-muted/50">
           <TableRow>
-            <TableHead className="min-w-56">Nombres</TableHead>
-            <TableHead className="min-w-28">Estado</TableHead>
-            <TableHead className="min-w-20">Edad</TableHead>
-            <TableHead className="min-w-28">Barrio</TableHead>
-            <TableHead className="min-w-32">Estaca</TableHead>
-            <TableHead className="min-w-36">Compañía asignada</TableHead>
-            <TableHead className="min-w-28">Cama asignada</TableHead>
-            <TableHead className="w-24 text-right">Acciones</TableHead>
+            <SortableTableHead
+              label="ID"
+              field="id"
+              sort={sort}
+              onSortChange={onSortChange}
+            />
+            <SortableTableHead
+              label="Estado"
+              field="status"
+              sort={sort}
+              onSortChange={onSortChange}
+            />
+            <SortableTableHead
+              label="Participante"
+              field="participant"
+              sort={sort}
+              onSortChange={onSortChange}
+            />
+            <SortableTableHead
+              label="Edad"
+              field="age"
+              sort={sort}
+              onSortChange={onSortChange}
+            />
+            <SortableTableHead
+              label="Compañía"
+              field="company"
+              sort={sort}
+              onSortChange={onSortChange}
+            />
+            <SortableTableHead
+              label="Alojamiento"
+              field="room"
+              sort={sort}
+              onSortChange={onSortChange}
+            />
+            <SortableTableHead
+              label="Estaca"
+              field="stake"
+              sort={sort}
+              onSortChange={onSortChange}
+            />
+            <SortableTableHead
+              label="Barrio"
+              field="ward"
+              sort={sort}
+              onSortChange={onSortChange}
+            />
+            <TableHead className="text-left">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {optimisticParticipants.map((participant) => {
             const participantName = `${participant.firstNames} ${participant.lastNames}`;
+            const roomName = participant.roomName?.trim() || null;
+            const hasAssignedRoom = Boolean(
+              roomName && roomName.toLocaleLowerCase() !== "sin asignar",
+            );
 
             return (
               <TableRow
@@ -414,26 +596,14 @@ export function ParticipantsTable({
                 tabIndex={0}
                 aria-label={`Ver a ${participantName}`}
                 className={cn(
-                  "cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                  "h-9 cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                   participantRowClassNames[participant.status],
                 )}
                 onClick={() => openParticipant(participant)}
                 onKeyDown={(event) => handleRowKeyDown(event, participant)}
               >
-                <TableCell className="min-w-56">
-                  <div className="flex items-center gap-2">
-                    <Avatar size="sm" aria-hidden="true">
-                      <AvatarFallback className="font-medium">
-                        {getParticipantInitials(
-                          participant.firstNames,
-                          participant.lastNames,
-                        )}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 font-medium whitespace-normal">
-                      {participantName}
-                    </div>
-                  </div>
+                <TableCell className="text-muted-foreground">
+                  {participant.sourceRecordId ?? "—"}
                 </TableCell>
                 <TableCell
                   onClick={keepRowClosed}
@@ -448,46 +618,101 @@ export function ParticipantsTable({
                     onStatusChange={changeParticipantStatus}
                   />
                 </TableCell>
+                <TableCell className="max-w-0 overflow-hidden">
+                  <div className="flex items-center gap-2">
+                    <Avatar size="sm" aria-hidden="true">
+                      <AvatarFallback
+                        className={cn(
+                          "!text-[9px] font-medium",
+                          participantStatusClassNames[participant.status],
+                        )}
+                      >
+                        {getParticipantInitials(
+                          participant.firstNames,
+                          participant.lastNames,
+                        )}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 truncate whitespace-nowrap">
+                      {participantName}
+                    </div>
+                  </div>
+                </TableCell>
                 <TableCell>
                   {participant.age === null
                     ? "Sin registrar"
                     : `${participant.age} años`}
                 </TableCell>
-                <TableCell>{participant.wardName}</TableCell>
-                <TableCell>{participant.stakeName}</TableCell>
-                <TableCell>
-                  {participant.companyName ? (
-                    participant.companyName
+                <TableCell className="max-w-0 overflow-hidden">
+                  {participant.companyName && participant.companyId ? (
+                    <button
+                      type="button"
+                      className="inline-flex max-w-full items-center gap-1.5 truncate text-primary underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring [&>svg]:size-3.5 [&>svg]:shrink-0"
+                      aria-label={`Ver compañía ${participant.companyName}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openCompany(participant.companyId!);
+                      }}
+                      onKeyDown={(event) => event.stopPropagation()}
+                    >
+                      <HugeiconsIcon icon={UserGroupIcon} />
+                      {participant.companyName}
+                    </button>
                   ) : (
-                    <Badge variant="secondary">Sin asignar</Badge>
+                    <span className="text-muted-foreground">Sin asignar</span>
                   )}
                 </TableCell>
-                <TableCell>
-                  {participant.roomName ? (
-                    participant.roomName
+                <TableCell className="max-w-0 overflow-hidden">
+                  {hasAssignedRoom ? (
+                    <span className="inline-flex max-w-full items-center gap-1.5 truncate text-primary [&>svg]:size-3.5 [&>svg]:shrink-0">
+                      <HugeiconsIcon icon={Building03Icon} />
+                      {roomName}
+                    </span>
                   ) : (
-                    <Badge variant="secondary">Sin asignar</Badge>
+                    <span className="text-muted-foreground">Sin asignar</span>
                   )}
+                </TableCell>
+                <TableCell className="max-w-0 truncate overflow-hidden">
+                  {participant.stakeName}
+                </TableCell>
+                <TableCell className="max-w-0 truncate overflow-hidden">
+                  {participant.wardName}
                 </TableCell>
                 <TableCell
                   onClick={keepRowClosed}
                   onKeyDown={(event) => event.stopPropagation()}
                 >
                   {canManage ? (
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        type="button"
-                        aria-label={`Editar ${participantName}`}
-                        variant="ghost"
-                        size="icon-xs"
-                        onClick={() => openParticipantEdit(participant)}
-                      >
-                        <HugeiconsIcon icon={UserEdit01Icon} strokeWidth={2} />
-                      </Button>
+                  <div className="flex justify-start gap-1">
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Link
+                              href={`/dashboard/participants/${participant.id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              aria-label={`Abrir ${participantName}`}
+                              className={cn(
+                                buttonVariants({
+                                  variant: "secondary",
+                                  size: "icon-md",
+                                }),
+                              )}
+                            >
+                              <HugeiconsIcon
+                                icon={ExternalLinkIcon}
+                                strokeWidth={2}
+                              />
+                            </Link>
+                          }
+                        />
+                        <TooltipContent>Abrir participante</TooltipContent>
+                      </Tooltip>
                       {canDelete ? (
                         <DeleteParticipantButton
                           participantId={participant.id}
                           participantName={participantName}
+                          onDeleted={onDataChanged}
                         />
                       ) : null}
                     </div>
@@ -496,6 +721,7 @@ export function ParticipantsTable({
               </TableRow>
             );
           })}
+        {isLoadingMore ? <ParticipantTableLoadingRows /> : null}
         </TableBody>
       </Table>
 
@@ -518,167 +744,45 @@ export function ParticipantsTable({
         >
           {sheetMode === "view" ? (
             <>
-              <SheetHeader className="border-b pr-16">
-                <div className="flex items-center gap-3">
-                  <Avatar size="lg" className="size-12" aria-hidden="true">
-                    <AvatarFallback>
-                      {selectedParticipant
-                        ? getParticipantInitials(
-                            selectedParticipant.firstNames,
-                            selectedParticipant.lastNames,
-                          )
-                        : "P"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <SheetTitle className="text-xl">{selectedName}</SheetTitle>
-                    <SheetDescription className="mt-1">
-                      {selectedParticipant?.preferredName
-                        ? `Prefiere ${selectedParticipant.preferredName} · `
-                        : null}
-                      Cédula:{" "}
-                      {present(selectedParticipant?.governmentId ?? null)}
-                    </SheetDescription>
-                  </div>
-                </div>
+              <SheetHeader className="justify-center pr-16 py-4">
+                <SheetTitle>Participante</SheetTitle>
               </SheetHeader>
-
               {selectedParticipant ? (
-                <div className="flex-1 overflow-y-auto px-6 pb-6">
-                  <section className="py-5">
-                    <h3 className="text-sm font-semibold">Estado actual</h3>
-                    <dl className="mt-3 grid grid-cols-3 divide-x rounded-xl border">
-                      <div className="min-w-0 p-2 sm:p-3">
-                        <dt className="text-xs font-medium text-muted-foreground">
-                          Llegada
-                        </dt>
-                        <dd className="mt-2">
-                          <Badge
-                            variant={
-                              selectedParticipant.checkedInAt
-                                ? "default"
-                                : "secondary"
-                            }
-                          >
-                            {selectedParticipant.checkedInAt
-                              ? "Llegó"
-                              : "Pendiente"}
-                          </Badge>
-                          <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
-                            {selectedParticipant.checkedInAt
-                              ? checkInDateFormatter.format(
-                                  new Date(selectedParticipant.checkedInAt),
-                                )
-                              : "Aún no llega"}
-                          </p>
-                        </dd>
-                      </div>
-                      <div className="min-w-0 p-2 sm:p-3">
-                        <dt className="text-xs font-medium text-muted-foreground">
-                          Compañía
-                        </dt>
-                        <dd className="mt-2">
-                          {selectedParticipant.companyName ? (
-                            <p className="line-clamp-2 text-sm font-medium">
-                              {selectedParticipant.companyName}
-                            </p>
-                          ) : (
-                            <Badge variant="secondary">Sin asignar</Badge>
-                          )}
-                        </dd>
-                      </div>
-                      <div className="min-w-0 p-2 sm:p-3">
-                        <dt className="text-xs font-medium text-muted-foreground">
-                          Habitación
-                        </dt>
-                        <dd className="mt-2">
-                          {selectedParticipant.roomName ? (
-                            <p className="line-clamp-2 text-sm font-medium">
-                              {selectedParticipant.roomName}
-                            </p>
-                          ) : (
-                            <Badge variant="secondary">Sin asignar</Badge>
-                          )}
-                        </dd>
-                      </div>
-                    </dl>
-                  </section>
-
-                  <Separator />
-
-                  <section className="py-5">
-                    <h3 className="text-sm font-semibold">Información</h3>
-                    <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-5">
-                      <DetailItem
-                        label="Fecha de nacimiento"
-                        value={formatBirthDate(selectedParticipant.birthDate)}
-                      />
-                      <DetailItem
-                        label="Sexo"
-                        value={present(selectedParticipant.sex)}
-                      />
-                      <DetailItem
-                        label="Miembro de la Iglesia"
-                        value={membershipLabel(
-                          selectedParticipant.isChurchMember,
-                        )}
-                      />
-                      <DetailItem
-                        label="Talla de camiseta"
-                        value={present(selectedParticipant.shirtSize)}
-                      />
-                    </dl>
-                  </section>
-
-                  <Separator />
-
-                  <section className="pt-5">
-                    <h3 className="text-sm font-semibold">Contacto y unidad</h3>
-                    <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-5">
-                      <DetailItem
-                        label="Teléfono"
-                        value={present(selectedParticipant.phone)}
-                      />
-                      <DetailItem
-                        label="Correo electrónico"
-                        value={present(selectedParticipant.email)}
-                      />
-                      <DetailItem
-                        label="Barrio"
-                        value={selectedParticipant.wardName}
-                      />
-                      <DetailItem
-                        label="Estaca"
-                        value={selectedParticipant.stakeName}
-                      />
-                    </dl>
-                  </section>
-                </div>
-              ) : null}
-
-              {selectedParticipant && canManage ? (
                 <>
-                  <Separator />
-                  <SheetFooter>
-                    <Button
-                      type="button"
-                      onClick={() => openParticipantEdit(selectedParticipant)}
-                    >
-                      <HugeiconsIcon
-                        icon={UserEdit01Icon}
-                        data-icon="inline-start"
-                      />
-                      Editar participante
-                    </Button>
-                  </SheetFooter>
+                  <SheetTitle className="sr-only">{selectedName}</SheetTitle>
+                  <SheetDescription className="sr-only">
+                    Detalle del participante
+                  </SheetDescription>
+                  <ParticipantDetails
+                    participant={selectedParticipant}
+                    canManage={canManage}
+                    canDelete={canDelete}
+                    className="flex-1"
+                    onEdit={() => openParticipantEdit(selectedParticipant)}
+                    onDeleted={() => {
+                      closeParticipantSheet();
+                      onDataChanged?.();
+                    }}
+                    onDataChanged={onDataChanged}
+                    onCompanyOpen={openCompany}
+                    onStatusChange={(nextStatus) =>
+                      changeParticipantStatus(
+                        selectedParticipant.id,
+                        selectedParticipant.status,
+                        nextStatus,
+                      )
+                    }
+                    isStatusUpdating={updatingStatusIds.has(
+                      selectedParticipant.id,
+                    )}
+                  />
                 </>
               ) : null}
             </>
           ) : (
             <>
               <SheetHeader className="pr-16">
-                <SheetTitle className="text-xl">Editar participante</SheetTitle>
-                <SheetDescription>{selectedName}</SheetDescription>
+                <SheetTitle className="text-xl">Editar Participante</SheetTitle>
               </SheetHeader>
 
               {isLoadingEdit ? (
@@ -715,10 +819,14 @@ export function ParticipantsTable({
                     participant={editData.participant}
                     companies={editData.companies}
                     wards={editData.wards}
+                    stakes={editData.stakes}
                     lodgingBuildings={editData.lodgingBuildings}
                     presentation="sheet"
                     onCancel={returnToParticipantView}
-                    onSuccess={closeParticipantSheet}
+                    onSuccess={() => {
+                      closeParticipantSheet();
+                      onDataChanged?.();
+                    }}
                   />
                 </div>
               ) : null}
@@ -726,6 +834,65 @@ export function ParticipantsTable({
           )}
         </SheetContent>
       </Sheet>
+
+      <Sheet
+        open={selectedCompany !== null || isLoadingCompany || companyError !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeCompanySheet();
+          }
+        }}
+      >
+        <SheetContent
+          side="right"
+          className="data-[side=right]:w-full data-[side=right]:sm:max-w-sm"
+        >
+          {isLoadingCompany ? (
+            <div
+              className="flex flex-col gap-4 px-6 py-6"
+              aria-label="Cargando compañía"
+              aria-busy="true"
+            >
+              <Skeleton className="h-7 w-2/3" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : companyError ? (
+            <Empty className="min-h-64">
+              <EmptyHeader>
+                <EmptyTitle>No pudimos cargar la compañía</EmptyTitle>
+                <EmptyDescription>{companyError}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : selectedCompany ? (
+            <>
+              <SheetHeader className="border-b pr-16">
+                <SheetTitle>{selectedCompany.name}</SheetTitle>
+                <SheetDescription>Consejeros asignados</SheetDescription>
+              </SheetHeader>
+              <div className="flex-1 overflow-y-auto px-6 pb-6">
+                <section className="py-5">
+                  <h3 className="text-sm font-semibold">Consejeros</h3>
+                  {selectedCompany.counselors.length > 0 ? (
+                    <div className="mt-3 divide-y rounded-xl border">
+                      {selectedCompany.counselors.map((counselor) => (
+                        <p key={counselor.id} className="px-3 py-2 text-sm">
+                          {counselor.name}
+                        </p>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      No hay consejeros asignados.
+                    </p>
+                  )}
+                </section>
+              </div>
+            </>
+          ) : null}
+        </SheetContent>
+      </Sheet>
+
     </>
   );
 }

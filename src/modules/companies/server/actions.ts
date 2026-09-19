@@ -21,7 +21,6 @@ import {
   DEFAULT_DISTRIBUTION_CAPACITY,
   DEFAULT_DISTRIBUTION_STRATEGY,
   FEMALE_PARTICIPANT_SEX,
-  getRequiredAdditionalCompanyCount,
   isDistributionCapacity,
   isDistributionDirection,
   isDistributionStrategy,
@@ -132,7 +131,6 @@ export type DistributionSaveActionResult =
       success: true;
       message: string;
       assignedCount: number;
-      createdCompanyCount: number;
     }
   | {
       success: false;
@@ -207,31 +205,6 @@ function getCompanyName(formData: FormData) {
   }
 
   return name;
-}
-
-function getGeneratedCompanyNames(
-  existingNames: readonly string[],
-  count: number,
-) {
-  const existing = new Set(
-    existingNames.map((name) => name.trim().toLocaleLowerCase("es-EC")),
-  );
-  const names: string[] = [];
-  let position = 1;
-
-  while (names.length < count) {
-    const name = `Compañía ${position}`;
-    const normalized = name.toLocaleLowerCase("es-EC");
-
-    if (!existing.has(normalized)) {
-      names.push(name);
-      existing.add(normalized);
-    }
-
-    position += 1;
-  }
-
-  return names;
 }
 
 async function companyNameExists(name: string, excludedId?: string) {
@@ -657,33 +630,7 @@ async function buildDistributionProposal(
     strategy,
     stakeDiversity,
   });
-  const generatedCompanyNames = getGeneratedCompanyNames(
-    resettableCompanies.map((company) => company.name),
-    getRequiredAdditionalCompanyCount(initialPlan, capacity),
-  );
-  const plan =
-    generatedCompanyNames.length === 0
-      ? initialPlan
-      : planParticipantDistribution({
-          companies: [
-            ...resettableCompanies,
-            ...generatedCompanyNames.map((name, index) => ({
-              id: `new-company-${index + 1}`,
-              name,
-              counts: {
-                total: 0,
-                female: 0,
-                male: 0,
-                unsupportedSex: 0,
-              },
-            })),
-          ],
-          participants: allParticipants,
-          direction,
-          capacity,
-          strategy,
-          stakeDiversity,
-        });
+  const plan = initialPlan;
   const participantsById = new Map(
     allParticipants.map((participant) => [participant.id, participant]),
   );
@@ -719,7 +666,7 @@ async function buildDistributionProposal(
     companies: plan.companies.map((company) => ({
       companyId: company.companyId,
       companyName: company.companyName,
-      isNew: generatedCompanyNames.includes(company.companyName),
+      isNew: false,
       status: company.blockedByExistingCapacity
         ? "blocked_over_capacity"
         : company.final.total >= capacity.female + capacity.male
@@ -738,8 +685,8 @@ async function buildDistributionProposal(
       },
     })),
     creation: {
-      count: generatedCompanyNames.length,
-      names: generatedCompanyNames,
+      count: 0,
+      names: [],
     },
     pending: {
       female: femalePending,
@@ -918,7 +865,7 @@ export async function saveParticipantDistributionAction(
       };
     }
 
-    let currentProposal = await buildDistributionProposal(
+    const currentProposal = await buildDistributionProposal(
       input.direction,
       input.capacity,
       input.strategy,
@@ -942,37 +889,12 @@ export async function saveParticipantDistributionAction(
       };
     }
 
-    let createdCompanyCount = 0;
-
-    if (currentProposal.creation.names.length > 0) {
-      const createdCompanies = await db
-        .insert(companies)
-        .values(currentProposal.creation.names.map((name) => ({ name })))
-        .returning({ id: companies.id });
-
-      if (createdCompanies.length !== currentProposal.creation.names.length) {
-        return {
-          success: false,
-          code: "server_error",
-          message: "No se pudieron crear todas las compañías necesarias.",
-        };
-      }
-
-      createdCompanyCount = createdCompanies.length;
-      currentProposal = await buildDistributionProposal(
-        input.direction,
-        input.capacity,
-        input.strategy,
-        input.stakeDiversity,
-      );
-    }
-
-    if (!currentProposal || currentProposal.creation.count > 0) {
+    if (currentProposal.pending.totalCount > 0) {
       return {
         success: false,
-        code: "stale_proposal",
+        code: "capacity_conflict",
         message:
-          "La distribución cambió mientras se creaban las compañías. Vuelve a generar la propuesta.",
+          "No hay espacio suficiente en las compañías existentes para distribuir a todos los participantes. Crea más compañías antes de distribuir.",
       };
     }
 
@@ -1040,12 +962,8 @@ export async function saveParticipantDistributionAction(
 
     return {
       success: true,
-      message:
-        createdCompanyCount > 0
-          ? `Se crearon ${createdCompanyCount} compañías y se rehízo la distribución de ${assignedParticipantIds.size} participantes correctamente.`
-          : `Se rehízo la distribución de ${assignedParticipantIds.size} participantes correctamente.`,
+      message: `Se distribuyeron ${assignedParticipantIds.size} participantes correctamente.`,
       assignedCount: assignedParticipantIds.size,
-      createdCompanyCount,
     };
   } catch {
     return {

@@ -2,7 +2,6 @@
 
 import {
   createContext,
-  type DragEvent,
   type ReactNode,
   useContext,
   useId,
@@ -59,18 +58,10 @@ import {
 import type { CompanyDirectoryItem } from "./companies-directory.client";
 
 type ParticipantManagement = {
-  selectedIds: ReadonlySet<string>;
   busy: boolean;
-  draggedIds: readonly string[];
-  toggleParticipant: (id: string, checked: boolean) => void;
-  toggleCompany: (companyId: string, checked: boolean) => void;
   openMove: (ids: readonly string[]) => void;
   openRemove: (ids: readonly string[]) => void;
   openDelete: (ids: readonly string[]) => void;
-  startDrag: (event: DragEvent, participantId: string) => void;
-  endDrag: () => void;
-  canDrop: (companyId: string | null) => boolean;
-  drop: (event: DragEvent, companyId: string | null) => void;
 };
 
 type ManagementPrompt = {
@@ -137,12 +128,9 @@ export function CompanyParticipantManagement({
   const targetSelectId = useId();
   const [pending, startTransition] = useTransition();
   const submittingRef = useRef(false);
-  const [selection, setSelection] = useState<Map<string, string | null>>(() => new Map());
   const [prompt, setPrompt] = useState<ManagementPrompt | null>(null);
   const [deleteConfirmed, setDeleteConfirmed] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
-  const [draggedParticipants, setDraggedParticipants] = useState<CapturedCompanyParticipant[]>([]);
-  const draggedRef = useRef<CapturedCompanyParticipant[]>([]);
   const currentById = useMemo(() => {
     const participants = new Map<string, CapturedCompanyParticipant>();
 
@@ -160,22 +148,12 @@ export function CompanyParticipantManagement({
 
     return participants;
   }, [companies]);
-  const selectedIds = useMemo(() => new Set(
-    [...selection].filter(([id, companyId]) =>
-      currentById.get(id)?.companyId === companyId,
-    ).map(([id]) => id),
-  ), [currentById, selection]);
   const destinations = useMemo(() => companies.map((company) => ({
     company,
     preview: getParticipantMovePreview(prompt?.participants ?? [], company),
   })), [companies, prompt?.participants]);
-  const dragDestinations = useMemo(() => new Map(companies.map((company) => [
-    company.id,
-    getParticipantMovePreview(draggedParticipants, company),
-  ])), [companies, draggedParticipants]);
   const target = destinations.find(({ company }) => company.id === prompt?.targetCompanyId);
   const promptIsStale = prompt !== null && !areCompanyParticipantsCurrent(prompt.participants, currentById);
-  const dragIsCurrent = areCompanyParticipantsCurrent(draggedParticipants, currentById);
   const moveDisabledReason = promptIsStale
     ? STALE_SELECTION_MESSAGE
     : !target
@@ -209,39 +187,6 @@ export function CompanyParticipantManagement({
       setDeleteConfirmed(false);
       setPrompt({ kind, participants, targetCompanyId: "" });
     }
-  }
-
-  function toggleParticipant(id: string, checked: boolean) {
-    if (pending || submittingRef.current) return;
-    const participant = currentById.get(id);
-    if (!participant) return;
-
-    setSelection((previous) => {
-      const next = new Map(previous);
-      if (checked) next.set(id, participant.companyId);
-      else next.delete(id);
-      return next;
-    });
-  }
-
-  function toggleCompany(companyId: string, checked: boolean) {
-    if (pending || submittingRef.current) return;
-    const company = companies.find((item) => item.id === companyId);
-    if (!company) return;
-
-    setSelection((previous) => {
-      const next = new Map(previous);
-      for (const participant of company.participants) {
-        if (checked) next.set(participant.id, company.id);
-        else next.delete(participant.id);
-      }
-      return next;
-    });
-  }
-
-  function endDrag() {
-    draggedRef.current = [];
-    setDraggedParticipants([]);
   }
 
   function executeAction(action: ManagementPrompt) {
@@ -290,13 +235,7 @@ export function CompanyParticipantManagement({
           return;
         }
 
-        setSelection((previous) => {
-          const next = new Map(previous);
-          for (const participant of action.participants) next.delete(participant.participantId);
-          return next;
-        });
         setPrompt(null);
-        endDrag();
         toast.success(result.message);
         router.refresh();
       } catch {
@@ -310,53 +249,6 @@ export function CompanyParticipantManagement({
     });
   }
 
-  function startDrag(event: DragEvent, participantId: string) {
-    if (pending || submittingRef.current || prompt) {
-      event.preventDefault();
-      return;
-    }
-
-    const ids = selectedIds.has(participantId) ? [...selectedIds] : [participantId];
-    const participants = captureParticipants(ids);
-
-    if (!participants) {
-      event.preventDefault();
-      return;
-    }
-
-    draggedRef.current = participants;
-    setDraggedParticipants(participants);
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("application/x-company-participants", JSON.stringify(ids));
-    event.dataTransfer.setData("text/plain", `${participants.length} participantes`);
-  }
-
-  function canDrop(companyId: string | null) {
-    if (pending || !dragIsCurrent) return false;
-    if (companyId === null) return draggedParticipants.some((participant) => participant.companyId !== null);
-    const preview = dragDestinations.get(companyId);
-    return preview !== undefined && preview.disabledReason === null;
-  }
-
-  function drop(event: DragEvent, companyId: string | null) {
-    event.preventDefault();
-    event.stopPropagation();
-    if (!canDrop(companyId) || submittingRef.current) return;
-
-    const participants = draggedRef.current;
-    if (!areCompanyParticipantsCurrent(participants, currentById)) return;
-    endDrag();
-    setFailure(null);
-    const action: ManagementPrompt = {
-      kind: companyId === null ? "remove" : "move",
-      participants,
-      targetCompanyId: companyId ?? "",
-    };
-
-    if (companyId === null) setPrompt(action);
-    else executeAction(action);
-  }
-
   function closePrompt(open: boolean) {
     if (!open && !pending && !submittingRef.current) {
       setPrompt(null);
@@ -366,93 +258,15 @@ export function CompanyParticipantManagement({
   }
 
   const context: ParticipantManagement = {
-    selectedIds,
     busy: pending,
-    draggedIds: draggedParticipants.map((participant) => participant.participantId),
-    toggleParticipant,
-    toggleCompany,
     openMove: (ids) => openAction("move", ids),
     openRemove: (ids) => openAction("remove", ids),
     openDelete: (ids) => openAction("delete", ids),
-    startDrag,
-    endDrag,
-    canDrop,
-    drop,
   };
 
   return (
     <ParticipantManagementContext.Provider value={context}>
-      <p className="text-sm text-muted-foreground">
-        Selecciona participantes de una o varias compañías para moverlos o quitarlos en grupo.
-        También puedes arrastrar una fila a otra compañía; si está seleccionada, se moverá toda la selección.
-      </p>
-
-      {selectedIds.size > 0 || pending ? (
-        <div className="sticky top-3 z-20 flex flex-wrap items-center gap-2 rounded-xl border bg-background p-3 shadow-sm">
-          <p className="mr-auto flex items-center gap-2 text-sm" role="status" aria-live="polite">
-            {pending ? <Spinner /> : null}
-            {pending ? "Guardando cambios…" : `${selectedIds.size} seleccionados`}
-          </p>
-          <Button type="button" size="sm" disabled={pending || selectedIds.size === 0} onClick={() => openAction("move", [...selectedIds])}>
-            Mover
-          </Button>
-          <Button type="button" size="sm" variant="outline" disabled={pending || selectedIds.size === 0} onClick={() => openAction("remove", [...selectedIds])}>
-            Quitar de compañía
-          </Button>
-          {canDelete ? (
-            <Button type="button" size="sm" variant="destructive" disabled={pending || selectedIds.size === 0} onClick={() => openAction("delete", [...selectedIds])}>
-              Eliminar definitivamente
-            </Button>
-          ) : null}
-          <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => setSelection(new Map())}>
-            Limpiar selección
-          </Button>
-        </div>
-      ) : null}
-
       {children}
-
-      {draggedParticipants.length > 0 ? (
-        <section aria-label="Destinos para mover participantes" className="fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-4xl flex-col gap-3 rounded-xl border bg-background p-4 shadow-lg">
-          <p className="text-sm font-medium">
-            Suelta aquí para mover {draggedParticipants.length} {draggedParticipants.length === 1 ? "participante" : "participantes"}
-          </p>
-          <div className="flex max-h-36 flex-wrap gap-2 overflow-y-auto">
-            {companies.map((company) => {
-              const preview = dragDestinations.get(company.id);
-              const allowed = canDrop(company.id);
-
-              return (
-                <Button
-                  key={company.id}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={!allowed}
-                  title={preview?.disabledReason ?? `Mover a ${company.name}`}
-                  onDragOver={(event) => {
-                    if (allowed) {
-                      event.preventDefault();
-                      event.dataTransfer.dropEffect = "move";
-                    }
-                  }}
-                  onDrop={(event) => drop(event, company.id)}
-                >
-                  {company.name} · {preview?.final.total}/{COMPANY_PARTICIPANT_LIMIT}
-                </Button>
-              );
-            })}
-            <Button type="button" variant="secondary" size="sm" disabled={!canDrop(null)} onDragOver={(event) => {
-              if (canDrop(null)) {
-                event.preventDefault();
-                event.dataTransfer.dropEffect = "move";
-              }
-            }} onDrop={(event) => drop(event, null)}>
-              Sin compañía
-            </Button>
-          </div>
-        </section>
-      ) : null}
 
       <Dialog open={prompt?.kind === "move"} onOpenChange={closePrompt}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl" showCloseButton={!pending}>

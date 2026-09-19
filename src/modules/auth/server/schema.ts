@@ -6,7 +6,10 @@ import {
   boolean,
   index,
   uniqueIndex,
+  uuid,
 } from "drizzle-orm/pg-core";
+
+import { companies } from "@/modules/companies/server/schema";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -19,6 +22,10 @@ export const user = pgTable("user", {
     .$onUpdate(() => new Date())
     .notNull(),
   role: text("role"),
+  companyId: uuid("company_id").references(() => companies.id, {
+    onDelete: "set null",
+    onUpdate: "cascade",
+  }),
   banned: boolean("banned").default(false),
   banReason: text("ban_reason"),
   banExpires: timestamp("ban_expires"),
