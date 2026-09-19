@@ -67,7 +67,11 @@ export function UnitsDirectory({ units }: UnitsDirectoryProps) {
                     <StakeEditSheet stake={stake} stakes={stakes} />
                   </div>
                 </div>
-                <Table className="[&_tr]:h-9 [&_th]:h-9 [&_th]:py-0 [&_td]:h-9 [&_td]:py-0">
+                <Table className="table-fixed [&_tr]:h-9 [&_th]:h-9 [&_th]:py-0 [&_td]:h-9 [&_td]:py-0">
+                  <colgroup>
+                    <col className="w-2/3" />
+                    <col className="w-1/3" />
+                  </colgroup>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Barrio</TableHead>
