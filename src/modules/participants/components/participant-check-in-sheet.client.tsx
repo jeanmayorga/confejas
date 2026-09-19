@@ -164,7 +164,7 @@ export function ParticipantCheckInSheet({
           <div className="flex flex-col gap-4">
             <section className="rounded-3xl bg-muted p-5">
               <div className="flex items-start justify-between gap-4">
-                <Avatar size="lg" className="size-16">
+                <Avatar size="lg" className="size-20">
                   <AvatarFallback className="bg-background">
                     {getInitials(participant.firstNames, participant.lastNames)}
                   </AvatarFallback>
