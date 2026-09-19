@@ -79,6 +79,11 @@ type CounselorDirectoryProps = {
   canDelete: boolean;
 };
 
+type CounselorCompany = {
+  id: string;
+  name: string;
+};
+
 function getCompanyGroupKey(counselor: CounselorDirectoryItem) {
   return counselor.companyId ?? "__unassigned__";
 }
@@ -192,6 +197,8 @@ export function CounselorDirectory({
   const [sort, setSort] = useState<CounselorSort>("company_asc");
   const [selectedCounselor, setSelectedCounselor] =
     useState<CounselorDirectoryItem | null>(null);
+  const [selectedCompany, setSelectedCompany] =
+    useState<CounselorCompany | null>(null);
   const normalizedSearch = normalizeSearch(search);
   const visibleCounselors = useMemo(() => {
     const filteredCounselors = normalizedSearch
@@ -236,6 +243,16 @@ export function CounselorDirectory({
     });
   }, [counselors, normalizedSearch, sort]);
 
+  const selectedCompanyCounselors = useMemo(
+    () =>
+      selectedCompany
+        ? counselors.filter(
+            (counselor) => counselor.companyId === selectedCompany.id,
+          )
+        : [],
+    [counselors, selectedCompany],
+  );
+
   const hasSearch = Boolean(normalizedSearch);
 
   function openCounselor(counselor: CounselorDirectoryItem) {
@@ -244,6 +261,14 @@ export function CounselorDirectory({
 
   function closeCounselorSheet() {
     setSelectedCounselor(null);
+  }
+
+  function openCompany(company: CounselorCompany) {
+    setSelectedCompany(company);
+  }
+
+  function closeCompanySheet() {
+    setSelectedCompany(null);
   }
 
   function handleRowKeyDown(
@@ -371,6 +396,8 @@ export function CounselorDirectory({
               {visibleCounselors.map((counselor, index) => {
                 const companySortActive = sort.startsWith("company_");
                 const companyGroupKey = getCompanyGroupKey(counselor);
+                const companyId = counselor.companyId;
+                const companyName = counselor.companyName;
                 const previousCounselor = visibleCounselors[index - 1];
                 const isFirstCompanyRow =
                   !companySortActive ||
@@ -409,8 +436,21 @@ export function CounselorDirectory({
                         rowSpan={companyRowSpan}
                         className="max-w-0 overflow-hidden truncate align-middle"
                       >
-                        {counselor.companyName ? (
-                          counselor.companyName
+                        {companyId && companyName ? (
+                          <button
+                            type="button"
+                            className="flex h-full w-full items-center truncate text-left font-normal hover:underline"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openCompany({
+                                id: companyId,
+                                name: companyName,
+                              });
+                            }}
+                            onKeyDown={(event) => event.stopPropagation()}
+                          >
+                            {companyName}
+                          </button>
                         ) : (
                           <span className="text-muted-foreground">Sin asignar</span>
                         )}
@@ -569,6 +609,47 @@ export function CounselorDirectory({
                       </dd>
                     </div>
                   </dl>
+                </section>
+              </div>
+            </>
+          ) : null}
+        </SheetContent>
+      </Sheet>
+
+      <Sheet
+        open={selectedCompany !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeCompanySheet();
+          }
+        }}
+      >
+        <SheetContent
+          side="right"
+          className="data-[side=right]:w-full data-[side=right]:sm:max-w-sm"
+        >
+          {selectedCompany ? (
+            <>
+              <SheetHeader className="border-b pr-16">
+                <SheetTitle>{selectedCompany.name}</SheetTitle>
+                <SheetDescription>Información de la compañía</SheetDescription>
+              </SheetHeader>
+              <div className="flex-1 overflow-y-auto px-6 pb-6">
+                <section className="py-5">
+                  <h2 className="text-sm font-semibold">Consejeros asignados</h2>
+                  {selectedCompanyCounselors.length > 0 ? (
+                    <div className="mt-3 divide-y rounded-xl border">
+                      {selectedCompanyCounselors.map((counselor) => (
+                        <p key={counselor.id} className="px-3 py-2 text-sm">
+                          {counselor.name}
+                        </p>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      No hay consejeros asignados.
+                    </p>
+                  )}
                 </section>
               </div>
             </>
