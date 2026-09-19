@@ -9,6 +9,7 @@ import { db } from "@/server/db";
 import { participantMedicalProfiles, participants } from "./schema";
 import { normalizeGovernmentId } from "../identity";
 import { isParticipantId, parseParticipantQrValue } from "../qr";
+import { isParticipantStatus, type ParticipantStatus } from "../status";
 
 export const PARTICIPANTS_PAGE_SIZE = 25;
 
@@ -24,7 +25,10 @@ type ParticipantDirectoryOptions = {
   companyId?: string;
   wardId?: number;
   stakeId?: number;
+  status?: string;
 };
+
+export type ParticipantStatusCounts = Record<ParticipantStatus, number>;
 
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -42,6 +46,7 @@ function getParticipantDirectoryState({
   companyId = "",
   wardId,
   stakeId,
+  status = "",
 }: ParticipantDirectoryOptions) {
   const safeSearch = search.trim().slice(0, 100);
   const safeSort: ParticipantSort =
@@ -50,6 +55,9 @@ function getParticipantDirectoryState({
     companyId === "unassigned" || isUuid(companyId) ? companyId : "";
   const safeWardId = getSafePositiveInteger(wardId);
   const safeStakeId = getSafePositiveInteger(stakeId);
+  const safeStatus: ParticipantStatus | "" = isParticipantStatus(status)
+    ? status
+    : "";
   const searchPattern = `%${safeSearch}%`;
   const searchFilter = safeSearch
     ? or(
@@ -75,7 +83,16 @@ function getParticipantDirectoryState({
     ? eq(participants.wardId, safeWardId)
     : undefined;
   const stakeFilter = safeStakeId ? eq(stakes.id, safeStakeId) : undefined;
-  const filters = and(searchFilter, companyFilter, wardFilter, stakeFilter);
+  const statusFilter = safeStatus
+    ? eq(participants.status, safeStatus)
+    : undefined;
+  const filters = and(
+    searchFilter,
+    companyFilter,
+    wardFilter,
+    stakeFilter,
+    statusFilter,
+  );
   const sortColumns =
     safeSort === "age_asc"
       ? [
@@ -105,6 +122,7 @@ function getParticipantDirectoryState({
     companyId: safeCompanyId,
     wardId: safeWardId,
     stakeId: safeStakeId,
+    status: safeStatus,
   };
 }
 
@@ -115,8 +133,13 @@ export async function listParticipants({
   const safePage = Number.isSafeInteger(page) && page > 0 ? page : 1;
   const offset = (safePage - 1) * PARTICIPANTS_PAGE_SIZE;
   const directory = getParticipantDirectoryState(options);
+  const allStatusesDirectory = getParticipantDirectoryState({
+    ...options,
+    status: "",
+  });
 
-  const [rows, [totalRow]] = await Promise.all([
+  const [rows, [totalRow], statusCountRows] =
+    await Promise.all([
     db
       .select({
         id: participants.id,
@@ -154,9 +177,30 @@ export async function listParticipants({
       .innerJoin(stakes, eq(wards.stakeId, stakes.id))
       .leftJoin(companies, eq(participants.companyId, companies.id))
       .where(directory.filters),
-  ]);
+      db
+        .select({ status: participants.status, value: count() })
+        .from(participants)
+        .innerJoin(wards, eq(participants.wardId, wards.id))
+        .innerJoin(stakes, eq(wards.stakeId, stakes.id))
+        .leftJoin(companies, eq(participants.companyId, companies.id))
+        .where(allStatusesDirectory.filters)
+        .groupBy(participants.status),
+    ]);
 
   const total = totalRow?.value ?? 0;
+  const statusCounts: ParticipantStatusCounts = {
+    registered: 0,
+    confirmed: 0,
+    arrived: 0,
+    cancelled: 0,
+    pending: 0,
+  };
+
+  for (const row of statusCountRows) {
+    if (isParticipantStatus(row.status)) {
+      statusCounts[row.status] = row.value;
+    }
+  }
 
   return {
     rows,
@@ -169,6 +213,8 @@ export async function listParticipants({
     companyId: directory.companyId,
     wardId: directory.wardId,
     stakeId: directory.stakeId,
+    status: directory.status,
+    statusCounts,
   };
 }
 
@@ -201,6 +247,7 @@ export async function listParticipantsForExport(
     companyId: directory.companyId,
     wardId: directory.wardId,
     stakeId: directory.stakeId,
+    status: directory.status,
   };
 }
 

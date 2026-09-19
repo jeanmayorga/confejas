@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { DataPagination } from "@/components/data-pagination";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -47,15 +48,11 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Usuarios</h1>
-          <p className="mt-1 text-muted-foreground">
-            Cuentas autorizadas para ingresar al panel de Confejas.
-          </p>
-        </div>
-        <UserFormDialog />
-      </div>
+      <PageHeader
+        title="Usuarios"
+        description="Cuentas autorizadas para ingresar al panel de Confejas."
+        actions={<UserFormDialog />}
+      />
 
       <Card>
         <CardHeader>

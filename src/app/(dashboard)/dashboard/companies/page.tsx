@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 import {
   Empty,
   EmptyDescription,
@@ -35,31 +36,32 @@ export default async function CompaniesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight">Compañías</h1>
-            <Badge variant="secondary">{companies.length}</Badge>
-          </div>
-          <p className="mt-1 text-muted-foreground">
-            Edita tus compañías y mueve, quita o elimina participantes, uno a uno
-            o en grupo.
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {assignedCount.toLocaleString("es-EC")} asignados ·{" "}
-            {distributionOverview.unassigned.total.toLocaleString("es-EC")} sin compañía · hasta {" "}
-            {COMPANY_PARTICIPANT_LIMIT} por compañía
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
+      <PageHeader
+        title="Compañías"
+        badge={<Badge variant="secondary">{companies.length}</Badge>}
+        description={
+          <>
+            <p>
+              Edita tus compañías y mueve, quita o elimina participantes, uno a uno
+              o en grupo.
+            </p>
+            <p className="mt-1">
+              {assignedCount.toLocaleString("es-EC")} asignados ·{" "}
+              {distributionOverview.unassigned.total.toLocaleString("es-EC")} sin compañía · hasta{" "}
+              {COMPANY_PARTICIPANT_LIMIT} por compañía
+            </p>
+          </>
+        }
+        actions={
+          <>
           <CompanyDistributionDialog
             companyCount={companies.length}
             overview={distributionOverview}
           />
           <CompanyFormDialog />
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {companies.length === 0 ? (
         <Card>

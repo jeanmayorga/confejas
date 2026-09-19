@@ -87,6 +87,7 @@ type ParticipantsTableProps = {
   participants: ParticipantTableRow[];
   canManage: boolean;
   canDelete: boolean;
+  onDataChanged?: () => void;
 };
 
 type ParticipantEditData = Extract<
@@ -258,6 +259,7 @@ export function ParticipantsTable({
   participants,
   canManage,
   canDelete,
+  onDataChanged,
 }: ParticipantsTableProps) {
   const [selectedParticipant, setSelectedParticipant] =
     useState<ParticipantTableRow | null>(null);
@@ -312,6 +314,7 @@ export function ParticipantsTable({
         }
 
         toast.success(result.message);
+        onDataChanged?.();
       } finally {
         setUpdatingStatusIds((currentIds) => {
           const nextIds = new Set(currentIds);
@@ -488,6 +491,7 @@ export function ParticipantsTable({
                         <DeleteParticipantButton
                           participantId={participant.id}
                           participantName={participantName}
+                          onDeleted={onDataChanged}
                         />
                       ) : null}
                     </div>
@@ -718,7 +722,10 @@ export function ParticipantsTable({
                     lodgingBuildings={editData.lodgingBuildings}
                     presentation="sheet"
                     onCancel={returnToParticipantView}
-                    onSuccess={closeParticipantSheet}
+                    onSuccess={() => {
+                      closeParticipantSheet();
+                      onDataChanged?.();
+                    }}
                   />
                 </div>
               ) : null}

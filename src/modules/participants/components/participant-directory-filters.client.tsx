@@ -2,21 +2,28 @@
 
 import {
   type FormEvent,
-  useOptimistic,
+  useEffect,
   useState,
   useTransition,
 } from "react";
-import { useRouter } from "next/navigation";
 import Cancel01Icon from "@hugeicons/core-free-icons/Cancel01Icon";
+import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import FilterHorizontalIcon from "@hugeicons/core-free-icons/FilterHorizontalIcon";
+import LiveStreaming02Icon from "@hugeicons/core-free-icons/LiveStreaming02Icon";
 import Pdf02Icon from "@hugeicons/core-free-icons/Pdf02Icon";
+import Refresh04Icon from "@hugeicons/core-free-icons/Refresh04Icon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   NativeSelect,
   NativeSelectOption,
@@ -31,7 +38,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import {
+  isParticipantStatus,
+  PARTICIPANT_STATUS_OPTIONS,
+  type ParticipantStatus,
+} from "@/modules/participants/status";
 
 type ParticipantSort = "name" | "age_asc" | "age_desc";
 
@@ -41,23 +54,28 @@ type ParticipantDirectoryFilterValues = {
   companyId: string;
   wardId: string;
   stakeId: string;
+  status: ParticipantStatus | "";
 };
 
-type DirectoryFilterField = "companyId" | "wardId" | "stakeId";
+type ParticipantStatusCounts = Record<ParticipantStatus, number>;
 
 type ParticipantDirectoryFiltersProps = {
-  filters: ParticipantDirectoryFilterValues;
   canExport: boolean;
   companies: { id: string; name: string }[];
   wards: { id: number; name: string }[];
   stakes: { id: number; name: string }[];
+  statusCounts: ParticipantStatusCounts;
+  isRefreshing: boolean;
+  isLive: boolean;
+  onRefresh: () => void;
+  onLiveChange: (enabled: boolean) => void;
 };
 
 function getDirectoryParams(filters: ParticipantDirectoryFilterValues) {
   const params = new URLSearchParams();
 
   if (filters.search) {
-    params.set("q", filters.search);
+    params.set("query", filters.search);
   }
 
   if (filters.sort !== "name") {
@@ -76,91 +94,106 @@ function getDirectoryParams(filters: ParticipantDirectoryFilterValues) {
     params.set("stake", filters.stakeId);
   }
 
+  if (filters.status) {
+    params.set("status", filters.status);
+  }
+
   return params;
 }
 
-function ActiveFilterBadge({
-  field,
-  label,
-  value,
-  disabled,
-  onRemove,
-}: {
-  field: DirectoryFilterField;
-  label: string;
-  value: string | undefined;
-  disabled: boolean;
-  onRemove: (field: DirectoryFilterField) => void;
-}) {
-  if (!value) {
-    return null;
-  }
-
-  return (
-    <Badge
-      variant="secondary"
-      render={
-        <button
-          type="button"
-          disabled={disabled}
-          aria-label={`Quitar filtro ${label}: ${value}`}
-          onClick={() => onRemove(field)}
-        />
-      }
-    >
-      {label}: {value}
-      <HugeiconsIcon icon={Cancel01Icon} aria-hidden="true" />
-    </Badge>
-  );
-}
-
 export function ParticipantDirectoryFilters({
-  filters,
   canExport,
   companies,
   wards,
   stakes,
+  statusCounts,
+  isRefreshing,
+  isLive,
+  onRefresh,
+  onLiveChange,
 }: ParticipantDirectoryFiltersProps) {
-  const router = useRouter();
-  const [selectedFilters, setSelectedFilters] = useOptimistic(filters);
-  const [searchDraft, setSearchDraft] = useState(filters.search);
   const [pending, startTransition] = useTransition();
+  const [queryState, setQueryState] = useQueryStates(
+    {
+      query: parseAsString.withDefault(""),
+      sort: parseAsString.withDefault("name"),
+      company: parseAsString.withDefault(""),
+      ward: parseAsString.withDefault(""),
+      stake: parseAsString.withDefault(""),
+      status: parseAsString.withDefault("registered"),
+      page: parseAsInteger.withDefault(1),
+    },
+    {
+      history: "replace",
+      scroll: false,
+      shallow: true,
+      startTransition,
+    },
+  );
+  const [searchDraft, setSearchDraft] = useState(queryState.query);
 
-  function navigate(nextFilters: ParticipantDirectoryFilterValues) {
-    const query = getDirectoryParams(nextFilters).toString();
+  useEffect(() => {
+    const normalizedQuery = searchDraft.trim();
 
-    startTransition(() => {
-      setSelectedFilters(nextFilters);
-      router.replace(
-        query ? `/dashboard/participants?${query}` : "/dashboard/participants",
-        { scroll: false },
-      );
-    });
-  }
+    if (normalizedQuery === queryState.query) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void setQueryState({ query: normalizedQuery || null, page: 1 });
+    }, 350);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [queryState.query, searchDraft, setQueryState]);
+
+  const selectedFilters: ParticipantDirectoryFilterValues = {
+    search: queryState.query,
+    sort:
+      queryState.sort === "age_asc" || queryState.sort === "age_desc"
+        ? queryState.sort
+        : "name",
+    companyId: queryState.company,
+    wardId: queryState.ward,
+    stakeId: queryState.stake,
+    status: isParticipantStatus(queryState.status) ? queryState.status : "",
+  };
 
   function updateFilter(
     field: Exclude<keyof ParticipantDirectoryFilterValues, "search">,
     value: string,
   ) {
-    navigate({
-      ...selectedFilters,
-      search: searchDraft.trim(),
-      [field]: value,
-    });
+    const nextValue = value || null;
+
+    if (field === "sort") {
+      void setQueryState({ sort: value, page: 1 });
+    } else if (field === "companyId") {
+      void setQueryState({ company: nextValue, page: 1 });
+    } else if (field === "wardId") {
+      void setQueryState({ ward: nextValue, page: 1 });
+    } else if (field === "stakeId") {
+      void setQueryState({ stake: nextValue, page: 1 });
+    } else {
+      void setQueryState({ status: nextValue, page: 1 });
+    }
   }
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    navigate({ ...selectedFilters, search: searchDraft.trim() });
+    void setQueryState({ query: searchDraft.trim() || null, page: 1 });
+  }
+
+  function clearSearch() {
+    setSearchDraft("");
+    void setQueryState({ query: null, page: 1 });
   }
 
   function clearDirectoryFilters() {
-    navigate({
-      ...selectedFilters,
-      search: searchDraft.trim(),
-      companyId: "",
-      wardId: "",
-      stakeId: "",
+    void setQueryState({
+      company: null,
+      ward: null,
+      stake: null,
+      status: null,
+      page: 1,
     });
   }
 
@@ -169,60 +202,115 @@ export function ParticipantDirectoryFilters({
     selectedFilters.wardId,
     selectedFilters.stakeId,
   ].filter(Boolean).length;
-  const companyName =
-    selectedFilters.companyId === "unassigned"
-      ? "Sin asignar"
-      : companies.find((company) => company.id === selectedFilters.companyId)
-          ?.name;
-  const wardName = wards.find(
-    (ward) => String(ward.id) === selectedFilters.wardId,
-  )?.name;
-  const stakeName = stakes.find(
-    (stake) => String(stake.id) === selectedFilters.stakeId,
-  )?.name;
   const exportQuery = getDirectoryParams(selectedFilters).toString();
   const exportHref = exportQuery
     ? `/api/participants/export?${exportQuery}`
     : "/api/participants/export";
-  const exportDisabled = pending || !canExport;
+  const exportDisabled = pending || isRefreshing || !canExport;
 
   return (
     <form onSubmit={submitSearch}>
-      <div className="flex flex-col gap-3 rounded-2xl border bg-card p-3 sm:p-4">
-        <div className="flex flex-col gap-2 2xl:flex-row 2xl:items-center">
-          <Field
-            orientation="horizontal"
-            className="min-w-0 flex-1 gap-2"
-            data-disabled={pending || undefined}
-          >
-            <FieldLabel htmlFor="participant-search" className="sr-only">
-              Buscar participante
-            </FieldLabel>
-            <Input
-              id="participant-search"
-              name="q"
-              value={searchDraft}
-              disabled={pending}
-              className="min-w-0 flex-1"
-              placeholder="Buscar por nombre o número de cédula"
-              aria-label="Buscar participantes"
-              onChange={(event) => setSearchDraft(event.currentTarget.value)}
-            />
-            <Button type="submit" disabled={pending}>
-              <HugeiconsIcon icon={Search01Icon} data-icon="inline-start" />
-              Buscar
-            </Button>
-          </Field>
+      <div className="flex flex-col gap-3">
+        <InputGroup
+          className="w-64 shrink-0 rounded-full"
+          data-disabled={pending || undefined}
+        >
+          <InputGroupAddon>
+            <HugeiconsIcon icon={Search01Icon} strokeWidth={2} aria-hidden />
+          </InputGroupAddon>
+          <InputGroupInput
+            id="participant-search"
+            name="query"
+            value={searchDraft}
+            disabled={pending}
+            placeholder="Buscar participantes"
+            aria-label="Buscar participantes"
+            onChange={(event) => setSearchDraft(event.currentTarget.value)}
+          />
+          {searchDraft ? (
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                variant="secondary"
+                size="icon-xs"
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Limpiar búsqueda"
+                onClick={clearSearch}
+              >
+                <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
+              </InputGroupButton>
+            </InputGroupAddon>
+          ) : null}
+        </InputGroup>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 items-center justify-between gap-2 overflow-x-auto">
+          <Tabs
+            className="shrink-0"
+            value={selectedFilters.status || "registered"}
+            onValueChange={(value) => updateFilter("status", value)}
+          >
+            <TabsList className="max-w-full overflow-x-auto">
+              {PARTICIPANT_STATUS_OPTIONS.map((option) => (
+                <TabsTrigger key={option.value} value={option.value}>
+                  {option.label}
+                  <Badge
+                    className={cn(
+                      "min-w-5 rounded-full bg-muted-foreground/30 px-1 text-muted-foreground",
+                      selectedFilters.status === option.value &&
+                        "bg-primary text-primary-foreground",
+                    )}
+                  >
+                    {statusCounts[option.value]}
+                  </Badge>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              type="button"
+              variant={isLive ? "default" : "outline"}
+              className="shrink-0"
+              disabled={pending}
+              aria-pressed={isLive}
+              onClick={() => onLiveChange(!isLive)}
+            >
+              <HugeiconsIcon
+                icon={LiveStreaming02Icon}
+                data-icon="inline-start"
+              />
+              {isLive ? (
+                <span className="relative flex size-2" aria-hidden="true">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary-foreground/75" />
+                  <span className="relative inline-flex size-2 rounded-full bg-primary-foreground" />
+                </span>
+              ) : null}
+              En vivo
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="shrink-0"
+              disabled={pending || isRefreshing}
+              onClick={onRefresh}
+            >
+              <HugeiconsIcon
+                icon={Refresh04Icon}
+                className={cn(isRefreshing && "animate-spin")}
+                data-icon="inline-start"
+              />
+              Actualizar
+            </Button>
+
             <Sheet>
               <SheetTrigger
                 render={
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full sm:w-auto"
-                    disabled={pending}
+                    className="shrink-0"
+                    disabled={pending || isRefreshing}
                   />
                 }
               >
@@ -341,36 +429,6 @@ export function ParticipantDirectoryFilters({
               </SheetContent>
             </Sheet>
 
-            <Field
-              orientation="horizontal"
-              className="w-full items-center gap-2 sm:w-auto sm:shrink-0"
-              data-disabled={pending || undefined}
-            >
-              <FieldLabel
-                htmlFor="participant-sort"
-                className="w-auto shrink-0 !flex-none"
-              >
-                Ordenar por
-              </FieldLabel>
-              <NativeSelect
-                id="participant-sort"
-                value={selectedFilters.sort}
-                disabled={pending}
-                className="min-w-0 flex-1 sm:w-52 sm:flex-none"
-                onChange={(event) =>
-                  updateFilter("sort", event.currentTarget.value)
-                }
-              >
-                <NativeSelectOption value="name">Nombres (A–Z)</NativeSelectOption>
-                <NativeSelectOption value="age_asc">
-                  Edad (menor a mayor)
-                </NativeSelectOption>
-                <NativeSelectOption value="age_desc">
-                  Edad (mayor a menor)
-                </NativeSelectOption>
-              </NativeSelect>
-            </Field>
-
             <a
               href={exportHref}
               download
@@ -378,53 +436,16 @@ export function ParticipantDirectoryFilters({
               tabIndex={exportDisabled ? -1 : undefined}
               className={cn(
                 buttonVariants({ variant: "outline" }),
-                "w-full sm:w-auto",
+                "shrink-0",
                 exportDisabled && "pointer-events-none opacity-50",
               )}
             >
               <HugeiconsIcon icon={Pdf02Icon} data-icon="inline-start" />
-              Exportar PDF
+              Exportar
             </a>
           </div>
         </div>
 
-        {activeFilterCount > 0 ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground">
-              Filtros activos
-            </span>
-            <ActiveFilterBadge
-              field="companyId"
-              label="Compañía"
-              value={companyName}
-              disabled={pending}
-              onRemove={(field) => updateFilter(field, "")}
-            />
-            <ActiveFilterBadge
-              field="wardId"
-              label="Barrio"
-              value={wardName}
-              disabled={pending}
-              onRemove={(field) => updateFilter(field, "")}
-            />
-            <ActiveFilterBadge
-              field="stakeId"
-              label="Estaca"
-              value={stakeName}
-              disabled={pending}
-              onRemove={(field) => updateFilter(field, "")}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              disabled={pending}
-              onClick={clearDirectoryFilters}
-            >
-              Limpiar filtros
-            </Button>
-          </div>
-        ) : null}
       </div>
     </form>
   );

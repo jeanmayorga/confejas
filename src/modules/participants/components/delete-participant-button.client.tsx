@@ -28,11 +28,13 @@ import { deleteParticipantAction } from "@/modules/participants/server/actions";
 type DeleteParticipantButtonProps = {
   participantId: string;
   participantName: string;
+  onDeleted?: () => void;
 };
 
 export function DeleteParticipantButton({
   participantId,
   participantName,
+  onDeleted,
 }: DeleteParticipantButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -50,6 +52,7 @@ export function DeleteParticipantButton({
 
       toast.success(result.message);
       setOpen(false);
+      onDeleted?.();
       router.refresh();
     });
   }

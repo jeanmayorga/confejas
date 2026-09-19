@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { PageHeader } from "@/components/page-header";
 import { canDeleteParticipants } from "@/modules/auth/roles";
 import { requireParticipantManagementAccess } from "@/modules/auth/server/session";
 import { listCompanyOptions } from "@/modules/companies/server/queries";
@@ -81,19 +82,12 @@ export default async function CounselorsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight">Consejeros</h1>
-            <Badge variant="secondary">{counselors.length}</Badge>
-          </div>
-          <p className="mt-1 text-muted-foreground">
-            Asigna los consejeros responsables de cada compañía; habitualmente son
-            dos.
-          </p>
-        </div>
-        <CounselorFormDialog companies={companies} />
-      </div>
+      <PageHeader
+        title="Consejeros"
+        badge={<Badge variant="secondary">{counselors.length}</Badge>}
+        description="Asigna los consejeros responsables de cada compañía; habitualmente son dos."
+        actions={<CounselorFormDialog companies={companies} />}
+      />
 
       <Card size="sm">
         <CardHeader>

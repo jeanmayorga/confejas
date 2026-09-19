@@ -17,7 +17,12 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { authClient } from "@/modules/auth/client/auth-client";
 
 type LoginFormProps = {
@@ -62,14 +67,11 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
       <FieldGroup className="gap-5">
         <Field data-disabled={isPending || undefined}>
           <FieldLabel htmlFor="email">Correo electrónico</FieldLabel>
-          <div className="relative">
-            <HugeiconsIcon
-              icon={Mail02Icon}
-              strokeWidth={2}
-              aria-hidden
-              className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
+          <InputGroup data-disabled={isPending || undefined}>
+            <InputGroupAddon>
+              <HugeiconsIcon icon={Mail02Icon} strokeWidth={2} aria-hidden />
+            </InputGroupAddon>
+            <InputGroupInput
               id="email"
               name="email"
               type="email"
@@ -77,20 +79,20 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
               placeholder="nombre@ejemplo.com"
               required
               disabled={isPending}
-              className="h-11 pl-11 pr-4"
             />
-          </div>
+          </InputGroup>
         </Field>
         <Field data-disabled={isPending || undefined}>
           <FieldLabel htmlFor="password">Contraseña</FieldLabel>
-          <div className="relative">
-            <HugeiconsIcon
-              icon={LockPasswordIcon}
-              strokeWidth={2}
-              aria-hidden
-              className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
+          <InputGroup data-disabled={isPending || undefined}>
+            <InputGroupAddon>
+              <HugeiconsIcon
+                icon={LockPasswordIcon}
+                strokeWidth={2}
+                aria-hidden
+              />
+            </InputGroupAddon>
+            <InputGroupInput
               id="password"
               name="password"
               type={showPassword ? "text" : "password"}
@@ -98,28 +100,27 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
               placeholder="Ingresa tu contraseña"
               required
               disabled={isPending}
-              className="h-11 pl-11 pr-11"
             />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className="absolute top-1/2 right-2 text-muted-foreground hover:text-foreground"
-              style={{ transform: "translateY(-50%)" }}
-              aria-label={
-                showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
-              }
-              aria-pressed={showPassword}
-              disabled={isPending}
-              onClick={() => setShowPassword((visible) => !visible)}
-            >
-              <HugeiconsIcon
-                icon={showPassword ? EyeOffIcon : EyeIcon}
-                strokeWidth={2}
-                aria-hidden
-              />
-            </Button>
-          </div>
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={
+                  showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                }
+                aria-pressed={showPassword}
+                disabled={isPending}
+                onClick={() => setShowPassword((visible) => !visible)}
+              >
+                <HugeiconsIcon
+                  icon={showPassword ? EyeOffIcon : EyeIcon}
+                  strokeWidth={2}
+                  aria-hidden
+                />
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
         </Field>
         <Field data-disabled={isPending || undefined}>
           <Button
