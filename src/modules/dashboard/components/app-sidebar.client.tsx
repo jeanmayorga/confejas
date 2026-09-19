@@ -118,20 +118,21 @@ export function AppSidebar({ user }: AppSidebarProps) {
           },
         ]
       : []),
-    ...(canManageUsers(user.role)
-      ? [
-          {
-            title: "Usuarios",
-            href: "/dashboard/users",
-            icon: UserGroupIcon,
-            exact: false,
-          },
-        ]
-      : []),
   ];
+  const configurationNavigation = canManageUsers(user.role)
+    ? [
+        {
+          title: "Usuarios",
+          href: "/dashboard/users",
+          icon: UserGroupIcon,
+          exact: false,
+        },
+      ]
+    : [];
   const navigationSections = [
     { label: "Acciones", items: actionNavigation },
     { label: "Gestión", items: managementNavigation },
+    { label: "Configuración", items: configurationNavigation },
   ].filter((section) => section.items.length > 0);
 
   async function handleSignOut() {
