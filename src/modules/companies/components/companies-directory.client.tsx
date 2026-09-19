@@ -331,7 +331,14 @@ function CompanyCard({
 
           {company.participants.length > 0 ? (
             <TableFrame className="mt-3">
-              <Table className="min-w-[900px]">
+              <Table className="min-w-[680px] table-fixed">
+                <colgroup>
+                  <col className="w-24" />
+                  <col />
+                  <col className="w-[76px]" />
+                  <col className="w-20" />
+                  <col className="w-32" />
+                </colgroup>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Estado</TableHead>
