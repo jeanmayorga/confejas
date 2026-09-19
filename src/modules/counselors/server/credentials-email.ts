@@ -33,20 +33,84 @@ export function getCounselorCredentialsEmail({
   return {
     subject: "Tus credenciales de acceso - Conferencia JAS 2026",
     html: `
-      <div style="margin:0;background:#f5f7fa;padding:32px 16px;font-family:Arial,sans-serif;color:#17202a">
-        <div style="margin:0 auto;max-width:560px;border:1px solid #e2e8f0;border-radius:16px;background:#ffffff;padding:32px">
-          <p style="margin:0 0 8px;color:#64748b;font-size:14px">Conferencia JAS 2026</p>
-          <h1 style="margin:0 0 24px;font-size:24px;line-height:1.25">Credenciales de acceso</h1>
-          <p style="margin:0 0 16px;font-size:16px;line-height:1.5">Hola ${safeName},</p>
-          <p style="margin:0 0 24px;font-size:16px;line-height:1.5">Con estas credenciales podrás ingresar a la plataforma como consejero, ver la agenda y consultar los participantes de tu compañía.</p>
-          <div style="border-radius:12px;background:#f1f5f9;padding:20px">
-            <p style="margin:0 0 12px;font-size:14px"><strong>Compañía:</strong> ${safeCompanyName}</p>
-            <p style="margin:0 0 12px;font-size:14px"><strong>Email:</strong> ${safeEmail}</p>
-            <p style="margin:0;font-size:14px"><strong>Contraseña temporal:</strong> <code style="border-radius:6px;background:#ffffff;padding:4px 6px">${safePassword}</code></p>
+      <!doctype html>
+      <html lang="es">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <meta name="x-apple-disable-message-reformatting" />
+          <title>Credenciales de acceso</title>
+        </head>
+        <body style="margin:0;padding:0;background-color:#ecf3f8;font-family:Arial,Helvetica,sans-serif;color:#17202a">
+          <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">
+            Tus credenciales para ver la agenda y los participantes de tu compañía.
           </div>
-          <p style="margin:24px 0 0;color:#64748b;font-size:13px;line-height:1.5">Por seguridad, no compartas estas credenciales con otras personas.</p>
-        </div>
-      </div>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ecf3f8" style="width:100%;border-collapse:collapse;background-color:#ecf3f8">
+            <tr>
+              <td align="center" style="padding:40px 16px">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;border-collapse:separate;border:1px solid #dbe7ef;border-radius:20px;background-color:#ffffff;overflow:hidden">
+                  <tr>
+                    <td style="padding:30px 36px;background-color:#0b78c5;color:#ffffff">
+                      <p style="margin:0 0 10px;font-size:13px;line-height:1.4;letter-spacing:0.08em;text-transform:uppercase;color:#d9efff">Conferencia JAS 2026</p>
+                      <h1 style="margin:0;font-size:28px;line-height:1.2;font-weight:700;color:#ffffff">Tu acceso está listo</h1>
+                      <p style="margin:12px 0 0;font-size:15px;line-height:1.5;color:#eaf6ff">Ingresa a la plataforma y comienza a organizar tu compañía.</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:34px 36px 30px">
+                      <p style="margin:0 0 14px;font-size:17px;line-height:1.5;color:#17202a">Hola ${safeName},</p>
+                      <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#475569">Con estas credenciales podrás ingresar como consejero, ver la agenda y consultar los participantes de tu compañía.</p>
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px;width:100%;border-collapse:separate;border:1px solid #d9e8f1;border-radius:14px;background-color:#f7fbfd">
+                        <tr>
+                          <td style="padding:17px 18px 7px;font-size:12px;line-height:1.4;letter-spacing:0.06em;text-transform:uppercase;color:#64748b">Tu compañía</td>
+                        </tr>
+                        <tr>
+                          <td style="padding:0 18px 17px;font-size:20px;line-height:1.3;font-weight:700;color:#0b639f">${safeCompanyName}</td>
+                        </tr>
+                      </table>
+                      <p style="margin:0 0 12px;font-size:13px;line-height:1.4;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#64748b">Datos para ingresar</p>
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border:1px solid #e2e8f0;border-radius:14px;background-color:#ffffff">
+                        <tr>
+                          <td style="padding:15px 16px 5px;font-size:12px;line-height:1.4;color:#64748b">Correo electrónico</td>
+                        </tr>
+                        <tr>
+                          <td style="padding:0 16px 15px;font-size:15px;line-height:1.4;font-weight:600;color:#17202a;word-break:break-word">${safeEmail}</td>
+                        </tr>
+                        <tr>
+                          <td style="height:1px;padding:0 16px;background-color:#e2e8f0;font-size:0;line-height:0">&nbsp;</td>
+                        </tr>
+                        <tr>
+                          <td style="padding:15px 16px 5px;font-size:12px;line-height:1.4;color:#64748b">Contraseña temporal</td>
+                        </tr>
+                        <tr>
+                          <td style="padding:0 16px 16px;font-family:monospace;font-size:20px;line-height:1.4;font-weight:700;letter-spacing:0.04em;color:#0b639f;word-break:break-word">${safePassword}</td>
+                        </tr>
+                      </table>
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:26px 0 0;width:100%;border-collapse:collapse">
+                        <tr>
+                          <td style="padding:0 0 10px;font-size:15px;line-height:1.5;font-weight:700;color:#17202a">Con tu acceso podrás:</td>
+                        </tr>
+                        <tr>
+                          <td style="padding:4px 0;font-size:14px;line-height:1.5;color:#475569">&#10003;&nbsp; Ver la agenda de la conferencia</td>
+                        </tr>
+                        <tr>
+                          <td style="padding:4px 0;font-size:14px;line-height:1.5;color:#475569">&#10003;&nbsp; Consultar los participantes de tu compañía</td>
+                        </tr>
+                      </table>
+                      <p style="margin:26px 0 0;padding:14px 16px;border-radius:10px;background-color:#fff8e8;font-size:13px;line-height:1.6;color:#805b12"><strong>Importante:</strong> esta es una contraseña temporal. Por seguridad, no compartas estas credenciales.</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:20px 36px;background-color:#f8fafc;text-align:center">
+                      <p style="margin:0;font-size:12px;line-height:1.5;color:#64748b">Conferencia JAS 2026 · Equipo de coordinación</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+      </html>
     `,
   };
 }
