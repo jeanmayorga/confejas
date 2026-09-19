@@ -614,6 +614,16 @@ function CapacityProgress({
     ? Math.min(100 - maleProgress, (female / totalCapacity) * 100)
     : 0;
 
+  if (assigned === 0) {
+    return (
+      <Progress value={0} renderTrack={false} aria-label="Sin participantes asignados">
+        <ProgressTrack className="h-6 justify-center text-xs font-bold text-muted-foreground">
+          Sin participantes
+        </ProgressTrack>
+      </Progress>
+    );
+  }
+
   return (
     <Progress
       value={progress}
