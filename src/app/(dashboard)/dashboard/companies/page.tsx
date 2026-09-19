@@ -18,12 +18,14 @@ import {
   listCompanies,
   listUnassignedParticipants,
 } from "@/modules/companies/server/queries";
+import { getCompanyCapacity } from "@/modules/companies/server/settings";
 
 export default async function CompaniesPage() {
   const session = await requireParticipantManagementAccess();
-  const [companies, unassignedParticipants] = await Promise.all([
+  const [companies, unassignedParticipants, capacity] = await Promise.all([
     listCompanies(),
     listUnassignedParticipants(),
+    getCompanyCapacity(),
   ]);
   const canDelete = canDeleteParticipants(session.user.role);
 
@@ -57,6 +59,7 @@ export default async function CompaniesPage() {
           companies={companies}
           unassignedParticipants={unassignedParticipants}
           canDelete={canDelete}
+          capacity={capacity}
         />
       )}
     </div>

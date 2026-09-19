@@ -6,12 +6,10 @@ import { participants } from "@/modules/participants/server/schema";
 import { db } from "@/server/db";
 
 import {
-  COMPANY_PARTICIPANT_LIMIT,
-  COMPANY_PARTICIPANT_SEX_LIMIT,
   FEMALE_PARTICIPANT_SEX,
   MALE_PARTICIPANT_SEX,
 } from "../distribution";
-import { companies } from "./schema";
+import { companies, companySettings } from "./schema";
 
 export type CompanyCapacityGuardInput = {
   companyId: string;
@@ -25,7 +23,7 @@ export type CompanyCapacityGuardInput = {
  */
 export function getCompanyCapacityLockQuery() {
   return db.execute(sql`
-    lock table ${companies}, ${participants}
+    lock table ${companies}, ${participants}, ${companySettings}
     in share row exclusive mode
   `);
 }
@@ -48,20 +46,31 @@ export function getCompanyCapacityCondition({
     and exists (
       select 1
       from ${companies} as capacity_company
+      inner join ${companySettings} as capacity_settings
+        on capacity_settings.id = 1
       where capacity_company.id = ${companyId}::uuid
         and (
           select count(*)
           from ${participants} as capacity_participant
           where capacity_participant.company_id = capacity_company.id
             ${exclusion}
-        ) < ${COMPANY_PARTICIPANT_LIMIT}
+        ) < (
+          capacity_settings.female_participant_limit +
+          capacity_settings.male_participant_limit
+        )
         and (
           select count(*)
           from ${participants} as capacity_participant
           where capacity_participant.company_id = capacity_company.id
             and capacity_participant.sex = ${sex}
             ${exclusion}
-        ) < ${COMPANY_PARTICIPANT_SEX_LIMIT}
+        ) < case
+          when ${sex} = ${FEMALE_PARTICIPANT_SEX}
+            then capacity_settings.female_participant_limit
+          when ${sex} = ${MALE_PARTICIPANT_SEX}
+            then capacity_settings.male_participant_limit
+          else 0
+        end
     )
   `;
 }

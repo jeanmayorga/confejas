@@ -9,8 +9,6 @@ import type { ParticipantStatus } from "@/modules/participants/status";
 import { db } from "@/server/db";
 
 import {
-  COMPANY_PARTICIPANT_LIMIT,
-  COMPANY_PARTICIPANT_SEX_LIMIT,
   compareCompanyNames,
   FEMALE_PARTICIPANT_SEX,
   isSupportedParticipantSex,
@@ -18,6 +16,7 @@ import {
   type ParticipantSexCounts,
 } from "../distribution";
 import { companies } from "./schema";
+import { getCompanyCapacity } from "./settings";
 
 export type CompanyParticipant = {
   id: string;
@@ -140,7 +139,8 @@ function isUuid(value: unknown): value is string {
 }
 
 export async function listCompanies(): Promise<CompanyListItem[]> {
-  const [companyRows, counselorRows, participantRows] = await Promise.all([
+  const [capacity, companyRows, counselorRows, participantRows] = await Promise.all([
+    getCompanyCapacity(),
     db
       .select({
         id: companies.id,
@@ -221,15 +221,15 @@ export async function listCompanies(): Promise<CompanyListItem[]> {
         unsupportedSexCount: counts.unsupportedSex,
         remainingCapacity: Math.max(
           0,
-          COMPANY_PARTICIPANT_LIMIT - counts.total,
+          capacity.female + capacity.male - counts.total,
         ),
         remainingFemaleCapacity: Math.max(
           0,
-          COMPANY_PARTICIPANT_SEX_LIMIT - counts.female,
+          capacity.female - counts.female,
         ),
         remainingMaleCapacity: Math.max(
           0,
-          COMPANY_PARTICIPANT_SEX_LIMIT - counts.male,
+          capacity.male - counts.male,
         ),
         counselors: assignedCounselors,
         counselorCount: assignedCounselors.length,
@@ -476,10 +476,10 @@ export async function validateCompanyParticipantAssignment({
     };
   }
 
-  const state = await getCompanyCapacityState(
-    companyId,
-    excludedParticipantId,
-  );
+  const [state, capacity] = await Promise.all([
+    getCompanyCapacityState(companyId, excludedParticipantId),
+    getCompanyCapacity(),
+  ]);
 
   if (!state) {
     return {
@@ -489,11 +489,11 @@ export async function validateCompanyParticipantAssignment({
     };
   }
 
-  if (state.counts.total >= COMPANY_PARTICIPANT_LIMIT) {
+  if (state.counts.total >= capacity.female + capacity.male) {
     return {
       success: false,
       reason: "company_full",
-      message: `La compañía ya alcanzó el máximo de ${COMPANY_PARTICIPANT_LIMIT} participantes.`,
+      message: `La compañía ya alcanzó el máximo de ${capacity.female + capacity.male} participantes.`,
     };
   }
 
@@ -502,11 +502,14 @@ export async function validateCompanyParticipantAssignment({
       ? state.counts.female
       : state.counts.male;
 
-  if (currentSexCount >= COMPANY_PARTICIPANT_SEX_LIMIT) {
+  const sexCapacity =
+    sex === FEMALE_PARTICIPANT_SEX ? capacity.female : capacity.male;
+
+  if (currentSexCount >= sexCapacity) {
     return {
       success: false,
       reason: "sex_full",
-      message: `La compañía ya alcanzó el máximo de ${COMPANY_PARTICIPANT_SEX_LIMIT} participantes de sexo ${sex}.`,
+      message: `La compañía ya alcanzó el máximo de ${sexCapacity} participantes de sexo ${sex}.`,
     };
   }
 

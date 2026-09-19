@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import {
-  COMPANY_PARTICIPANT_SEX_LIMIT,
   DEFAULT_DISTRIBUTION_STRATEGY,
   type DistributionCapacity,
 } from "@/modules/companies/distribution";
@@ -28,12 +27,11 @@ import {
   saveParticipantDistributionAction,
 } from "@/modules/companies/server/actions";
 
-const DISTRIBUTION_CAPACITY: DistributionCapacity = {
-  female: COMPANY_PARTICIPANT_SEX_LIMIT,
-  male: COMPANY_PARTICIPANT_SEX_LIMIT,
-};
-
-export function CompanyDistributionDialog() {
+export function CompanyDistributionDialog({
+  capacity,
+}: {
+  capacity: DistributionCapacity;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [youngestFirst, setYoungestFirst] = useState(true);
@@ -49,7 +47,7 @@ export function CompanyDistributionDialog() {
         : "oldest_to_youngest";
       const preview = await previewParticipantDistributionAction(
         direction,
-        DISTRIBUTION_CAPACITY,
+        capacity,
         DEFAULT_DISTRIBUTION_STRATEGY,
         stakeDiversity,
       );

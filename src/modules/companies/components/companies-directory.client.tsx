@@ -39,14 +39,14 @@ import {
   type ParticipantStatus,
 } from "@/modules/participants/status";
 import { getCompanyDisplayName } from "@/modules/companies/company-label";
+import { CompanyCapacityDialog } from "@/modules/companies/components/company-capacity-dialog.client";
 import { CreateCompanyButton } from "@/modules/companies/components/create-company-button.client";
 import { DeleteCompanyButton } from "@/modules/companies/components/delete-company-button.client";
 import { CompanyDistributionDialog } from "@/modules/companies/components/company-distribution-dialog.client";
 import {
-  COMPANY_PARTICIPANT_LIMIT as COMPANY_CAPACITY,
-  COMPANY_PARTICIPANT_SEX_LIMIT as COMPANY_SEX_CAPACITY,
   FEMALE_PARTICIPANT_SEX,
   MALE_PARTICIPANT_SEX,
+  type DistributionCapacity,
 } from "@/modules/companies/distribution";
 import type {
   CompanyListItem,
@@ -59,6 +59,7 @@ type CompaniesDirectoryProps = {
   companies: CompanyDirectoryItem[];
   unassignedParticipants: CompanyParticipant[];
   canDelete: boolean;
+  capacity: DistributionCapacity;
 };
 
 const participantStatusClassNames = {
@@ -103,6 +104,7 @@ export function CompaniesDirectory({
   companies,
   unassignedParticipants,
   canDelete,
+  capacity,
 }: CompaniesDirectoryProps) {
   if (companies.length === 0) {
     return (
@@ -132,18 +134,24 @@ export function CompaniesDirectory({
             company={company}
             position={index + 1}
             canDelete={canDelete}
+            capacity={capacity}
           />
         ))}
       </div>
-      <UnassignedParticipantsCard participants={unassignedParticipants} />
+      <UnassignedParticipantsCard
+        participants={unassignedParticipants}
+        capacity={capacity}
+      />
     </div>
   );
 }
 
 function UnassignedParticipantsCard({
   participants,
+  capacity,
 }: {
   participants: CompanyParticipant[];
+  capacity: DistributionCapacity;
 }) {
   const titleId = "unassigned-participants-title";
 
@@ -157,7 +165,10 @@ function UnassignedParticipantsCard({
         </CardHeader>
 
         <CardContent className="border-b py-3">
-          <CompanyDistributionDialog />
+          <div className="flex flex-wrap gap-2">
+            <CompanyDistributionDialog capacity={capacity} />
+            <CompanyCapacityDialog capacity={capacity} />
+          </div>
         </CardContent>
 
         {participants.length > 0 ? (
@@ -245,10 +256,12 @@ function CompanyCard({
   company,
   position,
   canDelete,
+  capacity,
 }: {
   company: CompanyDirectoryItem;
   position: number;
   canDelete: boolean;
+  capacity: DistributionCapacity;
 }) {
   const titleId = `company-${company.id}-title`;
   const companyLabel = getCompanyDisplayName(company.name, position);
@@ -275,6 +288,7 @@ function CompanyCard({
           female={company.femaleCount}
           male={company.maleCount}
           unsupported={company.unsupportedSexCount}
+          capacity={capacity}
         />
 
         <section aria-labelledby={`${titleId}-counselors`}>
@@ -432,30 +446,34 @@ function CapacityBadges({
   female,
   male,
   unsupported = 0,
+  capacity,
 }: {
   total: number;
   female: number;
   male: number;
   unsupported?: number;
+  capacity: DistributionCapacity;
 }) {
+  const totalCapacity = capacity.female + capacity.male;
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Badge
         variant={
-          total > COMPANY_CAPACITY
+          total > totalCapacity
             ? "destructive"
-            : total === COMPANY_CAPACITY
+            : total === totalCapacity
               ? "default"
               : "secondary"
         }
       >
-        Total {total.toLocaleString("es-EC")}/{COMPANY_CAPACITY}
+        Total {total.toLocaleString("es-EC")}/{totalCapacity}
       </Badge>
       <Badge
         variant={
-          female > COMPANY_SEX_CAPACITY
+          female > capacity.female
             ? "destructive"
-            : female === COMPANY_SEX_CAPACITY
+            : female === capacity.female
               ? "default"
               : "outline"
         }
@@ -465,13 +483,13 @@ function CapacityBadges({
           strokeWidth={2}
           data-icon="inline-start"
         />
-        Mujeres {female.toLocaleString("es-EC")}/{COMPANY_SEX_CAPACITY}
+        Mujeres {female.toLocaleString("es-EC")}/{capacity.female}
       </Badge>
       <Badge
         variant={
-          male > COMPANY_SEX_CAPACITY
+          male > capacity.male
             ? "destructive"
-            : male === COMPANY_SEX_CAPACITY
+            : male === capacity.male
               ? "default"
               : "outline"
         }
@@ -481,7 +499,7 @@ function CapacityBadges({
           strokeWidth={2}
           data-icon="inline-start"
         />
-        Hombres {male.toLocaleString("es-EC")}/{COMPANY_SEX_CAPACITY}
+        Hombres {male.toLocaleString("es-EC")}/{capacity.male}
       </Badge>
       {unsupported > 0 ? (
         <Badge variant="secondary">

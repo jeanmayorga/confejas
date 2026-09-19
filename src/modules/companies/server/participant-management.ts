@@ -12,8 +12,6 @@ import { participants } from "@/modules/participants/server/schema";
 import { db } from "@/server/db";
 
 import {
-  COMPANY_PARTICIPANT_LIMIT,
-  COMPANY_PARTICIPANT_SEX_LIMIT,
   FEMALE_PARTICIPANT_SEX,
   MALE_PARTICIPANT_SEX,
 } from "../distribution";
@@ -23,7 +21,7 @@ import {
   type CompanyParticipantAssignment,
 } from "../participant-management";
 import { getCompanyCapacityLockQuery } from "./capacity";
-import { companies } from "./schema";
+import { companies, companySettings } from "./schema";
 
 export type { CompanyParticipantAssignment } from "../participant-management";
 
@@ -53,7 +51,7 @@ function getMutationFailure(reason: MutationResult["reason"]) {
     case "unsupported_sex":
       return "Todos los participantes que vas a mover deben tener registrado Femenino o Masculino.";
     case "capacity":
-      return `La compañía de destino no tiene espacio para toda la selección. El máximo es ${COMPANY_PARTICIPANT_LIMIT} participantes y ${COMPANY_PARTICIPANT_SEX_LIMIT} por sexo.`;
+      return "La compañía de destino no tiene espacio para toda la selección con los límites actuales.";
     default:
       return "No se pudo completar la operación. Inténtalo nuevamente.";
   }
@@ -112,13 +110,25 @@ export async function moveCompanyParticipantsAction(
             where company_id is distinct from ${targetId}::uuid
           ) and (
             select
-              count(*) > ${COMPANY_PARTICIPANT_LIMIT}
+              count(*) > (
+                select female_participant_limit + male_participant_limit
+                from ${companySettings}
+                where id = 1
+              )
               or count(*) filter (
                 where sex = ${FEMALE_PARTICIPANT_SEX}
-              ) > ${COMPANY_PARTICIPANT_SEX_LIMIT}
+              ) > (
+                select female_participant_limit
+                from ${companySettings}
+                where id = 1
+              )
               or count(*) filter (
                 where sex = ${MALE_PARTICIPANT_SEX}
-              ) > ${COMPANY_PARTICIPANT_SEX_LIMIT}
+              ) > (
+                select male_participant_limit
+                from ${companySettings}
+                where id = 1
+              )
             from (
               select current_participant.id, current_participant.sex
               from ${participants} as current_participant

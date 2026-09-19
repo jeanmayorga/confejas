@@ -18,7 +18,6 @@ import { db } from "@/server/db";
 import {
   COMPANY_PARTICIPANT_LIMIT,
   COMPANY_PARTICIPANT_SEX_LIMIT,
-  DEFAULT_DISTRIBUTION_CAPACITY,
   DEFAULT_DISTRIBUTION_STRATEGY,
   FEMALE_PARTICIPANT_SEX,
   isDistributionCapacity,
@@ -46,7 +45,8 @@ import {
   type CompanyParticipant,
 } from "./queries";
 import { getCompanyCapacityLockQuery } from "./capacity";
-import { companies } from "./schema";
+import { companies, companySettings } from "./schema";
+import { getCompanyCapacity, saveCompanyCapacity } from "./settings";
 
 export type CompanyActionResult =
   | { success: true; message: string }
@@ -380,6 +380,12 @@ async function commitParticipantAssignments(
         )::integer as male
       from eligible_participants
       group by company_id
+    ), capacity_limits as (
+      select
+        ${companySettings.femaleParticipantLimit} as female_limit,
+        ${companySettings.maleParticipantLimit} as male_limit
+      from ${companySettings}
+      where ${companySettings.id} = 1
     ), current_capacity as (
       select
         requested_company.company_id,
@@ -430,6 +436,10 @@ async function commitParticipantAssignments(
           from expected_capacity
         ) = ${expectedCompanies.length}
         and (
+          select count(*)
+          from capacity_limits
+        ) = 1
+        and (
           not ${requireExactCompanySet}
           or (
             select count(*)
@@ -452,12 +462,14 @@ async function commitParticipantAssignments(
           from additions_by_company as addition
           left join current_capacity as capacity
             on capacity.company_id = addition.company_id
+          cross join capacity_limits as limits
           where capacity.existing_company_id is null
-            or capacity.total + addition.total > ${COMPANY_PARTICIPANT_LIMIT}
-            or capacity.female + addition.female > ${COMPANY_PARTICIPANT_SEX_LIMIT}
-            or capacity.male + addition.male > ${COMPANY_PARTICIPANT_SEX_LIMIT}
+            or capacity.total + addition.total > (
+              limits.female_limit + limits.male_limit
+            )
+            or capacity.female + addition.female > limits.female_limit
+            or capacity.male + addition.male > limits.male_limit
         ) as is_valid
-    )
     ), updated_participants as (
       ${replaceAllAssignments
         ? sql`
@@ -747,7 +759,7 @@ export async function getUnassignedParticipantsAction(): Promise<
 
 export async function previewParticipantDistributionAction(
   direction: DistributionDirection,
-  capacity: DistributionCapacity = DEFAULT_DISTRIBUTION_CAPACITY,
+  capacity: DistributionCapacity,
   strategy: DistributionStrategy = DEFAULT_DISTRIBUTION_STRATEGY,
   stakeDiversity = false,
 ): Promise<DistributionPreviewActionResult> {
@@ -789,9 +801,22 @@ export async function previewParticipantDistributionAction(
       };
     }
 
+    const configuredCapacity = await getCompanyCapacity();
+
+    if (
+      capacity.female !== configuredCapacity.female ||
+      capacity.male !== configuredCapacity.male
+    ) {
+      return {
+        success: false,
+        message:
+          "El tamaño de las compañías cambió. Actualiza la página e inténtalo nuevamente.",
+      };
+    }
+
     const proposal = await buildDistributionProposal(
       direction,
-      capacity,
+      configuredCapacity,
       strategy,
       stakeDiversity,
     );
@@ -836,9 +861,23 @@ export async function saveParticipantDistributionAction(
       };
     }
 
+    const configuredCapacity = await getCompanyCapacity();
+
+    if (
+      input.capacity.female !== configuredCapacity.female ||
+      input.capacity.male !== configuredCapacity.male
+    ) {
+      return {
+        success: false,
+        code: "stale_proposal",
+        message:
+          "El tamaño de las compañías cambió. Vuelve a generar la distribución.",
+      };
+    }
+
     const currentProposal = await buildDistributionProposal(
       input.direction,
-      input.capacity,
+      configuredCapacity,
       input.strategy,
       input.stakeDiversity,
     );
@@ -999,7 +1038,7 @@ export async function assignParticipantsToCompanyAction(
       };
     }
 
-    const [selectedParticipants, companyRows] = await Promise.all([
+    const [selectedParticipants, companyRows, capacity] = await Promise.all([
       db
         .select({
           id: participants.id,
@@ -1010,6 +1049,7 @@ export async function assignParticipantsToCompanyAction(
         .from(participants)
         .where(inArray(participants.id, participantIds)),
       listCompaniesForDistribution(),
+      getCompanyCapacity(),
     ]);
     const selectedParticipantsById = new Map(
       selectedParticipants.map((participant) => [participant.id, participant]),
@@ -1062,16 +1102,16 @@ export async function assignParticipantsToCompanyAction(
 
     if (
       company.counts.total + participantIds.length >
-        COMPANY_PARTICIPANT_LIMIT ||
+        capacity.female + capacity.male ||
       company.counts.female + requestedFemaleCount >
-        COMPANY_PARTICIPANT_SEX_LIMIT ||
+        capacity.female ||
       company.counts.male + requestedMaleCount >
-        COMPANY_PARTICIPANT_SEX_LIMIT
+        capacity.male
     ) {
       return {
         success: false,
         code: "capacity",
-        message: `La selección supera el máximo de ${COMPANY_PARTICIPANT_LIMIT} participantes o de ${COMPANY_PARTICIPANT_SEX_LIMIT} por sexo para esta compañía.`,
+        message: `La selección supera el máximo de ${capacity.female + capacity.male} participantes, ${capacity.female} mujeres o ${capacity.male} hombres para esta compañía.`,
       };
     }
 
@@ -1140,6 +1180,42 @@ export async function assignParticipantsToCompanyAction(
       success: false,
       code: "server_error",
       message: "No se pudieron asignar los participantes. Inténtalo nuevamente.",
+    };
+  }
+}
+
+export async function updateCompanyCapacityAction(
+  capacity: DistributionCapacity,
+): Promise<CompanyActionResult> {
+  try {
+    const session = await requireSession();
+
+    if (!canManageParticipants(session.user.role)) {
+      return {
+        success: false,
+        message: "No tienes permiso para editar el tamaño de las compañías.",
+      };
+    }
+
+    if (!isDistributionCapacity(capacity)) {
+      return {
+        success: false,
+        message: `Indica entre 1 y ${COMPANY_PARTICIPANT_SEX_LIMIT} participantes para cada sexo.`,
+      };
+    }
+
+    await saveCompanyCapacity(capacity);
+    revalidateCompanyPaths();
+
+    return {
+      success: true,
+      message: `Cada compañía permitirá hasta ${capacity.female} mujeres y ${capacity.male} hombres.`,
+    };
+  } catch {
+    return {
+      success: false,
+      message:
+        "No se pudo guardar el tamaño de las compañías. Inténtalo nuevamente.",
     };
   }
 }
