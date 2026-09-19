@@ -61,6 +61,7 @@ import {
   MALE_PARTICIPANT_SEX,
 } from "@/modules/companies/distribution";
 import type {
+  CompanyCounselor,
   CompanyListItem,
   CompanyParticipant,
 } from "@/modules/companies/server/queries";
@@ -88,8 +89,15 @@ function getParticipantAge(age: number | null) {
   return age === null ? "Edad no registrada" : `${age} años`;
 }
 
-function getCounselorInitials(name: string) {
-  return name
+function getCounselorInitials(counselor: CompanyCounselor) {
+  const firstNames = counselor.firstNames?.trim();
+  const lastNames = counselor.lastNames?.trim();
+
+  if (firstNames && lastNames) {
+    return getParticipantInitials(firstNames, lastNames);
+  }
+
+  return counselor.name
     .trim()
     .split(/\s+/)
     .slice(0, 2)
@@ -215,8 +223,13 @@ function CompanyCard({
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Avatar size="sm" aria-hidden="true">
-                        <AvatarFallback className="bg-muted text-[9px] font-medium text-muted-foreground">
-                          {getCounselorInitials(counselor.name)}
+                        <AvatarFallback
+                          className={cn(
+                            "!text-[9px] font-medium",
+                            participantStatusClassNames.registered,
+                          )}
+                        >
+                          {getCounselorInitials(counselor)}
                         </AvatarFallback>
                       </Avatar>
                       <span className="min-w-0 break-words font-medium">
