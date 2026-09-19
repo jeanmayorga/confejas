@@ -19,18 +19,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  getParticipantStatusLabel,
+  type ParticipantStatus,
+} from "@/modules/participants/status";
 
 export type CheckInSheetParticipant = {
   id: string;
   firstNames: string;
   lastNames: string;
   preferredName: string | null;
+  status: ParticipantStatus;
   wardName: string;
   stakeName: string;
   shirtSize: string | null;
   companyName: string | null;
   roomName: string | null;
-  checkedInAt: string | null;
 };
 
 type ParticipantCheckInSheetProps = {
@@ -52,7 +56,7 @@ function DetailItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-function CheckInSubmitButton({ confirmed }: { confirmed: boolean }) {
+function CheckInSubmitButton() {
   const { pending } = useFormStatus();
 
   return (
@@ -61,14 +65,14 @@ function CheckInSubmitButton({ confirmed }: { confirmed: boolean }) {
       variant="success"
       size="xl"
       className="w-full"
-      disabled={pending || confirmed}
+      disabled={pending}
     >
       {pending ? (
         <Spinner data-icon="inline-start" />
       ) : (
         <HugeiconsIcon icon={CheckmarkCircle02Icon} data-icon="inline-start" />
       )}
-      {confirmed ? "Llegó" : pending ? "Registrando llegada…" : "Ya llegó"}
+      {pending ? "Registrando llegada…" : "Ya llegó"}
     </Button>
   );
 }
@@ -80,7 +84,6 @@ export function ParticipantCheckInSheet({
 }: ParticipantCheckInSheetProps) {
   const router = useRouter();
   const [open, setOpen] = useState(!saved);
-  const confirmed = saved || Boolean(participant.checkedInAt);
   const action = completeParticipantCheckInFromSheet.bind(null, returnPath);
   const preferredName = participant.preferredName?.trim();
 
@@ -169,8 +172,8 @@ export function ParticipantCheckInSheet({
                     {getInitials(participant.firstNames, participant.lastNames)}
                   </AvatarFallback>
                 </Avatar>
-                <Badge variant={confirmed ? "default" : "secondary"}>
-                  {confirmed ? "Confirmado" : "Pendiente"}
+                <Badge variant="secondary">
+                  {getParticipantStatusLabel(participant.status)}
                 </Badge>
               </div>
               <h2 className="mt-4 text-lg font-semibold">
@@ -221,7 +224,7 @@ export function ParticipantCheckInSheet({
           </div>
 
           <DialogFooter className="flex-col gap-2 sm:flex-col">
-            <CheckInSubmitButton confirmed={confirmed} />
+            <CheckInSubmitButton />
             <Button
               type="button"
               variant="outline"
