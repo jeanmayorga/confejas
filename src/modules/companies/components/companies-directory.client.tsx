@@ -61,6 +61,7 @@ import {
   MALE_PARTICIPANT_SEX,
 } from "@/modules/companies/distribution";
 import type {
+  CompanyCounselor,
   CompanyListItem,
   CompanyParticipant,
 } from "@/modules/companies/server/queries";
@@ -88,8 +89,15 @@ function getParticipantAge(age: number | null) {
   return age === null ? "Edad no registrada" : `${age} años`;
 }
 
-function getCounselorInitials(name: string) {
-  return name
+function getCounselorInitials(counselor: CompanyCounselor) {
+  const firstNames = counselor.firstNames?.trim();
+  const lastNames = counselor.lastNames?.trim();
+
+  if (firstNames && lastNames) {
+    return getParticipantInitials(firstNames, lastNames);
+  }
+
+  return counselor.name
     .trim()
     .split(/\s+/)
     .slice(0, 2)
@@ -200,8 +208,9 @@ function CompanyCard({
           </div>
 
           {company.counselors.length > 0 ? (
-            <Table className="mt-3 min-w-[420px]">
-              <TableHeader>
+            <div className="mt-3 overflow-hidden rounded-lg border border-border/50">
+              <Table className="min-w-[420px]">
+              <TableHeader className="bg-muted/50">
                 <TableRow>
                   <TableHead>Consejero</TableHead>
                   <TableHead>Estaca</TableHead>
@@ -215,8 +224,13 @@ function CompanyCard({
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Avatar size="sm" aria-hidden="true">
-                        <AvatarFallback className="bg-muted text-[9px] font-medium text-muted-foreground">
-                          {getCounselorInitials(counselor.name)}
+                        <AvatarFallback
+                          className={cn(
+                            "!text-[9px] font-medium",
+                            participantStatusClassNames.registered,
+                          )}
+                        >
+                          {getCounselorInitials(counselor)}
                         </AvatarFallback>
                       </Avatar>
                       <span className="min-w-0 break-words font-medium">
@@ -230,7 +244,8 @@ function CompanyCard({
                 </TableRow>
               ))}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">
               Sin consejeros asignados.
@@ -253,8 +268,9 @@ function CompanyCard({
           </div>
 
           {company.participants.length > 0 ? (
-            <Table className="mt-3 min-w-[900px]">
-              <TableHeader>
+            <div className="mt-3 overflow-hidden rounded-lg border border-border/50">
+              <Table className="min-w-[900px]">
+              <TableHeader className="bg-muted/50">
                 <TableRow>
                   <TableHead>Nombres</TableHead>
                   <TableHead>Edad</TableHead>
@@ -416,7 +432,8 @@ function CompanyCard({
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
           ) : (
             <Empty className="min-h-40 p-6">
               <EmptyHeader>
