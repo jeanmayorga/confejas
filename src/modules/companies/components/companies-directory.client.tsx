@@ -148,11 +148,14 @@ function UnassignedParticipantsCard({
   const titleId = "unassigned-participants-title";
 
   return (
-    <aside className="self-start xl:sticky xl:top-6" aria-labelledby={titleId}>
+    <aside
+      className="self-start xl:sticky xl:top-6 xl:max-h-[calc(100dvh-3rem)]"
+      aria-labelledby={titleId}
+    >
       <Card className="gap-0 pb-3 pt-0">
         <CardHeader className="h-9 items-center border-b !pb-0">
           <CardTitle id={titleId} className="text-base">
-            Participantes
+            Participantes sin compañía
           </CardTitle>
         </CardHeader>
 
