@@ -1,8 +1,6 @@
 "use client";
 
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
-import FemaleSymbolIcon from "@hugeicons/core-free-icons/FemaleSymbolIcon";
-import MaleSymbolIcon from "@hugeicons/core-free-icons/MaleSymbolIcon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -471,12 +469,10 @@ function CapacityProgress({
           style={{ width: `${femaleProgress}%` }}
         />
         <div className="pointer-events-none absolute inset-0 flex items-center justify-between gap-3 px-3 text-xs font-medium text-primary-foreground">
-          <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-            <HugeiconsIcon icon={MaleSymbolIcon} strokeWidth={2} />
+          <span className="whitespace-nowrap">
             Hombres {male.toLocaleString("es-EC")}/{capacity.male}
           </span>
-          <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-            <HugeiconsIcon icon={FemaleSymbolIcon} strokeWidth={2} />
+          <span className="whitespace-nowrap">
             Mujeres {female.toLocaleString("es-EC")}/{capacity.female}
           </span>
         </div>
