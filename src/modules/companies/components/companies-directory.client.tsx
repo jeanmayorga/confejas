@@ -62,6 +62,7 @@ import {
   type ParticipantStatus,
 } from "@/modules/participants/status";
 import { getCompanyDisplayName } from "@/modules/companies/company-label";
+import { sortParticipantsByName } from "@/modules/companies/participant-order";
 import { CompanyCapacityDialog } from "@/modules/companies/components/company-capacity-dialog.client";
 import { CreateCompanyButton } from "@/modules/companies/components/create-company-button.client";
 import { DeleteCompanyButton } from "@/modules/companies/components/delete-company-button.client";
@@ -210,11 +211,12 @@ function applyPendingCompanyMove(
       }
     }
 
-    const counts = getParticipantCounts(nextParticipants);
+    const orderedParticipants = sortParticipantsByName(nextParticipants);
+    const counts = getParticipantCounts(orderedParticipants);
 
     return {
       ...company,
-      participants: nextParticipants,
+      participants: orderedParticipants,
       participantCount: counts.total,
       femaleCount: counts.female,
       maleCount: counts.male,
