@@ -4,6 +4,7 @@ import {
   type DragEvent,
   useDeferredValue,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useTransition,
@@ -17,6 +18,7 @@ import { toast } from "sonner";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardAction,
@@ -94,6 +96,10 @@ type DraggedCompanyParticipant = {
   name: string;
 };
 
+type DraggedCompanyParticipants = {
+  participants: DraggedCompanyParticipant[];
+};
+
 const participantStatusClassNames = {
   registered: "bg-muted text-muted-foreground",
   confirmed: "bg-participant-confirmed/10 text-participant-confirmed",
@@ -140,11 +146,23 @@ export function CompaniesDirectory({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [draggedParticipant, setDraggedParticipant] =
-    useState<DraggedCompanyParticipant | null>(null);
+    useState<DraggedCompanyParticipants | null>(null);
+  const [selectedParticipantIds, setSelectedParticipantIds] = useState<
+    ReadonlySet<string>
+  >(new Set());
   const [isUnassignedDropTarget, setIsUnassignedDropTarget] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [refreshing, startTransition] = useTransition();
   const dragDisabled = removing || refreshing;
+  const draggedParticipantIds = useMemo(
+    () =>
+      new Set(
+        draggedParticipant?.participants.map(
+          ({ participantId }) => participantId,
+        ),
+      ),
+    [draggedParticipant],
+  );
 
   function clearDragState() {
     setDraggedParticipant(null);
@@ -166,30 +184,81 @@ export function CompaniesDirectory({
       companyId: company.id,
       name: getParticipantName(participant),
     };
+    const participants = selectedParticipantIds.has(participant.id)
+      ? companies.flatMap((currentCompany) =>
+          currentCompany.participants
+            .filter((currentParticipant) =>
+              selectedParticipantIds.has(currentParticipant.id),
+            )
+            .map((currentParticipant) => ({
+              participantId: currentParticipant.id,
+              companyId: currentCompany.id,
+              name: getParticipantName(currentParticipant),
+            })),
+        )
+      : [dragged];
+
+    if (!selectedParticipantIds.has(participant.id)) {
+      setSelectedParticipantIds(new Set([participant.id]));
+    }
 
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", dragged.participantId);
-    setDraggedParticipant(dragged);
+    setDraggedParticipant({ participants });
+  }
+
+  function handleParticipantSelectionChange(
+    participantId: string,
+    checked: boolean,
+  ) {
+    setSelectedParticipantIds((current) => {
+      const next = new Set(current);
+
+      if (checked) {
+        next.add(participantId);
+      } else {
+        next.delete(participantId);
+      }
+
+      return next;
+    });
+  }
+
+  function handleCompanyParticipantsSelectionChange(
+    company: CompanyDirectoryItem,
+    checked: boolean,
+  ) {
+    setSelectedParticipantIds((current) => {
+      const next = new Set(current);
+
+      for (const participant of company.participants) {
+        if (checked) {
+          next.add(participant.id);
+        } else {
+          next.delete(participant.id);
+        }
+      }
+
+      return next;
+    });
   }
 
   function handleUnassignedDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
-    const participant = draggedParticipant;
+    const draggedParticipants = draggedParticipant?.participants ?? [];
 
     clearDragState();
 
-    if (!participant || dragDisabled) {
+    if (draggedParticipants.length === 0 || dragDisabled) {
       return;
     }
 
     setRemoving(true);
     const operation = moveCompanyParticipantsAction(
-      [
-        {
-          participantId: participant.participantId,
-          companyId: participant.companyId,
-        },
-      ],
+      draggedParticipants.map(({ participantId, companyId }) => ({
+        participantId,
+        companyId,
+      })),
       null,
     ).then(async (result) => {
       if (!result.success) {
@@ -202,11 +271,15 @@ export function CompaniesDirectory({
       startTransition(() => {
         router.refresh();
       });
+      setSelectedParticipantIds(new Set());
       return result;
     });
 
     toast.promise(operation, {
-      loading: `Quitando a ${participant.name} de su compañía…`,
+      loading:
+        draggedParticipants.length === 1
+          ? `Quitando a ${draggedParticipants[0]?.name} de su compañía…`
+          : `Quitando a ${draggedParticipants.length} participantes de sus compañías…`,
       success: (result) => result.message,
       error: (error) =>
         error instanceof Error
@@ -214,9 +287,7 @@ export function CompaniesDirectory({
           : "No pudimos quitar al participante de su compañía.",
     });
 
-    void operation
-      .catch(() => undefined)
-      .finally(() => setRemoving(false));
+    void operation.catch(() => undefined).finally(() => setRemoving(false));
   }
 
   function handleUnassignedDragOver(event: DragEvent<HTMLDivElement>) {
@@ -262,10 +333,15 @@ export function CompaniesDirectory({
             position={index + 1}
             canDelete={canDelete}
             capacity={capacity}
-            draggedParticipantId={draggedParticipant?.participantId ?? null}
+            draggedParticipantIds={draggedParticipantIds}
+            selectedParticipantIds={selectedParticipantIds}
             dragDisabled={dragDisabled}
             onParticipantDragStart={handleParticipantDragStart}
             onParticipantDragEnd={clearDragState}
+            onParticipantSelectionChange={handleParticipantSelectionChange}
+            onCompanyParticipantsSelectionChange={
+              handleCompanyParticipantsSelectionChange
+            }
           />
         ))}
       </div>
@@ -290,7 +366,7 @@ function UnassignedParticipantsCard({
   onDrop,
 }: {
   capacity: DistributionCapacity;
-  draggedParticipant: DraggedCompanyParticipant | null;
+  draggedParticipant: DraggedCompanyParticipants | null;
   isDropTarget: boolean;
   onDragOver: (event: DragEvent<HTMLDivElement>) => void;
   onDragLeave: (event: DragEvent<HTMLDivElement>) => void;
@@ -341,12 +417,7 @@ function UnassignedParticipantsCard({
     const listViewport = listViewportRef.current;
     const loadMoreNode = loadMoreRef.current;
 
-    if (
-      !listViewport ||
-      !loadMoreNode ||
-      !hasNextPage ||
-      isFetchingNextPage
-    ) {
+    if (!listViewport || !loadMoreNode || !hasNextPage || isFetchingNextPage) {
       return;
     }
 
@@ -369,6 +440,7 @@ function UnassignedParticipantsCard({
       <Card
         className={cn(
           "max-h-[calc(100dvh-3rem)] gap-0 py-3 transition-[background-color,box-shadow]",
+          draggedParticipant && "bg-primary/5 ring-1 ring-primary/40",
           isDropTarget && "bg-primary/5 ring-2 ring-primary ring-offset-2",
         )}
         onDragOver={onDragOver}
@@ -388,8 +460,12 @@ function UnassignedParticipantsCard({
               aria-live="polite"
             >
               {isDropTarget
-                ? `Suelta para quitar a ${draggedParticipant.name} de su compañía.`
-                : "Arrastra aquí para quitarlo de su compañía."}
+                ? draggedParticipant.participants.length === 1
+                  ? `Suelta para quitar a ${draggedParticipant.participants[0]?.name} de su compañía.`
+                  : `Suelta para quitar a los ${draggedParticipant.participants.length} participantes de sus compañías.`
+                : draggedParticipant.participants.length === 1
+                  ? "Arrastra aquí para quitarlo de su compañía."
+                  : `Arrastra aquí para quitar a los ${draggedParticipant.participants.length} participantes de sus compañías.`}
             </p>
           ) : null}
         </CardHeader>
@@ -510,7 +586,9 @@ function UnassignedParticipantsCard({
                               <AvatarFallback
                                 className={cn(
                                   "!text-[9px] font-medium",
-                                  participantStatusClassNames[participant.status],
+                                  participantStatusClassNames[
+                                    participant.status
+                                  ],
                                 )}
                               >
                                 {getParticipantInitials(
@@ -524,7 +602,9 @@ function UnassignedParticipantsCard({
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell>{getParticipantAge(participant.age)}</TableCell>
+                        <TableCell>
+                          {getParticipantAge(participant.age)}
+                        </TableCell>
                         <TableCell>
                           <Badge variant="secondary">
                             {getParticipantSexLabel(participant.sex)}
@@ -573,16 +653,20 @@ function CompanyCard({
   position,
   canDelete,
   capacity,
-  draggedParticipantId,
+  draggedParticipantIds,
+  selectedParticipantIds,
   dragDisabled,
   onParticipantDragStart,
   onParticipantDragEnd,
+  onParticipantSelectionChange,
+  onCompanyParticipantsSelectionChange,
 }: {
   company: CompanyDirectoryItem;
   position: number;
   canDelete: boolean;
   capacity: DistributionCapacity;
-  draggedParticipantId: string | null;
+  draggedParticipantIds: ReadonlySet<string>;
+  selectedParticipantIds: ReadonlySet<string>;
   dragDisabled: boolean;
   onParticipantDragStart: (
     event: DragEvent<HTMLTableRowElement>,
@@ -590,9 +674,23 @@ function CompanyCard({
     company: CompanyDirectoryItem,
   ) => void;
   onParticipantDragEnd: () => void;
+  onParticipantSelectionChange: (
+    participantId: string,
+    checked: boolean,
+  ) => void;
+  onCompanyParticipantsSelectionChange: (
+    company: CompanyDirectoryItem,
+    checked: boolean,
+  ) => void;
 }) {
   const titleId = `company-${company.id}-title`;
   const companyLabel = getCompanyDisplayName(company.name, position);
+  const selectedParticipantCount = company.participants.filter((participant) =>
+    selectedParticipantIds.has(participant.id),
+  ).length;
+  const areAllParticipantsSelected =
+    company.participants.length > 0 &&
+    selectedParticipantCount === company.participants.length;
 
   return (
     <Card className="py-3" aria-labelledby={titleId}>
@@ -602,10 +700,7 @@ function CompanyCard({
         </CardTitle>
         <CardAction className="row-span-1 self-center">
           {canDelete ? (
-            <DeleteCompanyButton
-              company={company}
-              label={companyLabel}
-            />
+            <DeleteCompanyButton company={company} label={companyLabel} />
           ) : null}
         </CardAction>
       </CardHeader>
@@ -674,6 +769,7 @@ function CompanyCard({
             <TableFrame className="mt-3">
               <Table className="min-w-[580px] table-fixed">
                 <colgroup>
+                  <col className="w-11" />
                   <col className="w-12" />
                   <col className="w-24" />
                   <col />
@@ -682,6 +778,20 @@ function CompanyCard({
                 </colgroup>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="text-center">
+                      <Checkbox
+                        checked={areAllParticipantsSelected}
+                        indeterminate={
+                          selectedParticipantCount > 0 &&
+                          !areAllParticipantsSelected
+                        }
+                        onCheckedChange={(checked) =>
+                          onCompanyParticipantsSelectionChange(company, checked)
+                        }
+                        onPointerDown={(event) => event.stopPropagation()}
+                        aria-label={`Seleccionar todos los participantes de ${companyLabel}`}
+                      />
+                    </TableHead>
                     <TableHead className="text-center">#</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Nombres</TableHead>
@@ -690,65 +800,95 @@ function CompanyCard({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                {company.participants.map((participant, index) => (
-                  <TableRow
-                    key={participant.id}
-                    draggable={!dragDisabled}
-                    aria-grabbed={draggedParticipantId === participant.id}
-                    title="Arrastra a Participantes sin compañía para quitarlo de esta compañía."
-                    className={cn(
-                      "cursor-grab active:cursor-grabbing",
-                      draggedParticipantId === participant.id && "opacity-50",
-                    )}
-                    onDragStart={(event) =>
-                      onParticipantDragStart(event, participant, company)
-                    }
-                    onDragEnd={onParticipantDragEnd}
-                  >
-                    <TableCell className="text-center tabular-nums text-muted-foreground">
-                      {index + 1}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "border-transparent",
-                          participantStatusClassNames[participant.status],
-                        )}
-                      >
-                        {getParticipantStatusLabel(participant.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="max-w-0 overflow-hidden">
-                      <div className="flex items-center gap-2">
-                        <Avatar size="sm" aria-hidden="true">
-                          <AvatarFallback
-                            className={cn(
-                              "!text-[9px] font-medium",
-                              participantStatusClassNames[participant.status],
-                            )}
-                          >
-                            {getParticipantInitials(
-                              participant.firstNames,
-                              participant.lastNames,
-                            )}
-                          </AvatarFallback>
-                        </Avatar>
-                          <div className="min-w-0 truncate whitespace-nowrap">
-                            <span className="font-medium">
-                              {getParticipantName(participant)}
-                            </span>
-                          </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getParticipantAge(participant.age)}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {getParticipantSexLabel(participant.sex)}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                  {company.participants.map((participant, index) =>
+                    (() => {
+                      const isSelected = selectedParticipantIds.has(
+                        participant.id,
+                      );
+                      const isDragged = draggedParticipantIds.has(
+                        participant.id,
+                      );
+
+                      return (
+                        <TableRow
+                          key={participant.id}
+                          draggable={!dragDisabled}
+                          aria-grabbed={isDragged}
+                          aria-selected={isSelected}
+                          title="Arrastra a Participantes sin compañía para quitarlo de esta compañía."
+                          className={cn(
+                            "cursor-grab active:cursor-grabbing",
+                            isSelected && "bg-primary/5 hover:bg-primary/10",
+                            isDragged && "opacity-50",
+                          )}
+                          onDragStart={(event) =>
+                            onParticipantDragStart(event, participant, company)
+                          }
+                          onDragEnd={onParticipantDragEnd}
+                        >
+                          <TableCell className="text-center">
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={(checked) =>
+                                onParticipantSelectionChange(
+                                  participant.id,
+                                  checked,
+                                )
+                              }
+                              onPointerDown={(event) => event.stopPropagation()}
+                              aria-label={`Seleccionar a ${getParticipantName(participant)}`}
+                            />
+                          </TableCell>
+                          <TableCell className="text-center tabular-nums text-muted-foreground">
+                            {index + 1}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "border-transparent",
+                                participantStatusClassNames[participant.status],
+                              )}
+                            >
+                              {getParticipantStatusLabel(participant.status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="max-w-0 overflow-hidden">
+                            <div className="flex items-center gap-2">
+                              <Avatar size="sm" aria-hidden="true">
+                                <AvatarFallback
+                                  className={cn(
+                                    "!text-[9px] font-medium",
+                                    participantStatusClassNames[
+                                      participant.status
+                                    ],
+                                  )}
+                                >
+                                  {getParticipantInitials(
+                                    participant.firstNames,
+                                    participant.lastNames,
+                                  )}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0 truncate whitespace-nowrap">
+                                <span className="font-medium">
+                                  {getParticipantName(participant)}
+                                </span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {getParticipantAge(participant.age)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">
+                              {getParticipantSexLabel(participant.sex)}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })(),
+                  )}
                 </TableBody>
               </Table>
             </TableFrame>
@@ -783,19 +923,22 @@ function CapacityProgress({
 }) {
   const totalCapacity = capacity.female + capacity.male;
   const assigned = female + male + unsupported;
-  const progress = totalCapacity > 0
-    ? Math.min(100, (assigned / totalCapacity) * 100)
-    : 0;
-  const maleProgress = totalCapacity > 0
-    ? Math.min(100, (male / totalCapacity) * 100)
-    : 0;
-  const femaleProgress = totalCapacity > 0
-    ? Math.min(100 - maleProgress, (female / totalCapacity) * 100)
-    : 0;
+  const progress =
+    totalCapacity > 0 ? Math.min(100, (assigned / totalCapacity) * 100) : 0;
+  const maleProgress =
+    totalCapacity > 0 ? Math.min(100, (male / totalCapacity) * 100) : 0;
+  const femaleProgress =
+    totalCapacity > 0
+      ? Math.min(100 - maleProgress, (female / totalCapacity) * 100)
+      : 0;
 
   if (assigned === 0) {
     return (
-      <Progress value={0} renderTrack={false} aria-label="Sin participantes asignados">
+      <Progress
+        value={0}
+        renderTrack={false}
+        aria-label="Sin participantes asignados"
+      >
         <ProgressTrack className="h-6 text-xs font-bold">
           <span className="flex h-full w-1/2 items-center bg-muted px-3 text-muted-foreground">
             Hombres 0/{capacity.male}
