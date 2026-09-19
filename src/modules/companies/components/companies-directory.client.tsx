@@ -149,8 +149,8 @@ function UnassignedParticipantsCard({
 
   return (
     <aside className="xl:sticky xl:top-6" aria-labelledby={titleId}>
-      <Card className="gap-0 py-3">
-        <CardHeader className="border-b !pb-3">
+      <Card className="gap-0 pb-3 pt-2">
+        <CardHeader className="border-b !pb-0">
           <CardTitle id={titleId} className="text-base">
             Participantes
           </CardTitle>
