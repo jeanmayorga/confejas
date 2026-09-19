@@ -468,7 +468,7 @@ function CapacityProgress({
           className="h-full shrink-0 bg-company-female transition-[width]"
           style={{ width: `${femaleProgress}%` }}
         />
-        <div className="pointer-events-none absolute inset-0 text-xs font-medium text-primary-foreground">
+        <div className="pointer-events-none absolute inset-0 text-xs font-semibold text-primary-foreground">
           <span className="absolute top-1/2 left-3 -translate-y-1/2 whitespace-nowrap">
             Hombres {male.toLocaleString("es-EC")}/{capacity.male}
           </span>
