@@ -30,12 +30,12 @@ export async function ParticipantCheckInSheetLoader({
         firstNames: participant.firstNames,
         lastNames: participant.lastNames,
         preferredName: participant.preferredName,
+        status: participant.status,
         wardName: participant.wardName,
         stakeName: participant.stakeName,
         shirtSize: participant.shirtSize,
         companyName: participant.companyName,
         roomName: participant.roomName,
-        checkedInAt: participant.checkedInAt?.toISOString() ?? null,
       }}
       returnPath={returnPath}
       saved={saved}

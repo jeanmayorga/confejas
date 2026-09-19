@@ -334,12 +334,12 @@ export async function getParticipantForCheckIn(participantId: string) {
       firstNames: participants.firstNames,
       lastNames: participants.lastNames,
       preferredName: participants.preferredName,
+      status: participants.status,
       wardName: wards.name,
       stakeName: stakes.name,
       shirtSize: participants.shirtSize,
       companyName: companies.name,
       roomName: participants.roomName,
-      checkedInAt: participants.checkedInAt,
     })
     .from(participants)
     .innerJoin(wards, eq(participants.wardId, wards.id))
