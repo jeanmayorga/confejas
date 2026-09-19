@@ -2,7 +2,7 @@
 
 import { type FormEvent, useRef, useState, useTransition } from "react";
 import Add01Icon from "@hugeicons/core-free-icons/Add01Icon";
-import PencilIcon from "@hugeicons/core-free-icons/PencilIcon";
+import PencilEdit02Icon from "@hugeicons/core-free-icons/PencilEdit02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -103,7 +103,7 @@ export function WardFormDialog({
         }
       >
         <HugeiconsIcon
-          icon={editing ? PencilIcon : Add01Icon}
+          icon={editing ? PencilEdit02Icon : Add01Icon}
           strokeWidth={2}
           data-icon="inline-start"
         />

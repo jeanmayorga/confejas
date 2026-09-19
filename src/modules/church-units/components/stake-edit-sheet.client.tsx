@@ -1,12 +1,11 @@
 "use client";
 
 import { type FormEvent, useState, useTransition } from "react";
-import PencilIcon from "@hugeicons/core-free-icons/PencilIcon";
+import PencilEdit02Icon from "@hugeicons/core-free-icons/PencilEdit02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -76,16 +75,14 @@ export function StakeEditSheet({ stake, stakes }: StakeEditSheetProps) {
               onClick={() => handleOpenChange(true)}
             >
               <HugeiconsIcon
-                icon={PencilIcon}
+                icon={PencilEdit02Icon}
                 strokeWidth={2}
                 data-icon="inline-start"
               />
               Editar
             </Button>
           }
-        >
-          <HugeiconsIcon icon={PencilIcon} strokeWidth={2} />
-        </TooltipTrigger>
+        />
         <TooltipContent>Editar estaca y barrios</TooltipContent>
       </Tooltip>
 
@@ -153,17 +150,12 @@ export function StakeEditSheet({ stake, stakes }: StakeEditSheetProps) {
                   >
                     <div className="min-w-0">
                       <p className="truncate font-medium">{ward.name}</p>
-                      <Badge
-                        variant={
-                          ward.participantCount > 0 ? "secondary" : "outline"
-                        }
-                        className="mt-1"
-                      >
+                      <p className="mt-1 text-sm text-muted-foreground">
                         {ward.participantCount}{" "}
                         {ward.participantCount === 1
                           ? "participante"
                           : "participantes"}
-                      </Badge>
+                      </p>
                     </div>
                     <div className="flex shrink-0 gap-1">
                       <WardFormDialog

@@ -3,7 +3,6 @@
 import MapPinpoint01Icon from "@hugeicons/core-free-icons/MapPinpoint01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
-import { Badge } from "@/components/ui/badge";
 import {
   Empty,
   EmptyDescription,
@@ -91,17 +90,7 @@ export function UnitsDirectory({ units }: UnitsDirectoryProps) {
                           <TableCell className="font-medium">
                             {ward.name}
                           </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                ward.participantCount > 0
-                                  ? "secondary"
-                                  : "outline"
-                              }
-                            >
-                              {ward.participantCount}
-                            </Badge>
-                          </TableCell>
+                          <TableCell>{ward.participantCount}</TableCell>
                         </TableRow>
                       ))
                     )}
