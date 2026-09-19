@@ -84,10 +84,10 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
           </TableHeader>
           <TableBody>
             {result.rows.map((user) => (
-              <TableRow key={user.id}>
+              <TableRow key={user.id} className="h-9">
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    <Avatar aria-hidden="true">
+                    <Avatar size="sm" aria-hidden="true">
                       <AvatarFallback className="font-medium">
                         {getUserInitials(user.name)}
                       </AvatarFallback>
