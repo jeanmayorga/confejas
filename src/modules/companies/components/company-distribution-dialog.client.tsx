@@ -97,7 +97,9 @@ function DistributionPreview({ proposal }: { proposal: DistributionPreview }) {
           <TableBody>
             {proposal.companies.map((company) => (
               <TableRow key={company.companyId}>
-                <TableCell className="font-medium">{company.companyName}</TableCell>
+                <TableCell className="font-medium">
+                  {company.companyName}
+                </TableCell>
                 <TableCell className="tabular-nums">
                   {company.final.male.toLocaleString("es-EC")}/
                   {proposal.limits.malePerCompany}
@@ -115,7 +117,8 @@ function DistributionPreview({ proposal }: { proposal: DistributionPreview }) {
       {proposal.pending.totalCount > 0 ? (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3">
           <p className="text-sm font-medium text-destructive">
-            Faltan espacios para {proposal.pending.totalCount.toLocaleString("es-EC")} participantes
+            Faltan espacios para{" "}
+            {proposal.pending.totalCount.toLocaleString("es-EC")} participantes
           </p>
           {pendingLabel ? (
             <p className="mt-1 text-xs text-destructive/80">{pendingLabel}</p>
@@ -136,7 +139,7 @@ export function CompanyDistributionDialog({
   onDistributed,
 }: {
   capacity: DistributionCapacity;
-  onDistributed?: () => void;
+  onDistributed?: () => Promise<unknown>;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -144,7 +147,9 @@ export function CompanyDistributionDialog({
   const [stakeDiversity, setStakeDiversity] = useState(false);
   const [proposal, setProposal] = useState<DistributionPreview | null>(null);
   const [operation, setOperation] = useState<DistributionOperation>(null);
-  const [pending, startTransition] = useTransition();
+  const [refreshing, startTransition] = useTransition();
+  const [saving, setSaving] = useState(false);
+  const pending = refreshing || saving;
 
   function resetPreview() {
     setProposal(null);
@@ -177,36 +182,50 @@ export function CompanyDistributionDialog({
     });
   }
 
-  function handleSave() {
-    if (!proposal) return;
+  async function handleSave() {
+    if (!proposal || pending) return;
 
     setOperation("save");
-    startTransition(async () => {
-      const result = await saveParticipantDistributionAction({
-        direction: proposal.direction,
-        strategy: proposal.strategy,
-        stakeDiversity: proposal.stakeDiversity,
-        capacity: {
-          female: proposal.limits.femalePerCompany,
-          male: proposal.limits.malePerCompany,
-        },
-        previewKey: proposal.previewKey,
-      });
-
+    setSaving(true);
+    const distribution = saveParticipantDistributionAction({
+      direction: proposal.direction,
+      strategy: proposal.strategy,
+      stakeDiversity: proposal.stakeDiversity,
+      capacity: {
+        female: proposal.limits.femalePerCompany,
+        male: proposal.limits.malePerCompany,
+      },
+      previewKey: proposal.previewKey,
+    }).then(async (result) => {
       if (!result.success) {
-        toast.error(result.message);
-        setOperation(null);
-        return;
+        throw new Error(result.message);
       }
 
-      toast.success(result.message);
-      setOpen(false);
-      resetPreview();
-      onDistributed?.();
+      await onDistributed?.();
       startTransition(() => {
         router.refresh();
       });
+      return result;
     });
+
+    toast.promise(distribution, {
+      loading: "Distribuyendo participantes…",
+      success: (result) => result.message,
+      error: (error) =>
+        error instanceof Error
+          ? error.message
+          : "No pudimos distribuir los participantes.",
+    });
+
+    try {
+      await distribution;
+      setOpen(false);
+      resetPreview();
+    } catch {
+      // El mensaje de error ya se presenta mediante el toast de la promesa.
+    } finally {
+      setSaving(false);
+    }
   }
 
   const hasPendingParticipants = (proposal?.pending.totalCount ?? 0) > 0;

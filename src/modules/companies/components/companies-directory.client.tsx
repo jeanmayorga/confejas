@@ -245,11 +245,11 @@ function UnassignedParticipantsCard({
             <div className="flex flex-wrap gap-2">
               <CompanyDistributionDialog
                 capacity={capacity}
-                onDistributed={() => {
-                  void queryClient.invalidateQueries({
+                onDistributed={() =>
+                  queryClient.invalidateQueries({
                     queryKey: ["company-unassigned-participants"],
-                  });
-                }}
+                  })
+                }
               />
               <CompanyCapacityDialog capacity={capacity} />
             </div>
