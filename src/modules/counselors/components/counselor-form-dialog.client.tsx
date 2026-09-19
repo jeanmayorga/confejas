@@ -146,7 +146,7 @@ export function CounselorFormDialog({
         render={
           <Button
             variant={editing ? "ghost" : "default"}
-            size={editing ? "icon-sm" : "default"}
+            size={editing ? "icon-md" : "default"}
             aria-label={editing ? `Editar ${counselor?.name}` : undefined}
           />
         }

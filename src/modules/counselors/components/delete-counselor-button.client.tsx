@@ -69,7 +69,7 @@ export function DeleteCounselorButton({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-sm"
+                  size="icon-md"
                   className="text-destructive"
                   aria-label={`Eliminar ${counselor.name}`}
                 >

@@ -268,18 +268,18 @@ export function CounselorDirectory({
             </TableHeader>
             <TableBody>
               {visibleCounselors.map((counselor) => (
-                <TableRow key={counselor.id} className="h-9">
-                  <TableCell className="max-w-0 overflow-hidden truncate">
+                <TableRow key={counselor.id} className="h-9 max-h-9">
+                  <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden truncate">
                     {counselor.companyName ? (
-                      <span className="text-primary">{counselor.companyName}</span>
+                      counselor.companyName
                     ) : (
                       <span className="text-muted-foreground">Sin asignar</span>
                     )}
                   </TableCell>
-                  <TableCell className="max-w-0 overflow-hidden">
+                  <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden">
                     <div className="flex items-center gap-2">
-                      <Avatar size="sm" aria-hidden="true">
-                        <AvatarFallback className="font-medium">
+                      <Avatar size="sm" className="!size-5" aria-hidden="true">
+                        <AvatarFallback className="!text-[9px] font-medium">
                           {getCounselorInitials(counselor)}
                         </AvatarFallback>
                       </Avatar>
@@ -288,8 +288,13 @@ export function CounselorDirectory({
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="max-w-0 overflow-hidden">
-                    <div className="flex min-w-0 flex-col gap-0.5 truncate">
+                  <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden">
+                    <div
+                      className="min-w-0 truncate"
+                      title={[counselor.email, counselor.whatsapp]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    >
                       {counselor.email ? (
                         <a
                           href={`mailto:${counselor.email}`}
@@ -297,18 +302,16 @@ export function CounselorDirectory({
                         >
                           {counselor.email}
                         </a>
-                      ) : null}
-                      {counselor.whatsapp ? (
-                        <span className="truncate text-xs text-muted-foreground">
+                      ) : counselor.whatsapp ? (
+                        <span className="truncate text-muted-foreground">
                           WhatsApp: {counselor.whatsapp}
                         </span>
-                      ) : null}
-                      {!counselor.email && !counselor.whatsapp ? (
+                      ) : (
                         <span className="text-muted-foreground">Sin registrar</span>
-                      ) : null}
+                      )}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="h-9 max-h-9">
                     <div className="flex justify-start gap-1">
                       <CounselorFormDialog
                         companies={companies}
