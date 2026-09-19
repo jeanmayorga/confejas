@@ -13,7 +13,6 @@ import {
 import { canDeleteParticipants } from "@/modules/auth/roles";
 import { requireParticipantManagementAccess } from "@/modules/auth/server/session";
 import { CompaniesDirectory } from "@/modules/companies/components/companies-directory.client";
-import { CompanyDistributionDialog } from "@/modules/companies/components/company-distribution-dialog.client";
 import { CreateCompanyButton } from "@/modules/companies/components/create-company-button.client";
 import {
   listCompanies,
@@ -33,12 +32,7 @@ export default async function CompaniesPage() {
       <PageHeader
         title="Compañías"
         description="Administra tus compañías y sus participantes."
-        actions={
-          <>
-            <CompanyDistributionDialog />
-            <CreateCompanyButton />
-          </>
-        }
+        actions={<CreateCompanyButton />}
       />
 
       {companies.length === 0 ? (

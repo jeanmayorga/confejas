@@ -11,7 +11,6 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -41,6 +40,7 @@ import {
 import { getCompanyDisplayName } from "@/modules/companies/company-label";
 import { CreateCompanyButton } from "@/modules/companies/components/create-company-button.client";
 import { DeleteCompanyButton } from "@/modules/companies/components/delete-company-button.client";
+import { CompanyDistributionDialog } from "@/modules/companies/components/company-distribution-dialog.client";
 import {
   COMPANY_PARTICIPANT_LIMIT as COMPANY_CAPACITY,
   COMPANY_PARTICIPANT_SEX_LIMIT as COMPANY_SEX_CAPACITY,
@@ -148,16 +148,11 @@ function UnassignedParticipantsCard({
 
   return (
     <aside className="xl:sticky xl:top-6" aria-labelledby={titleId}>
-      <Card>
+      <Card className="gap-0">
         <CardHeader className="border-b">
           <CardTitle id={titleId} className="text-base">
-            Participantes sin compañía
+            Participantes
           </CardTitle>
-          <CardDescription>
-            {participants.length === 1
-              ? "1 participante pendiente de asignación."
-              : `${participants.length.toLocaleString("es-EC")} participantes pendientes de asignación.`}
-          </CardDescription>
           <CardAction>
             <Badge variant={participants.length > 0 ? "secondary" : "outline"}>
               {participants.length.toLocaleString("es-EC")}
@@ -165,42 +160,77 @@ function UnassignedParticipantsCard({
           </CardAction>
         </CardHeader>
 
+        <CardContent className="border-b py-3">
+          <CompanyDistributionDialog />
+        </CardContent>
+
         {participants.length > 0 ? (
-          <CardContent className="max-h-[calc(100dvh-9rem)] overflow-y-auto p-0">
-            <ul aria-label="Participantes sin compañía">
-              {participants.map((participant) => (
-                <li
-                  key={participant.id}
-                  className="flex items-center gap-2 border-b px-4 py-2.5 last:border-b-0"
-                >
-                  <Avatar size="sm" aria-hidden="true">
-                    <AvatarFallback
-                      className={cn(
-                        "!text-[9px] font-medium",
-                        participantStatusClassNames[participant.status],
-                      )}
-                    >
-                      {getParticipantInitials(
-                        participant.firstNames,
-                        participant.lastNames,
-                      )}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">
-                      {getParticipantName(participant)}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {participant.wardName} · {participant.stakeName}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
+          <CardContent className="max-h-[calc(100dvh-12rem)] overflow-y-auto p-0">
+            <TableFrame className="rounded-none border-0">
+              <Table className="min-w-[440px] table-fixed">
+                <colgroup>
+                  <col className="w-24" />
+                  <col />
+                  <col className="w-[76px]" />
+                  <col className="w-20" />
+                </colgroup>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Nombres</TableHead>
+                    <TableHead>Edad</TableHead>
+                    <TableHead>Sexo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {participants.map((participant) => (
+                    <TableRow key={participant.id}>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "border-transparent",
+                            participantStatusClassNames[participant.status],
+                          )}
+                        >
+                          {getParticipantStatusLabel(participant.status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-0 overflow-hidden">
+                        <div className="flex items-center gap-2">
+                          <Avatar size="sm" aria-hidden="true">
+                            <AvatarFallback
+                              className={cn(
+                                "!text-[9px] font-medium",
+                                participantStatusClassNames[participant.status],
+                              )}
+                            >
+                              {getParticipantInitials(
+                                participant.firstNames,
+                                participant.lastNames,
+                              )}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="min-w-0 truncate font-medium">
+                            {getParticipantName(participant)}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getParticipantAge(participant.age)}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {getParticipantSexLabel(participant.sex)}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableFrame>
           </CardContent>
         ) : (
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Todos los participantes tienen compañía.
+            No hay participantes sin compañía.
           </CardContent>
         )}
       </Card>

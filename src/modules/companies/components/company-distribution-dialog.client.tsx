@@ -103,7 +103,7 @@ export function CompanyDistributionDialog() {
           strokeWidth={2}
           data-icon="inline-start"
         />
-        Distribuir participantes
+        Distribuir en compañías
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-md">
