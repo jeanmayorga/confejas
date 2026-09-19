@@ -57,7 +57,7 @@ export function UnitsDirectory({ units }: UnitsDirectoryProps) {
                 className="overflow-hidden rounded-xl border"
                 aria-labelledby={`stake-${stake.id}`}
               >
-                <div className="flex flex-col gap-3 border-b bg-muted/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex h-9 flex-col justify-center gap-3 border-b bg-muted/30 px-4 py-0 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h2 id={`stake-${stake.id}`} className="font-medium">
                       {stake.name}
@@ -67,7 +67,7 @@ export function UnitsDirectory({ units }: UnitsDirectoryProps) {
                     <StakeEditSheet stake={stake} stakes={stakes} />
                   </div>
                 </div>
-                <Table>
+                <Table className="[&_tr]:h-9 [&_th]:h-9 [&_th]:py-0 [&_td]:h-9 [&_td]:py-0">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Barrio</TableHead>
