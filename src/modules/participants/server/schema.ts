@@ -27,7 +27,9 @@ export const participants = pgTable(
   "participants",
   {
     id: uuid().defaultRandom().primaryKey(),
-    sourceRecordId: integer(),
+    sourceRecordId: integer().generatedByDefaultAsIdentity({
+      name: "participants_source_record_id_seq",
+    }),
     governmentId: varchar({ length: 32 }),
     firstNames: varchar({ length: 160 }).notNull(),
     lastNames: varchar({ length: 160 }).notNull(),
