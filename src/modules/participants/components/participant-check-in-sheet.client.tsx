@@ -22,7 +22,6 @@ import { Spinner } from "@/components/ui/spinner";
 
 export type CheckInSheetParticipant = {
   id: string;
-  sourceRecordId: number | null;
   firstNames: string;
   lastNames: string;
   preferredName: string | null;
@@ -163,7 +162,7 @@ export function ParticipantCheckInSheet({
           <div className="flex flex-col gap-4">
             <section className="rounded-3xl bg-muted p-5">
               <div className="flex items-start justify-between gap-4">
-                <Avatar size="lg" className="size-12">
+                <Avatar size="lg" className="size-16">
                   <AvatarFallback className="bg-background">
                     {getInitials(participant.firstNames, participant.lastNames)}
                   </AvatarFallback>
@@ -172,10 +171,7 @@ export function ParticipantCheckInSheet({
                   {confirmed ? "Confirmado" : "Pendiente"}
                 </Badge>
               </div>
-              <Badge variant="outline" className="mt-4 bg-background">
-                # {participant.sourceRecordId ?? "—"}
-              </Badge>
-              <h2 className="mt-3 text-lg font-semibold">
+              <h2 className="mt-4 text-lg font-semibold">
                 {participant.firstNames} {participant.lastNames}
               </h2>
               {preferredName ? (

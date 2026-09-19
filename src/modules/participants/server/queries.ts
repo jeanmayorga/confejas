@@ -331,7 +331,6 @@ export async function getParticipantForCheckIn(participantId: string) {
   const [participant] = await db
     .select({
       id: participants.id,
-      sourceRecordId: participants.sourceRecordId,
       firstNames: participants.firstNames,
       lastNames: participants.lastNames,
       preferredName: participants.preferredName,

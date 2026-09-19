@@ -27,7 +27,6 @@ export async function ParticipantCheckInSheetLoader({
       key={`${participant.id}-${saved ? "saved" : "review"}`}
       participant={{
         id: participant.id,
-        sourceRecordId: participant.sourceRecordId,
         firstNames: participant.firstNames,
         lastNames: participant.lastNames,
         preferredName: participant.preferredName,
