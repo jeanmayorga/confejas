@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
 import Building06Icon from "@hugeicons/core-free-icons/Building06Icon";
 import Logout01Icon from "@hugeicons/core-free-icons/Logout01Icon";
+import MapPinpoint01Icon from "@hugeicons/core-free-icons/MapPinpoint01Icon";
 import QrCodeScanIcon from "@hugeicons/core-free-icons/QrCodeScanIcon";
 import UnfoldMoreIcon from "@hugeicons/core-free-icons/UnfoldMoreIcon";
 import UserGroupIcon from "@hugeicons/core-free-icons/UserGroupIcon";
@@ -119,8 +120,19 @@ export function AppSidebar({ user }: AppSidebarProps) {
         ]
       : []),
   ];
-  const configurationNavigation = canManageUsers(user.role)
-    ? [
+  const configurationNavigation = [
+    ...(canManageParticipants(user.role)
+      ? [
+          {
+            title: "Unidades",
+            href: "/dashboard/units",
+            icon: MapPinpoint01Icon,
+            exact: false,
+          },
+        ]
+      : []),
+    ...(canManageUsers(user.role)
+      ? [
         {
           title: "Usuarios",
           href: "/dashboard/users",
@@ -128,7 +140,8 @@ export function AppSidebar({ user }: AppSidebarProps) {
           exact: false,
         },
       ]
-    : [];
+      : []),
+  ];
   const navigationSections = [
     { label: "Acciones", items: actionNavigation },
     { label: "Gestión", items: managementNavigation },
