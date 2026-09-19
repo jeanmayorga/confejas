@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,12 +18,20 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { DeleteSelectedWardsButton } from "@/modules/church-units/components/delete-selected-wards-button.client";
 import { DeleteStakeButton } from "@/modules/church-units/components/delete-stake-button.client";
-import { DeleteWardButton } from "@/modules/church-units/components/delete-ward-button.client";
 import { MergeWardDialog } from "@/modules/church-units/components/merge-ward-dialog.client";
 import { WardFormDialog } from "@/modules/church-units/components/ward-form-dialog.client";
 import { updateStakeAction } from "@/modules/church-units/server/actions";
@@ -37,13 +46,42 @@ export function StakeEditSheet({ stake, stakes }: StakeEditSheetProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(stake.name);
+  const [selectedWardIds, setSelectedWardIds] = useState<Set<number>>(
+    new Set(),
+  );
   const [pending, startTransition] = useTransition();
+  const selectedWards = stake.wards.filter((ward) =>
+    selectedWardIds.has(ward.id),
+  );
+  const allWardsSelected =
+    stake.wards.length > 0 && selectedWardIds.size === stake.wards.length;
+  const someWardsSelected =
+    selectedWardIds.size > 0 && !allWardsSelected;
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
       setName(stake.name);
+      setSelectedWardIds(new Set());
     }
     setOpen(nextOpen);
+  }
+
+  function handleWardSelection(wardId: number, checked: boolean) {
+    setSelectedWardIds((current) => {
+      const next = new Set(current);
+      if (checked) {
+        next.add(wardId);
+      } else {
+        next.delete(wardId);
+      }
+      return next;
+    });
+  }
+
+  function handleSelectAll(checked: boolean) {
+    setSelectedWardIds(
+      checked ? new Set(stake.wards.map((ward) => ward.id)) : new Set(),
+    );
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -138,42 +176,91 @@ export function StakeEditSheet({ stake, stakes }: StakeEditSheetProps) {
               />
             </div>
 
-            <div className="mt-4 divide-y rounded-lg border">
-              {stake.wards.length === 0 ? (
-                <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-                  Esta estaca aún no tiene barrios.
+            {selectedWards.length > 0 ? (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
+                <p className="text-sm text-muted-foreground">
+                  {selectedWards.length}{" "}
+                  {selectedWards.length === 1
+                    ? "barrio seleccionado"
+                    : "barrios seleccionados"}
                 </p>
-              ) : (
-                stake.wards.map((ward) => (
-                  <div
-                    key={ward.id}
-                    className="flex items-center justify-between gap-3 px-4 py-3"
+                <div className="flex flex-wrap items-center gap-2">
+                  <MergeWardDialog
+                    wards={selectedWards}
+                    onSuccess={() => setSelectedWardIds(new Set())}
+                  />
+                  <DeleteSelectedWardsButton
+                    wards={selectedWards}
+                    onSuccess={() => setSelectedWardIds(new Set())}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedWardIds(new Set())}
                   >
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{ward.name}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {ward.participantCount}{" "}
-                        {ward.participantCount === 1
-                          ? "participante"
-                          : "participantes"}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 gap-1">
-                      <WardFormDialog
-                        stakes={stakes}
-                        ward={{ ...ward, stakeId: stake.id }}
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-4 overflow-hidden rounded-lg border">
+              <Table className="[&_tr]:h-9 [&_th]:h-9 [&_th]:py-0 [&_td]:h-9 [&_td]:py-0">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={allWardsSelected}
+                        indeterminate={someWardsSelected}
+                        onCheckedChange={(checked) =>
+                          handleSelectAll(checked === true)
+                        }
+                        aria-label="Seleccionar todos los barrios"
                       />
-                      <MergeWardDialog
-                        ward={ward}
-                        candidates={stake.wards.filter(
-                          (candidate) => candidate.id !== ward.id,
-                        )}
-                      />
-                      <DeleteWardButton ward={ward} />
-                    </div>
-                  </div>
-                ))
-              )}
+                    </TableHead>
+                    <TableHead>Barrio</TableHead>
+                    <TableHead>Participantes</TableHead>
+                    <TableHead className="w-12" aria-label="Acciones" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stake.wards.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={4}
+                        className="h-20 text-center text-sm text-muted-foreground"
+                      >
+                        Esta estaca aún no tiene barrios.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    stake.wards.map((ward) => (
+                      <TableRow key={ward.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedWardIds.has(ward.id)}
+                            onCheckedChange={(checked) =>
+                              handleWardSelection(ward.id, checked === true)
+                            }
+                            aria-label={"Seleccionar " + ward.name}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {ward.name}
+                        </TableCell>
+                        <TableCell>{ward.participantCount}</TableCell>
+                        <TableCell className="text-right">
+                          <WardFormDialog
+                            stakes={stakes}
+                            ward={{ ...ward, stakeId: stake.id }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
 
             <div className="mt-6 flex justify-end">

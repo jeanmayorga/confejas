@@ -1,6 +1,6 @@
 "use server";
 
-import { and, count, eq, max, ne, sql } from "drizzle-orm";
+import { and, count, eq, inArray, max, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { canManageParticipants } from "@/modules/auth/roles";
@@ -383,6 +383,71 @@ export async function mergeWardAction(
     return {
       success: true,
       message: `${source.name} se fusionó con ${target.name}. Se movieron ${participantCount} ${participantCount === 1 ? "participante" : "participantes"}.`,
+    };
+  } catch (error) {
+    return { success: false, message: getSafeError(error) };
+  }
+}
+
+export async function deleteWardsAction(
+  wardIds: number[],
+): Promise<UnitActionResult> {
+  try {
+    const session = await requireSession();
+    if (!canManageParticipants(session.user.role)) {
+      return {
+        success: false,
+        message: "No tienes permiso para eliminar barrios.",
+      };
+    }
+
+    if (!Array.isArray(wardIds) || wardIds.length === 0) {
+      return {
+        success: false,
+        message: "Selecciona al menos un barrio.",
+      };
+    }
+
+    const ids = Array.from(
+      new Set(wardIds.map((wardId) => positiveId(wardId, "barrio"))),
+    );
+    const selectedWards = await db
+      .select({ id: wards.id })
+      .from(wards)
+      .where(inArray(wards.id, ids));
+
+    if (selectedWards.length !== ids.length) {
+      return { success: false, message: "Uno de los barrios ya no existe." };
+    }
+
+    const [participantAssignment] = await db
+      .select({ value: count() })
+      .from(participants)
+      .where(inArray(participants.wardId, ids));
+
+    if ((participantAssignment?.value ?? 0) > 0) {
+      return {
+        success: false,
+        message: "No puedes eliminar barrios que todavía tienen participantes.",
+      };
+    }
+
+    const deletedWards = await db
+      .delete(wards)
+      .where(inArray(wards.id, ids))
+      .returning({ id: wards.id });
+
+    if (deletedWards.length !== ids.length) {
+      return { success: false, message: "Uno de los barrios ya no existe." };
+    }
+
+    revalidateUnitPaths();
+    return {
+      success: true,
+      message:
+        ids.length === 1
+          ? "Barrio eliminado correctamente."
+          : `${ids.length} barrios eliminados correctamente.`,
     };
   } catch (error) {
     return { success: false, message: getSafeError(error) };

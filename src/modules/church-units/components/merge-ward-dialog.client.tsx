@@ -39,25 +39,25 @@ type WardOption = {
 };
 
 type MergeWardDialogProps = {
-  ward: WardOption;
-  candidates: WardOption[];
+  wards: WardOption[];
   disabled?: boolean;
+  onSuccess?: () => void;
 };
 
 export function MergeWardDialog({
-  ward,
-  candidates,
+  wards,
   disabled = false,
+  onSuccess,
 }: MergeWardDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [targetWardId, setTargetWardId] = useState(
-    candidates[0]?.id.toString() ?? "",
-  );
+  const [keepWardId, setKeepWardId] = useState(wards[0]?.id.toString() ?? "");
   const [pending, startTransition] = useTransition();
-  const targetWard = candidates.find(
-    (candidate) => candidate.id.toString() === targetWardId,
+  const canMerge = wards.length === 2;
+  const keepWard = wards.find(
+    (ward) => ward.id.toString() === keepWardId,
   );
+  const sourceWard = wards.find((ward) => ward.id.toString() !== keepWardId);
 
   function handleOpenChange(nextOpen: boolean) {
     if (pending) {
@@ -65,19 +65,19 @@ export function MergeWardDialog({
     }
 
     if (nextOpen) {
-      setTargetWardId(candidates[0]?.id.toString() ?? "");
+      setKeepWardId(wards[0]?.id.toString() ?? "");
     }
 
     setOpen(nextOpen);
   }
 
   function handleMerge() {
-    if (!targetWard) {
+    if (!canMerge || !keepWard || !sourceWard) {
       return;
     }
 
     startTransition(async () => {
-      const result = await mergeWardAction(ward.id, targetWard.id);
+      const result = await mergeWardAction(sourceWard.id, keepWard.id);
 
       if (!result.success) {
         toast.error(result.message);
@@ -85,28 +85,30 @@ export function MergeWardDialog({
       }
 
       toast.success(result.message);
+      onSuccess?.();
       setOpen(false);
       router.refresh();
     });
   }
 
-  if (candidates.length === 0) {
+  if (!canMerge) {
     return (
       <Tooltip>
         <TooltipTrigger
           render={
             <Button
               type="button"
-              variant="ghost"
-              size="icon-sm"
+              variant="outline"
+              size="sm"
               disabled
-              aria-label={"No se puede fusionar " + ward.name}
+              aria-label="Fusionar barrios"
             >
               <HugeiconsIcon icon={MergeIcon} strokeWidth={2} />
+              Fusionar
             </Button>
           }
         />
-        <TooltipContent>No hay otro barrio en esta estaca</TooltipContent>
+        <TooltipContent>Selecciona exactamente dos barrios</TooltipContent>
       </Tooltip>
     );
   }
@@ -120,12 +122,13 @@ export function MergeWardDialog({
               render={
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="icon-sm"
+                  variant="outline"
+                  size="sm"
                   disabled={disabled}
-                  aria-label={"Fusionar " + ward.name}
+                  aria-label="Fusionar barrios"
                 >
                   <HugeiconsIcon icon={MergeIcon} strokeWidth={2} />
+                  Fusionar
                 </Button>
               }
             />
@@ -136,46 +139,53 @@ export function MergeWardDialog({
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Fusionar barrio</DialogTitle>
+          <DialogTitle>Fusionar barrios</DialogTitle>
           <DialogDescription>
-            Los participantes de {ward.name} se moverán al barrio que elijas y
-            este registro se eliminará.
+            Los participantes del barrio que no conserves se moverán al barrio
+            que elijas y ese registro se eliminará.
           </DialogDescription>
         </DialogHeader>
 
         <FieldGroup>
           <Field>
-            <FieldLabel htmlFor={"merge-ward-" + ward.id}>
+            <FieldLabel htmlFor="merge-ward-target">
               Conservar en
             </FieldLabel>
             <Select
-              value={targetWardId}
+              value={keepWardId}
               onValueChange={(nextWardId) => {
                 if (nextWardId) {
-                  setTargetWardId(nextWardId);
+                  setKeepWardId(nextWardId);
                 }
               }}
               disabled={pending}
             >
               <SelectTrigger
-                id={"merge-ward-" + ward.id}
+                id="merge-ward-target"
                 aria-label="Conservar en"
                 className="w-full"
               >
                 <SelectValue>
-                  {targetWard
-                    ? `${targetWard.name} (${targetWard.participantCount} ${targetWard.participantCount === 1 ? "participante" : "participantes"})`
+                  {keepWard
+                    ? keepWard.name +
+                      " (" +
+                      keepWard.participantCount +
+                      " " +
+                      (keepWard.participantCount === 1
+                        ? "participante"
+                        : "participantes") +
+                      ")"
                     : "Selecciona un barrio"}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent align="start" alignItemWithTrigger={false}>
-                {candidates.map((candidate) => (
+                {wards.map((ward) => (
                   <SelectItem
-                    key={candidate.id}
-                    value={candidate.id.toString()}
+                    key={ward.id}
+                    value={ward.id.toString()}
                   >
-                    {candidate.name} ({candidate.participantCount}{" "}
-                    {candidate.participantCount === 1
+                    {ward.name} ({ward.participantCount}{" "}
+                    {ward.participantCount === 1
                       ? "participante"
                       : "participantes"})
                   </SelectItem>
@@ -185,11 +195,13 @@ export function MergeWardDialog({
           </Field>
         </FieldGroup>
 
-        {targetWard ? (
+        {keepWard && sourceWard ? (
           <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
-            Se moverán {ward.participantCount}{" "}
-            {ward.participantCount === 1 ? "participante" : "participantes"} a{" "}
-            {targetWard.name}. Esta acción no se puede deshacer.
+            Se moverán {sourceWard.participantCount}{" "}
+            {sourceWard.participantCount === 1
+              ? "participante"
+              : "participantes"}{" "}
+            a {keepWard.name}. Esta acción no se puede deshacer.
           </p>
         ) : null}
 
@@ -205,11 +217,11 @@ export function MergeWardDialog({
           <Button
             type="button"
             variant="destructive"
-            disabled={pending || !targetWard}
+            disabled={pending || !keepWard || !sourceWard}
             onClick={handleMerge}
           >
             {pending ? <Spinner data-icon="inline-start" /> : null}
-            {pending ? "Fusionando…" : "Fusionar barrio"}
+            {pending ? "Fusionando…" : "Fusionar barrios"}
           </Button>
         </DialogFooter>
       </DialogContent>
