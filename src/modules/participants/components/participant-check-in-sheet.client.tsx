@@ -79,7 +79,7 @@ export function ParticipantCheckInSheet({
   saved = false,
 }: ParticipantCheckInSheetProps) {
   const router = useRouter();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(!saved);
   const confirmed = saved || Boolean(participant.checkedInAt);
   const action = completeParticipantCheckInFromSheet.bind(null, returnPath);
   const preferredName = participant.preferredName?.trim();
@@ -93,42 +93,44 @@ export function ParticipantCheckInSheet({
     const prefersReducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
+
+    const celebrationTimer = window.setTimeout(
+      () => {
+        if (canceled || prefersReducedMotion) {
+          return;
+        }
+
+        void import("canvas-confetti")
+          .then(({ default: confetti }) => {
+            if (!canceled) {
+              void confetti({
+                particleCount: 90,
+                spread: 70,
+                startVelocity: 32,
+                ticks: 150,
+                origin: { x: 0.5, y: 0.68 },
+                disableForReducedMotion: true,
+              });
+            }
+          })
+          .catch(() => undefined);
+      },
+      prefersReducedMotion ? 0 : 150,
+    );
     const resetTimer = window.setTimeout(
       () => {
         if (canceled) {
           return;
         }
 
-        setOpen(false);
         router.replace(returnPath, { scroll: false });
       },
       prefersReducedMotion ? 350 : 1300,
     );
 
-    void import("canvas-confetti")
-      .then(({ default: confetti }) => {
-        if (canceled) {
-          return;
-        }
-
-        const sheetWidth = Math.min(window.innerWidth, 576);
-
-        void confetti({
-          particleCount: 90,
-          spread: 70,
-          startVelocity: 32,
-          ticks: 150,
-          origin: {
-            x: 1 - sheetWidth / (window.innerWidth * 2),
-            y: 0.75,
-          },
-          disableForReducedMotion: true,
-        });
-      })
-      .catch(() => undefined);
-
     return () => {
       canceled = true;
+      window.clearTimeout(celebrationTimer);
       window.clearTimeout(resetTimer);
     };
   }, [returnPath, router, saved]);
