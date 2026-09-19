@@ -38,7 +38,7 @@ export function getCounselorCredentialsEmail({
           <p style="margin:0 0 8px;color:#64748b;font-size:14px">Conferencia JAS 2026</p>
           <h1 style="margin:0 0 24px;font-size:24px;line-height:1.25">Credenciales de acceso</h1>
           <p style="margin:0 0 16px;font-size:16px;line-height:1.5">Hola ${safeName},</p>
-          <p style="margin:0 0 24px;font-size:16px;line-height:1.5">Estas son tus credenciales para ingresar a la plataforma como consejero.</p>
+          <p style="margin:0 0 24px;font-size:16px;line-height:1.5">Con estas credenciales podrás ingresar a la plataforma como consejero, ver la agenda y consultar los participantes de tu compañía.</p>
           <div style="border-radius:12px;background:#f1f5f9;padding:20px">
             <p style="margin:0 0 12px;font-size:14px"><strong>Compañía:</strong> ${safeCompanyName}</p>
             <p style="margin:0 0 12px;font-size:14px"><strong>Email:</strong> ${safeEmail}</p>
