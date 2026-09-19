@@ -15,9 +15,12 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const requestedStatus = url.searchParams.get("status") ?? "";
-  const status = isParticipantStatus(requestedStatus)
-    ? requestedStatus
-    : "registered";
+  const status =
+    requestedStatus === "all"
+      ? ""
+      : isParticipantStatus(requestedStatus)
+        ? requestedStatus
+        : "registered";
   const result = await listParticipants({
     page: getPositiveInteger(url.searchParams.get("page"), 1),
     search: url.searchParams.get("query") ?? "",

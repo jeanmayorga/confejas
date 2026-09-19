@@ -143,6 +143,7 @@ export async function listParticipants({
     db
       .select({
         id: participants.id,
+        sourceRecordId: participants.sourceRecordId,
         firstNames: participants.firstNames,
         lastNames: participants.lastNames,
         preferredName: participants.preferredName,

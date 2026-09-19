@@ -77,9 +77,12 @@ function getDirectoryQueryString(queryState: {
   page: number;
 }) {
   const params = new URLSearchParams();
-  const status = isParticipantStatus(queryState.status)
-    ? queryState.status
-    : "registered";
+  const status =
+    queryState.status === "all"
+      ? "all"
+      : isParticipantStatus(queryState.status)
+        ? queryState.status
+        : "registered";
 
   params.set("status", status);
   params.set("page", String(queryState.page));
@@ -252,7 +255,7 @@ export function ParticipantDirectory({
         onLiveChange={setIsLive}
       />
 
-      <div className="flex min-h-[calc(100svh-12rem)] flex-1 flex-col overflow-hidden rounded-2xl border bg-card">
+      <div className="flex min-h-[calc(100svh-12rem)] flex-1 flex-col overflow-hidden rounded-lg border border-border/50 bg-card">
         <div className="flex-1">
           {participantsQuery.isPending ? (
             <ParticipantDirectoryLoading />

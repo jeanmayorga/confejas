@@ -64,6 +64,7 @@ import { cn } from "@/lib/utils";
 
 export type ParticipantTableRow = {
   id: string;
+  sourceRecordId: number | null;
   firstNames: string;
   lastNames: string;
   preferredName: string | null;
@@ -128,8 +129,8 @@ const participantRowClassNames = {
   registered: "",
   confirmed: "",
   arrived: "",
-  cancelled: "bg-participant-cancelled/10 hover:bg-participant-cancelled/20",
-  pending: "bg-participant-pending/10 hover:bg-participant-pending/20",
+  cancelled: "bg-participant-cancelled/5 hover:bg-participant-cancelled/10",
+  pending: "bg-participant-pending/5 hover:bg-participant-pending/10",
 } satisfies Record<ParticipantStatus, string>;
 
 function present(value: string | null, fallback = "No registrado") {
@@ -212,10 +213,10 @@ function ParticipantStatusControl({
       }}
     >
       <SelectTrigger
-        size="sm"
+        size="xs"
         aria-label={`Estado de ${participantName}`}
         className={cn(
-          "w-32 px-2.5 shadow-none",
+          "w-32 px-2.5 text-xs font-medium shadow-none [&>svg]:!size-3",
           participantStatusClassNames[status],
         )}
       >
@@ -397,8 +398,9 @@ export function ParticipantsTable({
       <Table className="min-w-[980px]">
         <TableHeader className="bg-muted/50">
           <TableRow>
-            <TableHead className="min-w-56">Nombres</TableHead>
+            <TableHead className="w-16">ID</TableHead>
             <TableHead className="min-w-28">Estado</TableHead>
+            <TableHead className="min-w-56">Participante</TableHead>
             <TableHead className="min-w-20">Edad</TableHead>
             <TableHead className="min-w-28">Barrio</TableHead>
             <TableHead className="min-w-32">Estaca</TableHead>
@@ -417,26 +419,14 @@ export function ParticipantsTable({
                 tabIndex={0}
                 aria-label={`Ver a ${participantName}`}
                 className={cn(
-                  "cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                  "h-9 cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                   participantRowClassNames[participant.status],
                 )}
                 onClick={() => openParticipant(participant)}
                 onKeyDown={(event) => handleRowKeyDown(event, participant)}
               >
-                <TableCell className="min-w-56">
-                  <div className="flex items-center gap-2">
-                    <Avatar size="sm" aria-hidden="true">
-                      <AvatarFallback className="font-medium">
-                        {getParticipantInitials(
-                          participant.firstNames,
-                          participant.lastNames,
-                        )}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 font-medium whitespace-normal">
-                      {participantName}
-                    </div>
-                  </div>
+                <TableCell className="w-16 text-muted-foreground">
+                  {participant.sourceRecordId ?? "—"}
                 </TableCell>
                 <TableCell
                   onClick={keepRowClosed}
@@ -450,6 +440,26 @@ export function ParticipantsTable({
                     disabled={updatingStatusIds.has(participant.id)}
                     onStatusChange={changeParticipantStatus}
                   />
+                </TableCell>
+                <TableCell className="min-w-56">
+                  <div className="flex items-center gap-2">
+                    <Avatar size="sm" aria-hidden="true">
+                      <AvatarFallback
+                        className={cn(
+                          "!text-[9px] font-medium",
+                          participantStatusClassNames[participant.status],
+                        )}
+                      >
+                        {getParticipantInitials(
+                          participant.firstNames,
+                          participant.lastNames,
+                        )}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 whitespace-nowrap">
+                      {participantName}
+                    </div>
+                  </div>
                 </TableCell>
                 <TableCell>
                   {participant.age === null

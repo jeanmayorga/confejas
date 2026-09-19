@@ -125,7 +125,6 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
         <Field data-disabled={isPending || undefined}>
           <Button
             type="submit"
-            size="xl"
             className="w-full"
             disabled={isPending}
           >

@@ -157,6 +157,14 @@ export function ParticipantDirectoryFilters({
     stakeId: queryState.stake,
     status: isParticipantStatus(queryState.status) ? queryState.status : "",
   };
+  const selectedStatusTab =
+    queryState.status === "all"
+      ? "all"
+      : selectedFilters.status || "registered";
+  const allStatusCount = Object.values(statusCounts).reduce(
+    (total, count) => total + count,
+    0,
+  );
 
   function updateFilter(
     field: Exclude<keyof ParticipantDirectoryFilterValues, "search">,
@@ -173,7 +181,10 @@ export function ParticipantDirectoryFilters({
     } else if (field === "stakeId") {
       void setQueryState({ stake: nextValue, page: 1 });
     } else {
-      void setQueryState({ status: nextValue, page: 1 });
+      void setQueryState({
+        status: value === "all" ? "all" : nextValue,
+        page: 1,
+      });
     }
   }
 
@@ -245,10 +256,22 @@ export function ParticipantDirectoryFilters({
         <div className="flex min-w-0 items-center justify-between gap-2 overflow-x-auto">
           <Tabs
             className="shrink-0"
-            value={selectedFilters.status || "registered"}
+            value={selectedStatusTab}
             onValueChange={(value) => updateFilter("status", value)}
           >
             <TabsList className="max-w-full overflow-x-auto">
+              <TabsTrigger value="all">
+                Todos
+                <Badge
+                  className={cn(
+                    "min-w-5 rounded-full bg-muted-foreground/30 px-1 text-muted-foreground",
+                    selectedStatusTab === "all" &&
+                      "bg-primary text-primary-foreground",
+                  )}
+                >
+                  {allStatusCount}
+                </Badge>
+              </TabsTrigger>
               {PARTICIPANT_STATUS_OPTIONS.map((option) => (
                 <TabsTrigger key={option.value} value={option.value}>
                   {option.label}
