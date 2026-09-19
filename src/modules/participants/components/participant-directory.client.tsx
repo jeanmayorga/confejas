@@ -13,13 +13,12 @@ import {
   useState,
   useTransition,
 } from "react";
-import Link from "next/link";
 import PlusSignIcon from "@hugeicons/core-free-icons/PlusSignIcon";
 import UserMultiple02Icon from "@hugeicons/core-free-icons/UserMultiple02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { PageHeader } from "@/components/page-header";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Empty,
   EmptyDescription,
@@ -29,9 +28,17 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
   Table,
   TableBody,
   TableCell,
+  TableFrame,
   TableHead,
   TableHeader,
   TableRow,
@@ -44,6 +51,7 @@ import {
   ParticipantsTable,
   type ParticipantTableRow,
 } from "@/modules/participants/components/participants-table.client";
+import { ParticipantForm } from "@/modules/participants/components/participant-form.client";
 import { isParticipantStatus, type ParticipantStatus } from "@/modules/participants/status";
 import {
   DEFAULT_PARTICIPANT_SORT,
@@ -71,7 +79,7 @@ type ParticipantDirectoryProps = {
   canManage: boolean;
   canDelete: boolean;
   companies: { id: string; name: string }[];
-  wards: { id: number; name: string }[];
+  wards: { id: number; name: string; stakeId: number }[];
   stakes: { id: number; name: string }[];
 };
 
@@ -116,7 +124,7 @@ function getDirectoryQueryString(queryState: {
 function ParticipantDirectoryLoading() {
   return (
     <Table className="min-w-[980px]" aria-label="Cargando participantes">
-      <TableHeader className="bg-muted/50">
+      <TableHeader>
         <TableRow>
           <TableHead className="w-16">ID</TableHead>
           <TableHead className="min-w-28">Estado</TableHead>
@@ -193,6 +201,7 @@ export function ParticipantDirectory({
       ward: parseAsString.withDefault(""),
       stake: parseAsString.withDefault(""),
       status: parseAsString.withDefault("registered"),
+      newParticipant: parseAsString.withDefault(""),
     },
     {
       history: "replace",
@@ -208,6 +217,7 @@ export function ParticipantDirectory({
     [setQueryState],
   );
   const queryString = getDirectoryQueryString(queryState);
+  const isCreateOpen = queryState.newParticipant === "1";
   const participantsQuery = useInfiniteQuery({
     queryKey: ["participants", queryString],
     queryFn: async ({ pageParam }) => {
@@ -252,6 +262,12 @@ export function ParticipantDirectory({
     void participantsQuery.refetch();
   }
 
+  function handleDataChanged() {
+    void queryClient.invalidateQueries({
+      queryKey: ["participants"],
+    });
+  }
+
   useEffect(() => {
     const loadMoreNode = loadMoreRef.current;
 
@@ -288,13 +304,13 @@ export function ParticipantDirectory({
         description="Una lista de todos los participantes"
         actions={
           canManage ? (
-            <Link
-              href="/dashboard/participants/new"
-              className={buttonVariants()}
+            <Button
+              type="button"
+              onClick={() => void setQueryState({ newParticipant: "1" })}
             >
               <HugeiconsIcon icon={PlusSignIcon} data-icon="inline-start" />
               Nuevo participante
-            </Link>
+            </Button>
           ) : null
         }
       />
@@ -314,7 +330,7 @@ export function ParticipantDirectory({
         onQueryStateChange={updateQueryState}
       />
 
-      <div className="flex flex-col overflow-hidden rounded-lg border border-border/50 bg-card">
+      <TableFrame>
         <div className="flex-1">
           {participantsQuery.isPending ? (
             <ParticipantDirectoryLoading />
@@ -370,13 +386,13 @@ export function ParticipantDirectory({
                     Ver inscritos
                   </button>
                 ) : canManage ? (
-                  <Link
-                    href="/dashboard/participants/new"
-                    className={buttonVariants()}
+                  <Button
+                    type="button"
+                    onClick={() => void setQueryState({ newParticipant: "1" })}
                   >
                     <HugeiconsIcon icon={PlusSignIcon} data-icon="inline-start" />
                     Nuevo participante
-                  </Link>
+                  </Button>
                 ) : null}
               </EmptyHeader>
             </Empty>
@@ -389,11 +405,7 @@ export function ParticipantDirectory({
                 isLoadingMore={isFetchingNextPage}
                 sort={normalizeParticipantSort(queryState.sort)}
                 onSortChange={(sort) => void setQueryState({ sort })}
-                onDataChanged={() =>
-                  void queryClient.invalidateQueries({
-                    queryKey: ["participants"],
-                  })
-                }
+                onDataChanged={handleDataChanged}
               />
               {hasNextPage ? (
                 <div ref={loadMoreRef} className="h-1" aria-hidden="true" />
@@ -401,7 +413,42 @@ export function ParticipantDirectory({
             </div>
           )}
         </div>
-      </div>
+      </TableFrame>
+
+      <Sheet
+        open={isCreateOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            void setQueryState({ newParticipant: null });
+          }
+        }}
+      >
+        <SheetContent
+          side="right"
+          className="data-[side=right]:w-full data-[side=right]:sm:max-w-2xl"
+        >
+          <SheetHeader className="pr-16">
+            <SheetTitle>Nuevo participante</SheetTitle>
+            <SheetDescription>
+              Registra su información personal, de la conferencia y de salud.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
+            <ParticipantForm
+              companies={companies}
+              wards={wards}
+              stakes={stakes}
+              lodgingBuildings={[]}
+              presentation="sheet"
+              onCancel={() => void setQueryState({ newParticipant: null })}
+              onSuccess={() => {
+                void setQueryState({ newParticipant: null });
+                handleDataChanged();
+              }}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

@@ -18,10 +18,6 @@ import {
   isCompanyCapacityGuardError,
 } from "@/modules/companies/server/capacity";
 import {
-  COMPANY_PARTICIPANT_LIMIT,
-  COMPANY_PARTICIPANT_SEX_LIMIT,
-} from "@/modules/companies/distribution";
-import {
   listCompanyOptions,
   validateCompanyParticipantAssignment,
 } from "@/modules/companies/server/queries";
@@ -240,7 +236,7 @@ function parseParticipantForm(formData: FormData) {
 
 function safeError(error: unknown) {
   if (isCompanyCapacityGuardError(error)) {
-    return `La compañía alcanzó el máximo de ${COMPANY_PARTICIPANT_LIMIT} participantes o de ${COMPANY_PARTICIPANT_SEX_LIMIT} por sexo. Actualiza la página e inténtalo nuevamente.`;
+    return "La compañía alcanzó su límite de participantes. Actualiza la página e inténtalo nuevamente.";
   }
 
   const databaseError = error as {

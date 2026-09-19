@@ -4,7 +4,6 @@ import { FormEvent, useState } from "react";
 import EyeIcon from "@hugeicons/core-free-icons/EyeIcon";
 import EyeOffIcon from "@hugeicons/core-free-icons/EyeOffIcon";
 import LockPasswordIcon from "@hugeicons/core-free-icons/LockPasswordIcon";
-import Loading03Icon from "@hugeicons/core-free-icons/Loading03Icon";
 import Login02Icon from "@hugeicons/core-free-icons/Login02Icon";
 import Mail02Icon from "@hugeicons/core-free-icons/Mail02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -12,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Field,
   FieldGroup,
@@ -129,13 +129,7 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
             disabled={isPending}
           >
             {isPending ? (
-              <HugeiconsIcon
-                icon={Loading03Icon}
-                strokeWidth={2}
-                data-icon="inline-start"
-                aria-hidden
-                className="size-4 animate-spin"
-              />
+              <Spinner data-icon="inline-start" />
             ) : (
               <HugeiconsIcon
                 icon={Login02Icon}

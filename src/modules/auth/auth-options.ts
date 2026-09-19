@@ -8,7 +8,7 @@ export const authOptions = {
   emailAndPassword: {
     enabled: true,
     disableSignUp: true,
-    minPasswordLength: 12,
+    minPasswordLength: 8,
     maxPasswordLength: 128,
   },
   plugins: [

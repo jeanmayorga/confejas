@@ -21,6 +21,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFrame,
   TableHead,
   TableHeader,
   TableRow,
@@ -205,7 +206,7 @@ export function StakeEditSheet({ stake, stakes }: StakeEditSheetProps) {
               </div>
             ) : null}
 
-            <div className="mt-4 overflow-hidden rounded-lg border">
+            <TableFrame className="mt-4">
               <Table className="[&_tr]:h-9 [&_th]:h-9 [&_th]:py-0 [&_td]:h-9 [&_td]:py-0">
                 <TableHeader>
                   <TableRow>
@@ -261,7 +262,7 @@ export function StakeEditSheet({ stake, stakes }: StakeEditSheetProps) {
                   )}
                 </TableBody>
               </Table>
-            </div>
+            </TableFrame>
 
             <div className="mt-6 flex justify-end">
               <DeleteStakeButton

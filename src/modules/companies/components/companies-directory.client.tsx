@@ -1,23 +1,18 @@
 "use client";
 
+import { useDeferredValue, useEffect, useRef, useState } from "react";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
-import Delete02Icon from "@hugeicons/core-free-icons/Delete02Icon";
-import FemaleSymbolIcon from "@hugeicons/core-free-icons/FemaleSymbolIcon";
-import MaleSymbolIcon from "@hugeicons/core-free-icons/MaleSymbolIcon";
-import UserEdit01Icon from "@hugeicons/core-free-icons/UserEdit01Icon";
-import UserRemove01Icon from "@hugeicons/core-free-icons/UserRemove01Icon";
-import ArrowDataTransferHorizontalIcon from "@hugeicons/core-free-icons/ArrowDataTransferHorizontalIcon";
+import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
-import Link from "next/link";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -28,37 +23,38 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
   TableCell,
+  TableFrame,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Progress, ProgressTrack } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { getParticipantInitials } from "@/modules/participants/components/participant-details.client";
 import {
   getParticipantStatusLabel,
   type ParticipantStatus,
 } from "@/modules/participants/status";
-import { CompanyFormDialog } from "@/modules/companies/components/company-form-dialog.client";
-import {
-  CompanyParticipantManagement,
-  useCompanyParticipantManagement,
-} from "@/modules/companies/components/company-participant-management.client";
+import { getCompanyDisplayName } from "@/modules/companies/company-label";
+import { CompanyCapacityDialog } from "@/modules/companies/components/company-capacity-dialog.client";
+import { CreateCompanyButton } from "@/modules/companies/components/create-company-button.client";
 import { DeleteCompanyButton } from "@/modules/companies/components/delete-company-button.client";
+import { CompanyDistributionDialog } from "@/modules/companies/components/company-distribution-dialog.client";
 import {
-  COMPANY_PARTICIPANT_LIMIT as COMPANY_CAPACITY,
-  COMPANY_PARTICIPANT_SEX_LIMIT as COMPANY_SEX_CAPACITY,
   FEMALE_PARTICIPANT_SEX,
   MALE_PARTICIPANT_SEX,
+  type DistributionCapacity,
 } from "@/modules/companies/distribution";
 import type {
   CompanyListItem,
@@ -70,6 +66,16 @@ export type CompanyDirectoryItem = CompanyListItem;
 type CompaniesDirectoryProps = {
   companies: CompanyDirectoryItem[];
   canDelete: boolean;
+  capacity: DistributionCapacity;
+};
+
+type UnassignedParticipantsPage = {
+  rows: CompanyParticipant[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  search: string;
 };
 
 const participantStatusClassNames = {
@@ -113,6 +119,7 @@ function getParticipantSexLabel(value: string | null) {
 export function CompaniesDirectory({
   companies,
   canDelete,
+  capacity,
 }: CompaniesDirectoryProps) {
   if (companies.length === 0) {
     return (
@@ -127,25 +134,283 @@ export function CompaniesDirectory({
           </p>
         </EmptyHeader>
         <EmptyContent>
-          <CompanyFormDialog />
+          <CreateCompanyButton />
         </EmptyContent>
       </Empty>
     );
   }
 
   return (
-    <CompanyParticipantManagement companies={companies} canDelete={canDelete}>
-      <div className="flex flex-col gap-5">
+    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="flex min-w-0 flex-col gap-5">
         {companies.map((company, index) => (
           <CompanyCard
             key={company.id}
             company={company}
             position={index + 1}
             canDelete={canDelete}
+            capacity={capacity}
           />
         ))}
       </div>
-    </CompanyParticipantManagement>
+      <UnassignedParticipantsCard capacity={capacity} />
+    </div>
+  );
+}
+
+function UnassignedParticipantsCard({
+  capacity,
+}: {
+  capacity: DistributionCapacity;
+}) {
+  const titleId = "unassigned-participants-title";
+  const queryClient = useQueryClient();
+  const listViewportRef = useRef<HTMLDivElement>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
+  const unassignedParticipantsQuery = useInfiniteQuery({
+    queryKey: ["company-unassigned-participants", deferredSearch],
+    queryFn: async ({ pageParam }) => {
+      const params = new URLSearchParams({ page: String(pageParam) });
+
+      if (deferredSearch) {
+        params.set("query", deferredSearch);
+      }
+
+      const response = await fetch(
+        `/api/companies/unassigned-participants?${params}`,
+        { cache: "no-store" },
+      );
+
+      if (!response.ok) {
+        throw new Error("No pudimos cargar los participantes sin compañía.");
+      }
+
+      return (await response.json()) as UnassignedParticipantsPage;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
+  });
+  const participants =
+    unassignedParticipantsQuery.data?.pages.flatMap((page) => page.rows) ?? [];
+  const firstPage = unassignedParticipantsQuery.data?.pages[0];
+  const total = firstPage?.total ?? 0;
+  const { fetchNextPage, hasNextPage, isFetchingNextPage } =
+    unassignedParticipantsQuery;
+
+  useEffect(() => {
+    listViewportRef.current?.scrollTo({ top: 0 });
+  }, [deferredSearch]);
+
+  useEffect(() => {
+    const listViewport = listViewportRef.current;
+    const loadMoreNode = loadMoreRef.current;
+
+    if (
+      !listViewport ||
+      !loadMoreNode ||
+      !hasNextPage ||
+      isFetchingNextPage
+    ) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void fetchNextPage();
+        }
+      },
+      { root: listViewport, rootMargin: "0px 0px 240px" },
+    );
+
+    observer.observe(loadMoreNode);
+
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+  return (
+    <aside className="self-start xl:sticky xl:top-6" aria-labelledby={titleId}>
+      <Card className="max-h-[calc(100dvh-3rem)] gap-0 py-3">
+        <CardHeader className="border-b !pb-2">
+          <CardTitle id={titleId} className="text-lg">
+            Participantes sin compañía
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent className="border-b py-3">
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap gap-2">
+              <CompanyDistributionDialog
+                capacity={capacity}
+                onDistributed={() =>
+                  queryClient.invalidateQueries({
+                    queryKey: ["company-unassigned-participants"],
+                  })
+                }
+              />
+              <CompanyCapacityDialog capacity={capacity} />
+            </div>
+            <InputGroup>
+              <InputGroupAddon>
+                <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
+              </InputGroupAddon>
+              <InputGroupInput
+                type="search"
+                placeholder="Buscar participante"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                aria-label="Buscar participantes sin compañía"
+              />
+            </InputGroup>
+          </div>
+        </CardContent>
+
+        {unassignedParticipantsQuery.isPending ? (
+          <CardContent className="min-h-0 flex-1 p-0">
+            <TableFrame className="rounded-none border-0">
+              <Table className="min-w-[440px] table-fixed">
+                <colgroup>
+                  <col className="w-24" />
+                  <col />
+                  <col className="w-[76px]" />
+                  <col className="w-20" />
+                </colgroup>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Nombres</TableHead>
+                    <TableHead>Edad</TableHead>
+                    <TableHead>Sexo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.from({ length: 8 }, (_, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <Skeleton className="h-5 w-16 rounded-full" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="size-6 rounded-full" />
+                          <Skeleton className="h-3 w-32" />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-3 w-12" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-14 rounded-full" />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableFrame>
+          </CardContent>
+        ) : unassignedParticipantsQuery.isError ? (
+          <CardContent className="flex min-h-40 flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground">
+            No pudimos cargar los participantes sin compañía.
+          </CardContent>
+        ) : participants.length > 0 ? (
+          <CardContent className="flex min-h-0 flex-1 flex-col p-0">
+            <div
+              ref={listViewportRef}
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+            >
+              <TableFrame className="rounded-none border-0">
+                <Table className="min-w-[440px] table-fixed">
+                  <colgroup>
+                    <col className="w-24" />
+                    <col />
+                    <col className="w-[76px]" />
+                    <col className="w-20" />
+                  </colgroup>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Estado</TableHead>
+                      <TableHead>Nombres</TableHead>
+                      <TableHead>Edad</TableHead>
+                      <TableHead>Sexo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {participants.map((participant) => (
+                      <TableRow key={participant.id}>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "border-transparent",
+                              participantStatusClassNames[participant.status],
+                            )}
+                          >
+                            {getParticipantStatusLabel(participant.status)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-0 overflow-hidden">
+                          <div className="flex items-center gap-2">
+                            <Avatar size="sm" aria-hidden="true">
+                              <AvatarFallback
+                                className={cn(
+                                  "!text-[9px] font-medium",
+                                  participantStatusClassNames[participant.status],
+                                )}
+                              >
+                                {getParticipantInitials(
+                                  participant.firstNames,
+                                  participant.lastNames,
+                                )}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="min-w-0 truncate font-medium">
+                              {getParticipantName(participant)}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{getParticipantAge(participant.age)}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {getParticipantSexLabel(participant.sex)}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {isFetchingNextPage ? (
+                      <TableRow>
+                        <TableCell colSpan={4}>
+                          <Skeleton className="h-3 w-28" />
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </TableBody>
+                </Table>
+              </TableFrame>
+              {hasNextPage ? (
+                <div ref={loadMoreRef} className="h-px" aria-hidden="true" />
+              ) : null}
+            </div>
+          </CardContent>
+        ) : (
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            {deferredSearch
+              ? "No encontramos participantes sin compañía."
+              : "No hay participantes sin compañía."}
+          </CardContent>
+        )}
+
+        <CardFooter className="justify-between border-t !pt-3">
+          <span className="font-medium">Total de participantes</span>
+          <Badge variant="secondary">
+            {unassignedParticipantsQuery.isPending
+              ? "…"
+              : total.toLocaleString("es-EC")}
+          </Badge>
+        </CardFooter>
+      </Card>
+    </aside>
   );
 }
 
@@ -153,84 +418,78 @@ function CompanyCard({
   company,
   position,
   canDelete,
+  capacity,
 }: {
   company: CompanyDirectoryItem;
   position: number;
   canDelete: boolean;
+  capacity: DistributionCapacity;
 }) {
-  const management = useCompanyParticipantManagement();
   const titleId = `company-${company.id}-title`;
+  const companyLabel = getCompanyDisplayName(company.name, position);
 
   return (
-    <Card aria-labelledby={titleId} aria-busy={management.busy}>
-      <CardHeader className="has-data-[slot=card-action]:grid-cols-1 border-b sm:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
+    <Card className="py-3" aria-labelledby={titleId}>
+      <CardHeader className="border-b !pb-2">
         <CardTitle id={titleId} className="text-lg">
-          {position}. {company.name}
+          {companyLabel}
         </CardTitle>
-        <CardDescription>
-          Cupo máximo: {COMPANY_CAPACITY} participantes, hasta{" "}
-          {COMPANY_SEX_CAPACITY} mujeres y {COMPANY_SEX_CAPACITY} hombres.
-        </CardDescription>
-        <CardAction className="col-start-1 row-start-3 row-span-1 mt-2 flex flex-wrap items-center justify-start gap-1 sm:col-start-2 sm:row-start-1 sm:row-span-2 sm:mt-0 sm:justify-end sm:justify-self-end">
-          <CompanyFormDialog company={company} disabled={management.busy} />
+        <CardAction className="row-span-1 self-center">
           {canDelete ? (
-            <DeleteCompanyButton company={company} disabled={management.busy} />
+            <DeleteCompanyButton
+              company={company}
+              label={companyLabel}
+            />
           ) : null}
         </CardAction>
       </CardHeader>
 
       <CardContent className="flex flex-col gap-5">
-        <CapacityBadges
+        <CapacityProgress
           total={company.participantCount}
           female={company.femaleCount}
           male={company.maleCount}
           unsupported={company.unsupportedSexCount}
+          capacity={capacity}
         />
 
         <section aria-labelledby={`${titleId}-counselors`}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 id={`${titleId}-counselors`} className="text-sm font-semibold">
-              Consejeros
-            </h3>
-            <Badge
-              variant={company.counselorCount === 2 ? "default" : "secondary"}
-            >
-              {company.counselorCount} de 2 habituales
-            </Badge>
-          </div>
+          <h3 id={`${titleId}-counselors`} className="text-sm font-semibold">
+            Consejeros
+          </h3>
 
           {company.counselors.length > 0 ? (
-            <Table className="mt-3 min-w-[420px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Consejero</TableHead>
-                  <TableHead>Estaca</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-              {company.counselors.map((counselor) => (
-                <TableRow
-                  key={counselor.id}
-                >
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Avatar size="sm" aria-hidden="true">
-                        <AvatarFallback className="bg-muted text-[9px] font-medium text-muted-foreground">
-                          {getCounselorInitials(counselor.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="min-w-0 break-words font-medium">
-                        {counselor.name}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {counselor.stakeName ?? "Sin estaca"}
-                  </TableCell>
-                </TableRow>
-              ))}
-              </TableBody>
-            </Table>
+            <TableFrame className="mt-3">
+              <Table className="min-w-[420px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Consejero</TableHead>
+                    <TableHead>Estaca</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {company.counselors.map((counselor) => (
+                    <TableRow key={counselor.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar size="sm" aria-hidden="true">
+                            <AvatarFallback className="bg-muted text-[9px] font-medium text-muted-foreground">
+                              {getCounselorInitials(counselor.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="min-w-0 break-words font-medium">
+                            {counselor.name}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {counselor.stakeName ?? "Sin estaca"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableFrame>
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">
               Sin consejeros asignados.
@@ -241,33 +500,46 @@ function CompanyCard({
         <Separator />
 
         <section aria-labelledby={`${titleId}-participants`}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 id={`${titleId}-participants`} className="text-sm font-semibold">
-              Participantes
-            </h3>
-            <Badge
-              variant={company.participantCount > 0 ? "default" : "secondary"}
-            >
-              {company.participantCount.toLocaleString("es-EC")}
-            </Badge>
-          </div>
+          <h3 id={`${titleId}-participants`} className="text-sm font-semibold">
+            Participantes
+          </h3>
 
           {company.participants.length > 0 ? (
-            <Table className="mt-3 min-w-[900px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombres</TableHead>
-                  <TableHead>Edad</TableHead>
-                  <TableHead>Sexo</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Barrio</TableHead>
-                  <TableHead>Estaca</TableHead>
-                  <TableHead className="text-left">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {company.participants.map((participant) => (
+            <TableFrame className="mt-3">
+              <Table className="min-w-[580px] table-fixed">
+                <colgroup>
+                  <col className="w-12" />
+                  <col className="w-24" />
+                  <col />
+                  <col className="w-[76px]" />
+                  <col className="w-20" />
+                </colgroup>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-center">#</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Nombres</TableHead>
+                    <TableHead>Edad</TableHead>
+                    <TableHead>Sexo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                {company.participants.map((participant, index) => (
                   <TableRow key={participant.id}>
+                    <TableCell className="text-center tabular-nums text-muted-foreground">
+                      {index + 1}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "border-transparent",
+                          participantStatusClassNames[participant.status],
+                        )}
+                      >
+                        {getParticipantStatusLabel(participant.status)}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="max-w-0 overflow-hidden">
                       <div className="flex items-center gap-2">
                         <Avatar size="sm" aria-hidden="true">
@@ -283,16 +555,11 @@ function CompanyCard({
                             )}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="min-w-0 truncate whitespace-nowrap">
-                          <span className="font-medium">
-                            {getParticipantName(participant)}
-                          </span>
-                          {participant.preferredName ? (
-                            <span className="ml-1 text-xs text-muted-foreground">
-                              ({participant.preferredName})
+                          <div className="min-w-0 truncate whitespace-nowrap">
+                            <span className="font-medium">
+                              {getParticipantName(participant)}
                             </span>
-                          ) : null}
-                        </div>
+                          </div>
                       </div>
                     </TableCell>
                     <TableCell>{getParticipantAge(participant.age)}</TableCell>
@@ -301,122 +568,11 @@ function CompanyCard({
                         {getParticipantSexLabel(participant.sex)}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "border-transparent",
-                          participantStatusClassNames[participant.status],
-                        )}
-                      >
-                        {getParticipantStatusLabel(participant.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{participant.wardName}</TableCell>
-                    <TableCell>{participant.stakeName}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-start gap-1">
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                disabled={management.busy}
-                                aria-label={`Mover ${getParticipantName(participant)} a otra compañía`}
-                                onClick={() =>
-                                  management.openMove([participant.id])
-                                }
-                              />
-                            }
-                          >
-                            <HugeiconsIcon
-                              icon={ArrowDataTransferHorizontalIcon}
-                              strokeWidth={2}
-                              data-icon="inline-start"
-                            />
-                            Mover
-                          </TooltipTrigger>
-                          <TooltipContent>Mover a otra compañía</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon-sm"
-                                disabled={management.busy}
-                                aria-label={`Quitar a ${getParticipantName(participant)} de ${company.name}`}
-                                onClick={() =>
-                                  management.openRemove([participant.id])
-                                }
-                              />
-                            }
-                          >
-                            <HugeiconsIcon
-                              icon={UserRemove01Icon}
-                              strokeWidth={2}
-                            />
-                          </TooltipTrigger>
-                          <TooltipContent>Quitar de la compañía</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                render={
-                                  <Link
-                                    href={`/dashboard/participants/${participant.id}/edit`}
-                                  />
-                                }
-                                variant="ghost"
-                                size="icon-sm"
-                                disabled={management.busy}
-                                aria-label={`Editar ${getParticipantName(participant)}`}
-                              />
-                            }
-                          >
-                            <HugeiconsIcon
-                              icon={UserEdit01Icon}
-                              strokeWidth={2}
-                            />
-                          </TooltipTrigger>
-                          <TooltipContent>Editar participante</TooltipContent>
-                        </Tooltip>
-                        {canDelete ? (
-                          <Tooltip>
-                            <TooltipTrigger
-                              render={
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="icon-sm"
-                                  disabled={management.busy}
-                                  aria-label={`Eliminar permanentemente a ${getParticipantName(participant)}`}
-                                  onClick={() =>
-                                    management.openDelete([participant.id])
-                                  }
-                                />
-                              }
-                            >
-                              <HugeiconsIcon
-                                icon={Delete02Icon}
-                                strokeWidth={2}
-                              />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              Eliminar permanentemente
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : null}
-                      </div>
-                    </TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
-            </Table>
+                </TableBody>
+              </Table>
+            </TableFrame>
           ) : (
             <Empty className="min-h-40 p-6">
               <EmptyHeader>
@@ -433,67 +589,80 @@ function CompanyCard({
   );
 }
 
-function CapacityBadges({
+function CapacityProgress({
   total,
   female,
   male,
   unsupported = 0,
+  capacity,
 }: {
   total: number;
   female: number;
   male: number;
   unsupported?: number;
+  capacity: DistributionCapacity;
 }) {
+  const totalCapacity = capacity.female + capacity.male;
+  const assigned = female + male + unsupported;
+  const progress = totalCapacity > 0
+    ? Math.min(100, (assigned / totalCapacity) * 100)
+    : 0;
+  const maleProgress = totalCapacity > 0
+    ? Math.min(100, (male / totalCapacity) * 100)
+    : 0;
+  const femaleProgress = totalCapacity > 0
+    ? Math.min(100 - maleProgress, (female / totalCapacity) * 100)
+    : 0;
+
+  if (assigned === 0) {
+    return (
+      <Progress value={0} renderTrack={false} aria-label="Sin participantes asignados">
+        <ProgressTrack className="h-6 text-xs font-bold">
+          <span className="flex h-full w-1/2 items-center bg-muted px-3 text-muted-foreground">
+            Hombres 0/{capacity.male}
+          </span>
+          <span className="flex h-full w-1/2 items-center border-l bg-muted px-3 text-muted-foreground">
+            Mujeres 0/{capacity.female}
+          </span>
+        </ProgressTrack>
+      </Progress>
+    );
+  }
+
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Badge
-        variant={
-          total > COMPANY_CAPACITY
-            ? "destructive"
-            : total === COMPANY_CAPACITY
-              ? "default"
-              : "secondary"
-        }
-      >
-        Total {total.toLocaleString("es-EC")}/{COMPANY_CAPACITY}
-      </Badge>
-      <Badge
-        variant={
-          female > COMPANY_SEX_CAPACITY
-            ? "destructive"
-            : female === COMPANY_SEX_CAPACITY
-              ? "default"
-              : "outline"
-        }
-      >
-        <HugeiconsIcon
-          icon={FemaleSymbolIcon}
-          strokeWidth={2}
-          data-icon="inline-start"
+    <Progress
+      value={progress}
+      renderTrack={false}
+      aria-label={`Ocupación de ${total.toLocaleString("es-EC")} participantes: ${male.toLocaleString("es-EC")} hombres de ${capacity.male} y ${female.toLocaleString("es-EC")} mujeres de ${capacity.female}`}
+    >
+      <ProgressTrack className="h-6">
+        <span
+          aria-hidden="true"
+          className="h-full shrink-0 bg-primary transition-[width]"
+          style={{ width: `${maleProgress}%` }}
         />
-        Mujeres {female.toLocaleString("es-EC")}/{COMPANY_SEX_CAPACITY}
-      </Badge>
-      <Badge
-        variant={
-          male > COMPANY_SEX_CAPACITY
-            ? "destructive"
-            : male === COMPANY_SEX_CAPACITY
-              ? "default"
-              : "outline"
-        }
-      >
-        <HugeiconsIcon
-          icon={MaleSymbolIcon}
-          strokeWidth={2}
-          data-icon="inline-start"
+        <span
+          aria-hidden="true"
+          className="h-full shrink-0 bg-company-female transition-[width]"
+          style={{ width: `${femaleProgress}%` }}
         />
-        Hombres {male.toLocaleString("es-EC")}/{COMPANY_SEX_CAPACITY}
-      </Badge>
+        <div className="pointer-events-none absolute inset-0 text-xs font-bold text-primary-foreground">
+          <span className="absolute top-1/2 left-3 -translate-y-1/2 whitespace-nowrap">
+            Hombres {male.toLocaleString("es-EC")}/{capacity.male}
+          </span>
+          <span
+            className="absolute top-1/2 -translate-y-1/2 whitespace-nowrap"
+            style={{ left: `calc(${maleProgress}% + 0.75rem)` }}
+          >
+            Mujeres {female.toLocaleString("es-EC")}/{capacity.female}
+          </span>
+        </div>
+      </ProgressTrack>
       {unsupported > 0 ? (
-        <Badge variant="secondary">
+        <span className="text-sm text-muted-foreground">
           Otro o sin registrar {unsupported.toLocaleString("es-EC")}
-        </Badge>
+        </span>
       ) : null}
-    </div>
+    </Progress>
   );
 }

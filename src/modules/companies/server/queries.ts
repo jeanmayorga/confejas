@@ -1,6 +1,17 @@
 import "server-only";
 
-import { and, asc, count, eq, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  ilike,
+  isNotNull,
+  isNull,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import { stakes, wards } from "@/modules/church-units/server/schema";
 import { counselors } from "@/modules/counselors/server/schema";
@@ -9,8 +20,6 @@ import type { ParticipantStatus } from "@/modules/participants/status";
 import { db } from "@/server/db";
 
 import {
-  COMPANY_PARTICIPANT_LIMIT,
-  COMPANY_PARTICIPANT_SEX_LIMIT,
   compareCompanyNames,
   FEMALE_PARTICIPANT_SEX,
   isSupportedParticipantSex,
@@ -18,6 +27,7 @@ import {
   type ParticipantSexCounts,
 } from "../distribution";
 import { companies } from "./schema";
+import { getCompanyCapacity } from "./settings";
 
 export type CompanyParticipant = {
   id: string;
@@ -94,6 +104,8 @@ export type CompanyDistributionOverview = {
   companies: Awaited<ReturnType<typeof listCompaniesForDistribution>>;
 };
 
+export const UNASSIGNED_PARTICIPANTS_PAGE_SIZE = 50;
+
 const companyParticipantSelection = {
   id: participants.id,
   firstNames: participants.firstNames,
@@ -140,7 +152,8 @@ function isUuid(value: unknown): value is string {
 }
 
 export async function listCompanies(): Promise<CompanyListItem[]> {
-  const [companyRows, counselorRows, participantRows] = await Promise.all([
+  const [capacity, companyRows, counselorRows, participantRows] = await Promise.all([
+    getCompanyCapacity(),
     db
       .select({
         id: companies.id,
@@ -221,15 +234,15 @@ export async function listCompanies(): Promise<CompanyListItem[]> {
         unsupportedSexCount: counts.unsupportedSex,
         remainingCapacity: Math.max(
           0,
-          COMPANY_PARTICIPANT_LIMIT - counts.total,
+          capacity.female + capacity.male - counts.total,
         ),
         remainingFemaleCapacity: Math.max(
           0,
-          COMPANY_PARTICIPANT_SEX_LIMIT - counts.female,
+          capacity.female - counts.female,
         ),
         remainingMaleCapacity: Math.max(
           0,
-          COMPANY_PARTICIPANT_SEX_LIMIT - counts.male,
+          capacity.male - counts.male,
         ),
         counselors: assignedCounselors,
         counselorCount: assignedCounselors.length,
@@ -312,6 +325,67 @@ export async function listUnassignedParticipants(): Promise<
       asc(participants.lastNames),
       asc(participants.id),
     );
+}
+
+export async function listUnassignedParticipantsPage({
+  page = 1,
+  search = "",
+}: {
+  page?: number;
+  search?: string;
+}) {
+  const safePage = Number.isSafeInteger(page) && page > 0 ? page : 1;
+  const safeSearch = search.trim().slice(0, 100);
+  const searchPattern = `%${safeSearch}%`;
+  const searchFilter = safeSearch
+    ? or(
+        ilike(participants.firstNames, searchPattern),
+        ilike(participants.lastNames, searchPattern),
+        ilike(
+          sql`concat_ws(' ', ${participants.firstNames}, ${participants.lastNames})`,
+          searchPattern,
+        ),
+        ilike(wards.name, searchPattern),
+        ilike(stakes.name, searchPattern),
+      )
+    : undefined;
+  const filters = and(isNull(participants.companyId), searchFilter);
+  const offset = (safePage - 1) * UNASSIGNED_PARTICIPANTS_PAGE_SIZE;
+
+  const [rows, [totalRow]] = await Promise.all([
+    db
+      .select(companyParticipantSelection)
+      .from(participants)
+      .innerJoin(wards, eq(participants.wardId, wards.id))
+      .innerJoin(stakes, eq(wards.stakeId, stakes.id))
+      .where(filters)
+      .orderBy(
+        asc(participants.firstNames),
+        asc(participants.lastNames),
+        asc(participants.id),
+      )
+      .limit(UNASSIGNED_PARTICIPANTS_PAGE_SIZE)
+      .offset(offset),
+    db
+      .select({ value: count() })
+      .from(participants)
+      .innerJoin(wards, eq(participants.wardId, wards.id))
+      .innerJoin(stakes, eq(wards.stakeId, stakes.id))
+      .where(filters),
+  ]);
+  const total = totalRow?.value ?? 0;
+
+  return {
+    rows,
+    page: safePage,
+    pageSize: UNASSIGNED_PARTICIPANTS_PAGE_SIZE,
+    total,
+    totalPages: Math.max(
+      1,
+      Math.ceil(total / UNASSIGNED_PARTICIPANTS_PAGE_SIZE),
+    ),
+    search: safeSearch,
+  };
 }
 
 export async function listAllParticipants(): Promise<CompanyParticipant[]> {
@@ -476,10 +550,10 @@ export async function validateCompanyParticipantAssignment({
     };
   }
 
-  const state = await getCompanyCapacityState(
-    companyId,
-    excludedParticipantId,
-  );
+  const [state, capacity] = await Promise.all([
+    getCompanyCapacityState(companyId, excludedParticipantId),
+    getCompanyCapacity(),
+  ]);
 
   if (!state) {
     return {
@@ -489,11 +563,11 @@ export async function validateCompanyParticipantAssignment({
     };
   }
 
-  if (state.counts.total >= COMPANY_PARTICIPANT_LIMIT) {
+  if (state.counts.total >= capacity.female + capacity.male) {
     return {
       success: false,
       reason: "company_full",
-      message: `La compañía ya alcanzó el máximo de ${COMPANY_PARTICIPANT_LIMIT} participantes.`,
+      message: `La compañía ya alcanzó el máximo de ${capacity.female + capacity.male} participantes.`,
     };
   }
 
@@ -502,11 +576,14 @@ export async function validateCompanyParticipantAssignment({
       ? state.counts.female
       : state.counts.male;
 
-  if (currentSexCount >= COMPANY_PARTICIPANT_SEX_LIMIT) {
+  const sexCapacity =
+    sex === FEMALE_PARTICIPANT_SEX ? capacity.female : capacity.male;
+
+  if (currentSexCount >= sexCapacity) {
     return {
       success: false,
       reason: "sex_full",
-      message: `La compañía ya alcanzó el máximo de ${COMPANY_PARTICIPANT_SEX_LIMIT} participantes de sexo ${sex}.`,
+      message: `La compañía ya alcanzó el máximo de ${sexCapacity} participantes de sexo ${sex}.`,
     };
   }
 

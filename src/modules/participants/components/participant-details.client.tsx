@@ -36,6 +36,7 @@ import UserGroupIcon from "@hugeicons/core-free-icons/UserGroupIcon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { toast } from "sonner";
 import { DeleteParticipantButton } from "@/modules/participants/components/delete-participant-button.client";
+import { ParticipantQrDialog } from "@/modules/participants/components/participant-qr-dialog.client";
 import { updateParticipantMedicalNotesAction } from "@/modules/participants/server/actions";
 import {
   getParticipantStatusLabel,
@@ -102,6 +103,7 @@ function DetailItem({
 type ParticipantDetailsProps = {
   participant: ParticipantTableRow;
   canManage?: boolean;
+  canChangeStatus?: boolean;
   canDelete?: boolean;
   className?: string;
   onEdit?: () => void;
@@ -131,6 +133,7 @@ const participantStatusDotClassNames = {
 export function ParticipantDetails({
   participant,
   canManage = false,
+  canChangeStatus = canManage,
   canDelete = false,
   className,
   onEdit = () => {},
@@ -187,7 +190,7 @@ export function ParticipantDetails({
               {getParticipantInitials(participant.firstNames, participant.lastNames)}
             </AvatarFallback>
           </Avatar>
-          {canManage ? (
+          {canChangeStatus ? (
             <Select
               items={PARTICIPANT_STATUS_OPTIONS}
               value={participant.status}
@@ -255,24 +258,26 @@ export function ParticipantDetails({
         <p className="mt-0.5 text-sm text-muted-foreground">
           Me gustaría que me llamen: {preferredName}
         </p>
-        {canManage || canDelete ? (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {canManage ? (
-              <Button type="button" variant="outline" size="sm" onClick={onEdit}>
-                <HugeiconsIcon icon={UserEdit01Icon} data-icon="inline-start" />
-                Editar
-              </Button>
-            ) : null}
-            {canDelete ? (
-              <DeleteParticipantButton
-                participantId={participant.id}
-                participantName={participantName}
-                showLabel
-                onDeleted={onDeleted}
-              />
-            ) : null}
-          </div>
-        ) : null}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <ParticipantQrDialog
+            participantCode={participant.sourceRecordId}
+            participantName={participantName}
+          />
+          {canManage ? (
+            <Button type="button" variant="outline" size="sm" onClick={onEdit}>
+              <HugeiconsIcon icon={UserEdit01Icon} data-icon="inline-start" />
+              Editar
+            </Button>
+          ) : null}
+          {canDelete ? (
+            <DeleteParticipantButton
+              participantId={participant.id}
+              participantName={participantName}
+              showLabel
+              onDeleted={onDeleted}
+            />
+          ) : null}
+        </div>
       </div>
 
       <Tabs defaultValue="personal" className="mt-5 gap-3">

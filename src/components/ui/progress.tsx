@@ -7,9 +7,10 @@ import { cn } from "@/lib/utils"
 function Progress({
   className,
   children,
+  renderTrack = true,
   value,
   ...props
-}: ProgressPrimitive.Root.Props) {
+}: ProgressPrimitive.Root.Props & { renderTrack?: boolean }) {
   return (
     <ProgressPrimitive.Root
       value={value}
@@ -18,9 +19,11 @@ function Progress({
       {...props}
     >
       {children}
-      <ProgressTrack>
-        <ProgressIndicator />
-      </ProgressTrack>
+      {renderTrack ? (
+        <ProgressTrack>
+          <ProgressIndicator />
+        </ProgressTrack>
+      ) : null}
     </ProgressPrimitive.Root>
   )
 }

@@ -1,0 +1,2 @@
+ALTER TABLE "counselors" ADD COLUMN "ward_id" integer;--> statement-breakpoint
+ALTER TABLE "counselors" ADD CONSTRAINT "counselors_ward_id_wards_id_fk" FOREIGN KEY ("ward_id") REFERENCES "public"."wards"("id") ON DELETE restrict ON UPDATE cascade;

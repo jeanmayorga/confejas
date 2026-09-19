@@ -19,11 +19,24 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
   )
 }
 
+function TableFrame({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="table-frame"
+      className={cn(
+        "flex flex-col overflow-hidden rounded-lg border border-border/50 bg-card",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
 function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("[&_tr]:border-b", className)}
+      className={cn("bg-muted/50 [&_tr]:border-b", className)}
       {...props}
     />
   )
@@ -105,6 +118,7 @@ function TableCaption({
 }
 
 export {
+  TableFrame,
   Table,
   TableHeader,
   TableBody,

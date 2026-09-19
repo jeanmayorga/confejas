@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Confejas Staff",
+    name: "Confejas",
     short_name: "Confejas",
-    description: "Check-in y gestión de participantes de Confejas.",
-    start_url: "/dashboard/check-in",
+    description: "Gestión y acompañamiento de participantes de Confejas.",
+    start_url: "/",
     scope: "/",
     display: "standalone",
     orientation: "portrait",

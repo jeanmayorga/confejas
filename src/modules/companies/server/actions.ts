@@ -2,7 +2,7 @@
 
 import { createHash } from "node:crypto";
 
-import { and, count, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, count, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import type { NeonHttpQueryResult } from "drizzle-orm/neon-http";
 import { revalidatePath } from "next/cache";
 
@@ -18,7 +18,6 @@ import { db } from "@/server/db";
 import {
   COMPANY_PARTICIPANT_LIMIT,
   COMPANY_PARTICIPANT_SEX_LIMIT,
-  DEFAULT_DISTRIBUTION_CAPACITY,
   DEFAULT_DISTRIBUTION_STRATEGY,
   FEMALE_PARTICIPANT_SEX,
   isDistributionCapacity,
@@ -34,6 +33,10 @@ import {
   type ParticipantSexCounts,
 } from "../distribution";
 import {
+  formatCompanyName,
+  getNextCompanyNumber,
+} from "../company-label";
+import {
   getCompanyDetail,
   listAllParticipants,
   listCompaniesForDistribution,
@@ -42,7 +45,8 @@ import {
   type CompanyParticipant,
 } from "./queries";
 import { getCompanyCapacityLockQuery } from "./capacity";
-import { companies } from "./schema";
+import { companies, companySettings } from "./schema";
+import { getCompanyCapacity, saveCompanyCapacity } from "./settings";
 
 export type CompanyActionResult =
   | { success: true; message: string }
@@ -122,8 +126,27 @@ export type DistributionProposalInput = {
   previewKey: string;
 };
 
+export type DistributionPreview = Pick<
+  DistributionProposal,
+  | "previewKey"
+  | "direction"
+  | "strategy"
+  | "stakeDiversity"
+  | "limits"
+  | "summary"
+  | "canSave"
+> & {
+  companies: Array<
+    Pick<
+      DistributionProposalCompany,
+      "companyId" | "companyName" | "status" | "final"
+    >
+  >;
+  pending: Pick<DistributionProposal["pending"], "totalCount">;
+};
+
 export type DistributionPreviewActionResult =
-  | { success: true; proposal: DistributionProposal }
+  | { success: true; proposal: DistributionPreview }
   | { success: false; message: string };
 
 export type DistributionSaveActionResult =
@@ -190,39 +213,6 @@ function isCompanyId(value: unknown): value is string {
 }
 
 const isParticipantId = isCompanyId;
-
-function getCompanyName(formData: FormData) {
-  const name = String(formData.get("name") ?? "")
-    .trim()
-    .replace(/\s+/g, " ");
-
-  if (!name) {
-    throw new Error("El nombre de la compañía es obligatorio.");
-  }
-
-  if (name.length > 120) {
-    throw new Error("El nombre no puede superar 120 caracteres.");
-  }
-
-  return name;
-}
-
-async function companyNameExists(name: string, excludedId?: string) {
-  const [company] = await db
-    .select({ id: companies.id })
-    .from(companies)
-    .where(
-      excludedId
-        ? and(
-            sql`lower(${companies.name}) = lower(${name})`,
-            ne(companies.id, excludedId),
-          )
-        : sql`lower(${companies.name}) = lower(${name})`,
-    )
-    .limit(1);
-
-  return Boolean(company);
-}
 
 function getSafeError(error: unknown) {
   if (error instanceof Error) {
@@ -409,6 +399,12 @@ async function commitParticipantAssignments(
         )::integer as male
       from eligible_participants
       group by company_id
+    ), capacity_limits as (
+      select
+        ${companySettings.femaleParticipantLimit} as female_limit,
+        ${companySettings.maleParticipantLimit} as male_limit
+      from ${companySettings}
+      where ${companySettings.id} = 1
     ), current_capacity as (
       select
         requested_company.company_id,
@@ -459,6 +455,10 @@ async function commitParticipantAssignments(
           from expected_capacity
         ) = ${expectedCompanies.length}
         and (
+          select count(*)
+          from capacity_limits
+        ) = 1
+        and (
           not ${requireExactCompanySet}
           or (
             select count(*)
@@ -481,12 +481,14 @@ async function commitParticipantAssignments(
           from additions_by_company as addition
           left join current_capacity as capacity
             on capacity.company_id = addition.company_id
+          cross join capacity_limits as limits
           where capacity.existing_company_id is null
-            or capacity.total + addition.total > ${COMPANY_PARTICIPANT_LIMIT}
-            or capacity.female + addition.female > ${COMPANY_PARTICIPANT_SEX_LIMIT}
-            or capacity.male + addition.male > ${COMPANY_PARTICIPANT_SEX_LIMIT}
+            or capacity.total + addition.total > (
+              limits.female_limit + limits.male_limit
+            )
+            or capacity.female + addition.female > limits.female_limit
+            or capacity.male + addition.male > limits.male_limit
         ) as is_valid
-    )
     ), updated_participants as (
       ${replaceAllAssignments
         ? sql`
@@ -717,6 +719,29 @@ async function buildDistributionProposal(
   return proposal;
 }
 
+function toDistributionPreview(
+  proposal: DistributionProposal,
+): DistributionPreview {
+  return {
+    previewKey: proposal.previewKey,
+    direction: proposal.direction,
+    strategy: proposal.strategy,
+    stakeDiversity: proposal.stakeDiversity,
+    limits: proposal.limits,
+    summary: proposal.summary,
+    canSave: proposal.canSave,
+    companies: proposal.companies.map((company) => ({
+      companyId: company.companyId,
+      companyName: company.companyName,
+      status: company.status,
+      final: company.final,
+    })),
+    pending: {
+      totalCount: proposal.pending.totalCount,
+    },
+  };
+}
+
 export async function getCompanyDetailAction(
   companyId: string,
 ): Promise<CompanyDetailActionResult> {
@@ -776,7 +801,7 @@ export async function getUnassignedParticipantsAction(): Promise<
 
 export async function previewParticipantDistributionAction(
   direction: DistributionDirection,
-  capacity: DistributionCapacity = DEFAULT_DISTRIBUTION_CAPACITY,
+  capacity: DistributionCapacity,
   strategy: DistributionStrategy = DEFAULT_DISTRIBUTION_STRATEGY,
   stakeDiversity = false,
 ): Promise<DistributionPreviewActionResult> {
@@ -818,14 +843,27 @@ export async function previewParticipantDistributionAction(
       };
     }
 
+    const configuredCapacity = await getCompanyCapacity();
+
+    if (
+      capacity.female !== configuredCapacity.female ||
+      capacity.male !== configuredCapacity.male
+    ) {
+      return {
+        success: false,
+        message:
+          "El tamaño de las compañías cambió. Actualiza la página e inténtalo nuevamente.",
+      };
+    }
+
     const proposal = await buildDistributionProposal(
       direction,
-      capacity,
+      configuredCapacity,
       strategy,
       stakeDiversity,
     );
 
-    return { success: true, proposal };
+    return { success: true, proposal: toDistributionPreview(proposal) };
   } catch {
     return {
       success: false,
@@ -865,9 +903,23 @@ export async function saveParticipantDistributionAction(
       };
     }
 
+    const configuredCapacity = await getCompanyCapacity();
+
+    if (
+      input.capacity.female !== configuredCapacity.female ||
+      input.capacity.male !== configuredCapacity.male
+    ) {
+      return {
+        success: false,
+        code: "stale_proposal",
+        message:
+          "El tamaño de las compañías cambió. Vuelve a generar la distribución.",
+      };
+    }
+
     const currentProposal = await buildDistributionProposal(
       input.direction,
-      input.capacity,
+      configuredCapacity,
       input.strategy,
       input.stakeDiversity,
     );
@@ -1028,7 +1080,7 @@ export async function assignParticipantsToCompanyAction(
       };
     }
 
-    const [selectedParticipants, companyRows] = await Promise.all([
+    const [selectedParticipants, companyRows, capacity] = await Promise.all([
       db
         .select({
           id: participants.id,
@@ -1039,6 +1091,7 @@ export async function assignParticipantsToCompanyAction(
         .from(participants)
         .where(inArray(participants.id, participantIds)),
       listCompaniesForDistribution(),
+      getCompanyCapacity(),
     ]);
     const selectedParticipantsById = new Map(
       selectedParticipants.map((participant) => [participant.id, participant]),
@@ -1091,16 +1144,16 @@ export async function assignParticipantsToCompanyAction(
 
     if (
       company.counts.total + participantIds.length >
-        COMPANY_PARTICIPANT_LIMIT ||
+        capacity.female + capacity.male ||
       company.counts.female + requestedFemaleCount >
-        COMPANY_PARTICIPANT_SEX_LIMIT ||
+        capacity.female ||
       company.counts.male + requestedMaleCount >
-        COMPANY_PARTICIPANT_SEX_LIMIT
+        capacity.male
     ) {
       return {
         success: false,
         code: "capacity",
-        message: `La selección supera el máximo de ${COMPANY_PARTICIPANT_LIMIT} participantes o de ${COMPANY_PARTICIPANT_SEX_LIMIT} por sexo para esta compañía.`,
+        message: `La selección supera el máximo de ${capacity.female + capacity.male} participantes, ${capacity.female} mujeres o ${capacity.male} hombres para esta compañía.`,
       };
     }
 
@@ -1173,61 +1226,100 @@ export async function assignParticipantsToCompanyAction(
   }
 }
 
-export async function createCompanyAction(
-  formData: FormData,
+export async function updateCompanyCapacityAction(
+  capacity: DistributionCapacity,
 ): Promise<CompanyActionResult> {
+  try {
+    const session = await requireSession();
+
+    if (!canManageParticipants(session.user.role)) {
+      return {
+        success: false,
+        message: "No tienes permiso para editar el tamaño de las compañías.",
+      };
+    }
+
+    if (!isDistributionCapacity(capacity)) {
+      return {
+        success: false,
+        message: `Indica entre 1 y ${COMPANY_PARTICIPANT_SEX_LIMIT} participantes para cada sexo.`,
+      };
+    }
+
+    await saveCompanyCapacity(capacity);
+    revalidateCompanyPaths();
+
+    return {
+      success: true,
+      message: `Cada compañía permitirá hasta ${capacity.female} mujeres y ${capacity.male} hombres.`,
+    };
+  } catch {
+    return {
+      success: false,
+      message:
+        "No se pudo guardar el tamaño de las compañías. Inténtalo nuevamente.",
+    };
+  }
+}
+
+export async function createCompanyAction(): Promise<CompanyActionResult> {
   try {
     const session = await requireSession();
     if (!canManageParticipants(session.user.role)) {
       return { success: false, message: "No tienes permiso para crear compañías." };
     }
 
-    const name = getCompanyName(formData);
-    if (await companyNameExists(name)) {
-      return { success: false, message: "Ya existe una compañía con ese nombre." };
-    }
+    const companyRows = await db
+      .select({ name: companies.name })
+      .from(companies);
+    const name = formatCompanyName(
+      getNextCompanyNumber(companyRows.map((company) => company.name)),
+    );
 
     await db.insert(companies).values({ name });
     revalidateCompanyPaths();
-    return { success: true, message: "Compañía creada correctamente." };
+    return { success: true, message: `${name} creada correctamente.` };
   } catch (error) {
     return { success: false, message: getSafeError(error) };
   }
 }
 
-export async function updateCompanyAction(
-  companyId: string,
-  formData: FormData,
-): Promise<CompanyActionResult> {
+export async function clearCompanyParticipantsAction(): Promise<CompanyActionResult> {
   try {
     const session = await requireSession();
+
     if (!canManageParticipants(session.user.role)) {
-      return { success: false, message: "No tienes permiso para editar compañías." };
+      return {
+        success: false,
+        message: "No tienes permiso para quitar participantes de las compañías.",
+      };
     }
 
-    if (!isCompanyId(companyId)) {
-      return { success: false, message: "La compañía no es válida." };
-    }
-
-    const name = getCompanyName(formData);
-    if (await companyNameExists(name, companyId)) {
-      return { success: false, message: "Ya existe una compañía con ese nombre." };
-    }
-
-    const [updated] = await db
-      .update(companies)
-      .set({ name, updatedAt: new Date() })
-      .where(eq(companies.id, companyId))
-      .returning({ id: companies.id });
-
-    if (!updated) {
-      return { success: false, message: "La compañía ya no existe." };
-    }
+    const unassignedParticipants = await db
+      .update(participants)
+      .set({ companyId: null })
+      .where(isNotNull(participants.companyId))
+      .returning({ id: participants.id });
 
     revalidateCompanyPaths();
-    return { success: true, message: "Compañía actualizada correctamente." };
-  } catch (error) {
-    return { success: false, message: getSafeError(error) };
+
+    if (unassignedParticipants.length === 0) {
+      return {
+        success: true,
+        message: "No había participantes asignados a una compañía.",
+      };
+    }
+
+    return {
+      success: true,
+      message: `${unassignedParticipants.length.toLocaleString("es-EC")} participantes quedaron sin compañía. Sus registros se conservan.`,
+    };
+  } catch {
+    return {
+      success: false,
+      message:
+        "No se pudieron quitar los participantes de las compañías. Inténtalo nuevamente.",
+    };
   }
 }
 

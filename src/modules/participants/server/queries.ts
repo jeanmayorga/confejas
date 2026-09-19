@@ -357,7 +357,10 @@ export async function getParticipantForCheckIn(participantId: string) {
   return participant ?? null;
 }
 
-export async function getParticipantById(participantId: string) {
+export async function getParticipantById(
+  participantId: string,
+  companyId?: string,
+) {
   if (!isParticipantId(participantId)) {
     return null;
   }
@@ -401,7 +404,12 @@ export async function getParticipantById(participantId: string) {
     .innerJoin(wards, eq(participants.wardId, wards.id))
     .innerJoin(stakes, eq(wards.stakeId, stakes.id))
     .leftJoin(companies, eq(participants.companyId, companies.id))
-    .where(eq(participants.id, participantId))
+    .where(
+      and(
+        eq(participants.id, participantId),
+        companyId ? eq(participants.companyId, companyId) : undefined,
+      ),
+    )
     .limit(1);
 
   return participant ?? null;

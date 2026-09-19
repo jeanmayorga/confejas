@@ -9,6 +9,7 @@ import {
   canManageParticipants,
   canManageUsers,
   canViewParticipantDirectory,
+  usesCounselorApp,
 } from "../roles";
 import { auth } from "./auth";
 
@@ -32,6 +33,26 @@ export async function requireAdmin() {
   const session = await requireSession();
 
   if (!canManageUsers(session.user.role)) {
+    redirect("/dashboard");
+  }
+
+  return session;
+}
+
+export async function requireDashboardSession() {
+  const session = await requireSession();
+
+  if (usesCounselorApp(session.user.role)) {
+    redirect("/consejero");
+  }
+
+  return session;
+}
+
+export async function requireCounselorAppSession() {
+  const session = await requireSession();
+
+  if (!usesCounselorApp(session.user.role)) {
     redirect("/dashboard");
   }
 

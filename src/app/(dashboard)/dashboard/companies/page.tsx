@@ -12,15 +12,23 @@ import {
 } from "@/components/ui/empty";
 import { canDeleteParticipants } from "@/modules/auth/roles";
 import { requireParticipantManagementAccess } from "@/modules/auth/server/session";
+import { ClearCompanyParticipantsButton } from "@/modules/companies/components/clear-company-participants-button.client";
 import { CompaniesDirectory } from "@/modules/companies/components/companies-directory.client";
-import { CompanyDistributionDialog } from "@/modules/companies/components/company-distribution-dialog.client";
-import { CompanyFormDialog } from "@/modules/companies/components/company-form-dialog.client";
+import { CreateCompanyButton } from "@/modules/companies/components/create-company-button.client";
 import { listCompanies } from "@/modules/companies/server/queries";
+import { getCompanyCapacity } from "@/modules/companies/server/settings";
 
 export default async function CompaniesPage() {
   const session = await requireParticipantManagementAccess();
-  const companies = await listCompanies();
+  const [companies, capacity] = await Promise.all([
+    listCompanies(),
+    getCompanyCapacity(),
+  ]);
   const canDelete = canDeleteParticipants(session.user.role);
+  const assignedParticipantCount = companies.reduce(
+    (total, company) => total + company.participantCount,
+    0,
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -29,8 +37,10 @@ export default async function CompaniesPage() {
         description="Administra tus compañías y sus participantes."
         actions={
           <>
-            <CompanyDistributionDialog />
-            <CompanyFormDialog />
+            <ClearCompanyParticipantsButton
+              participantCount={assignedParticipantCount}
+            />
+            <CreateCompanyButton />
           </>
         }
       />
@@ -47,13 +57,17 @@ export default async function CompaniesPage() {
                 <EmptyDescription>
                   Crea la primera compañía para empezar a asignar participantes.
                 </EmptyDescription>
-                <CompanyFormDialog />
+                <CreateCompanyButton />
               </EmptyHeader>
             </Empty>
           </CardContent>
         </Card>
       ) : (
-        <CompaniesDirectory companies={companies} canDelete={canDelete} />
+        <CompaniesDirectory
+          companies={companies}
+          canDelete={canDelete}
+          capacity={capacity}
+        />
       )}
     </div>
   );
