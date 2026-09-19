@@ -411,32 +411,28 @@ function CompanyCard({
                           </TooltipTrigger>
                           <TooltipContent>Mover a otra compañía</TooltipContent>
                         </Tooltip>
-                        {canDelete ? (
-                          <Tooltip>
-                            <TooltipTrigger
-                              render={
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="icon-xs"
-                                  disabled={management.busy}
-                                  aria-label={`Eliminar permanentemente a ${getParticipantName(participant)}`}
-                                  onClick={() =>
-                                    management.openDelete([participant.id])
-                                  }
-                                />
-                              }
-                            >
-                              <HugeiconsIcon
-                                icon={Delete02Icon}
-                                strokeWidth={2}
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon-xs"
+                                disabled={management.busy}
+                                aria-label={`Quitar a ${getParticipantName(participant)} de ${company.name}`}
+                                onClick={() =>
+                                  management.openRemove([participant.id])
+                                }
                               />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              Eliminar permanentemente
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : null}
+                            }
+                          >
+                            <HugeiconsIcon
+                              icon={Delete02Icon}
+                              strokeWidth={2}
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent>Quitar de la compañía</TooltipContent>
+                        </Tooltip>
                       </div>
                     </TableCell>
                   </TableRow>
