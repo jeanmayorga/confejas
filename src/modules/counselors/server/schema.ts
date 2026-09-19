@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
   index,
+  integer,
   pgTable,
   timestamp,
   uniqueIndex,
@@ -8,6 +9,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+import { stakes, wards } from "@/modules/church-units/server/schema";
 import { companies } from "@/modules/companies/server/schema";
 
 export const counselors = pgTable(
@@ -22,6 +24,14 @@ export const counselors = pgTable(
     email: varchar({ length: 254 }),
     companyId: uuid().references(() => companies.id, {
       onDelete: "set null",
+      onUpdate: "cascade",
+    }),
+    stakeId: integer().references(() => stakes.id, {
+      onDelete: "restrict",
+      onUpdate: "cascade",
+    }),
+    wardId: integer().references(() => wards.id, {
+      onDelete: "restrict",
       onUpdate: "cascade",
     }),
     createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
@@ -41,5 +51,13 @@ export const counselorsRelations = relations(counselors, ({ one }) => ({
   company: one(companies, {
     fields: [counselors.companyId],
     references: [companies.id],
+  }),
+  stake: one(stakes, {
+    fields: [counselors.stakeId],
+    references: [stakes.id],
+  }),
+  ward: one(wards, {
+    fields: [counselors.wardId],
+    references: [wards.id],
   }),
 }));

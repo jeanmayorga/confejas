@@ -1,6 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import {
+  type KeyboardEvent,
+  type MouseEvent,
+  useMemo,
+  useState,
+} from "react";
 import ArrowDown02Icon from "@hugeicons/core-free-icons/ArrowDown02Icon";
 import ArrowUpDownIcon from "@hugeicons/core-free-icons/ArrowUpDownIcon";
 import Cancel01Icon from "@hugeicons/core-free-icons/Cancel01Icon";
@@ -9,6 +14,8 @@ import UserGroup02Icon from "@hugeicons/core-free-icons/UserGroup02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { PageHeader } from "@/components/page-header";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -23,8 +30,21 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { CounselorFormDialog } from "@/modules/counselors/components/counselor-form-dialog.client";
 import { DeleteCounselorButton } from "@/modules/counselors/components/delete-counselor-button.client";
 
@@ -40,11 +60,17 @@ type CounselorDirectoryItem = {
   email: string | null;
   companyId: string | null;
   companyName: string | null;
+  stakeId: number | null;
+  stakeName: string | null;
+  wardId: number | null;
+  wardName: string | null;
 };
 
 type CounselorDirectoryProps = {
   counselors: CounselorDirectoryItem[];
   companies: { id: string; name: string }[];
+  stakes: { id: number; name: string }[];
+  wards: { id: number; name: string; stakeId: number }[];
   canDelete: boolean;
 };
 
@@ -91,6 +117,8 @@ function getCounselorSearchText(counselor: CounselorDirectoryItem) {
       counselor.governmentId,
       counselor.email,
       counselor.whatsapp,
+      counselor.stakeName,
+      counselor.wardName,
     ]
       .filter(Boolean)
       .join(" "),
@@ -135,10 +163,14 @@ function SortableTableHead({
 export function CounselorDirectory({
   counselors,
   companies,
+  stakes,
+  wards,
   canDelete,
 }: CounselorDirectoryProps) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<CounselorSort>("company");
+  const [selectedCounselor, setSelectedCounselor] =
+    useState<CounselorDirectoryItem | null>(null);
   const normalizedSearch = normalizeSearch(search);
   const visibleCounselors = useMemo(() => {
     const filteredCounselors = normalizedSearch
@@ -176,12 +208,42 @@ export function CounselorDirectory({
 
   const hasSearch = Boolean(normalizedSearch);
 
+  function openCounselor(counselor: CounselorDirectoryItem) {
+    setSelectedCounselor(counselor);
+  }
+
+  function closeCounselorSheet() {
+    setSelectedCounselor(null);
+  }
+
+  function handleRowKeyDown(
+    event: KeyboardEvent<HTMLTableRowElement>,
+    counselor: CounselorDirectoryItem,
+  ) {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    openCounselor(counselor);
+  }
+
+  function keepRowClosed(event: MouseEvent<HTMLTableCellElement>) {
+    event.stopPropagation();
+  }
+
   return (
     <>
       <PageHeader
         title="Consejeros"
         description="Una lista de todos los consejeros"
-        actions={<CounselorFormDialog companies={companies} />}
+        actions={
+          <CounselorFormDialog
+            companies={companies}
+            stakes={stakes}
+            wards={wards}
+          />
+        }
       />
 
       <div className="flex flex-col gap-3">
@@ -236,15 +298,21 @@ export function CounselorDirectory({
                   Limpiar búsqueda
                 </Button>
               ) : (
-                <CounselorFormDialog companies={companies} />
+                <CounselorFormDialog
+                  companies={companies}
+                  stakes={stakes}
+                  wards={wards}
+                />
               )}
             </EmptyHeader>
           </Empty>
         ) : (
-          <Table className="min-w-[780px] table-fixed" aria-label="Lista de consejeros">
+          <Table className="min-w-[1120px] table-fixed" aria-label="Lista de consejeros">
             <colgroup>
               <col className="w-[220px]" />
-              <col className="w-[330px]" />
+              <col className="w-[280px]" />
+              <col className="w-[170px]" />
+              <col className="w-[190px]" />
               <col className="w-[280px]" />
               <col className="w-[92px]" />
             </colgroup>
@@ -262,17 +330,36 @@ export function CounselorDirectory({
                   sort={sort}
                   onSortChange={setSort}
                 />
+                <TableHead>Estaca</TableHead>
+                <TableHead>Barrio</TableHead>
                 <TableHead>Contacto</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {visibleCounselors.map((counselor) => (
-                <TableRow key={counselor.id} className="h-9 max-h-9">
+                <TableRow
+                  key={counselor.id}
+                  tabIndex={0}
+                  aria-label={`Ver a ${counselor.name}`}
+                  className="h-9 max-h-9 cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                  onClick={() => openCounselor(counselor)}
+                  onKeyDown={(event) => handleRowKeyDown(event, counselor)}
+                >
                   <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden truncate">
                     {counselor.companyName ? (
                       counselor.companyName
                     ) : (
+                      <span className="text-muted-foreground">Sin asignar</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden truncate">
+                    {counselor.stakeName ?? (
+                      <span className="text-muted-foreground">Sin asignar</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden truncate">
+                    {counselor.wardName ?? (
                       <span className="text-muted-foreground">Sin asignar</span>
                     )}
                   </TableCell>
@@ -299,6 +386,8 @@ export function CounselorDirectory({
                         <a
                           href={`mailto:${counselor.email}`}
                           className="truncate text-primary underline-offset-4 hover:underline"
+                          onClick={(event) => event.stopPropagation()}
+                          onKeyDown={(event) => event.stopPropagation()}
                         >
                           {counselor.email}
                         </a>
@@ -311,10 +400,16 @@ export function CounselorDirectory({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="h-9 max-h-9">
+                  <TableCell
+                    className="h-9 max-h-9"
+                    onClick={keepRowClosed}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  >
                     <div className="flex justify-start gap-1">
                       <CounselorFormDialog
                         companies={companies}
+                        stakes={stakes}
+                        wards={wards}
                         counselor={counselor}
                       />
                       {canDelete ? (
@@ -328,6 +423,111 @@ export function CounselorDirectory({
           </Table>
         )}
       </div>
+
+      <Sheet
+        open={selectedCounselor !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeCounselorSheet();
+          }
+        }}
+      >
+        <SheetContent
+          side="right"
+          className="data-[side=right]:w-full data-[side=right]:sm:max-w-lg"
+        >
+          {selectedCounselor ? (
+            <>
+              <SheetHeader className="border-b pr-16">
+                <div className="flex items-center gap-3">
+                  <Avatar className="size-12" aria-hidden="true">
+                    <AvatarFallback className="font-medium">
+                      {getCounselorInitials(selectedCounselor)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <SheetTitle className="truncate text-xl">
+                      {selectedCounselor.name}
+                    </SheetTitle>
+                    <SheetDescription>
+                      Información del consejero
+                    </SheetDescription>
+                  </div>
+                </div>
+              </SheetHeader>
+
+              <div className="flex-1 overflow-y-auto px-6 pb-6">
+                <section className="py-5" aria-labelledby="counselor-assignment-heading">
+                  <div className="flex items-center justify-between gap-3">
+                    <h2
+                      id="counselor-assignment-heading"
+                      className="text-sm font-semibold"
+                    >
+                      Asignación
+                    </h2>
+                    <Badge variant="secondary">
+                      {selectedCounselor.companyName ?? "Sin compañía"}
+                    </Badge>
+                  </div>
+                  <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
+                    <div className="flex flex-col gap-1">
+                      <dt className="text-muted-foreground">Estaca</dt>
+                      <dd className="font-medium">
+                        {selectedCounselor.stakeName ?? "Sin asignar"}
+                      </dd>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <dt className="text-muted-foreground">Barrio</dt>
+                      <dd className="font-medium">
+                        {selectedCounselor.wardName ?? "Sin asignar"}
+                      </dd>
+                    </div>
+                  </dl>
+                </section>
+
+                <section className="border-t py-5" aria-labelledby="counselor-contact-heading">
+                  <h2
+                    id="counselor-contact-heading"
+                    className="text-sm font-semibold"
+                  >
+                    Contacto
+                  </h2>
+                  <dl className="mt-4 flex flex-col gap-4 text-sm">
+                    <div className="flex flex-col gap-1">
+                      <dt className="text-muted-foreground">Cédula</dt>
+                      <dd className="font-medium">
+                        {selectedCounselor.governmentId ?? "Sin registrar"}
+                      </dd>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <dt className="text-muted-foreground">Correo electrónico</dt>
+                      <dd className="font-medium">
+                        {selectedCounselor.email ? (
+                          <a
+                            href={`mailto:${selectedCounselor.email}`}
+                            className="text-primary underline-offset-4 hover:underline"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            {selectedCounselor.email}
+                          </a>
+                        ) : (
+                          "Sin registrar"
+                        )}
+                      </dd>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <dt className="text-muted-foreground">WhatsApp</dt>
+                      <dd className="font-medium">
+                        {selectedCounselor.whatsapp ?? "Sin registrar"}
+                      </dd>
+                    </div>
+                  </dl>
+                </section>
+              </div>
+            </>
+          ) : null}
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

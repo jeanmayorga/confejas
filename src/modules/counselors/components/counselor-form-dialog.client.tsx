@@ -41,15 +41,21 @@ type EditableCounselor = {
   whatsapp: string | null;
   email: string | null;
   companyId: string | null;
+  stakeId: number | null;
+  wardId: number | null;
 };
 
 type CounselorFormDialogProps = {
   companies: { id: string; name: string }[];
+  stakes: { id: number; name: string }[];
+  wards: { id: number; name: string; stakeId: number }[];
   counselor?: EditableCounselor;
 };
 
 export function CounselorFormDialog({
   companies,
+  stakes,
+  wards,
   counselor,
 }: CounselorFormDialogProps) {
   const router = useRouter();
@@ -57,13 +63,23 @@ export function CounselorFormDialog({
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [lookupPending, startLookupTransition] = useTransition();
+  const [stakeId, setStakeId] = useState(String(counselor?.stakeId ?? ""));
+  const [wardId, setWardId] = useState(String(counselor?.wardId ?? ""));
   const editing = Boolean(counselor);
+  const availableWards = wards.filter(
+    (ward) => String(ward.stakeId) === stakeId,
+  );
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
 
-    if (!nextOpen) {
+    if (nextOpen) {
+      setStakeId(String(counselor?.stakeId ?? ""));
+      setWardId(String(counselor?.wardId ?? ""));
+    } else {
       formRef.current?.reset();
+      setStakeId(String(counselor?.stakeId ?? ""));
+      setWardId(String(counselor?.wardId ?? ""));
     }
   }
 
@@ -135,6 +151,8 @@ export function CounselorFormDialog({
 
       toast.success(result.message);
       formRef.current?.reset();
+      setStakeId(String(counselor?.stakeId ?? ""));
+      setWardId(String(counselor?.wardId ?? ""));
       setOpen(false);
       router.refresh();
     });
@@ -165,8 +183,8 @@ export function CounselorFormDialog({
             {editing ? "Editar consejero" : "Nuevo consejero"}
           </DialogTitle>
           <DialogDescription>
-            Registra al consejero y asígnalo a una compañía. Habitualmente cada
-            compañía cuenta con dos.
+            Registra al consejero y asígnalo a su compañía, estaca y barrio.
+            Habitualmente cada compañía cuenta con dos.
           </DialogDescription>
         </DialogHeader>
 
@@ -273,6 +291,64 @@ export function CounselorFormDialog({
                 autoComplete="email"
                 maxLength={254}
               />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={`counselor-stake-${counselor?.id ?? "new"}`}>
+                Estaca
+              </FieldLabel>
+              <NativeSelect
+                id={`counselor-stake-${counselor?.id ?? "new"}`}
+                name="stakeId"
+                value={stakeId}
+                onChange={(event) => {
+                  setStakeId(event.currentTarget.value);
+                  setWardId("");
+                }}
+                className="w-full"
+              >
+                <NativeSelectOption value="">Sin asignar</NativeSelectOption>
+                <NativeSelectOptGroup label="Estacas">
+                  {stakes.map((stake) => (
+                    <NativeSelectOption key={stake.id} value={String(stake.id)}>
+                      {stake.name}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelectOptGroup>
+              </NativeSelect>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={`counselor-ward-${counselor?.id ?? "new"}`}>
+                Barrio
+              </FieldLabel>
+              <NativeSelect
+                id={`counselor-ward-${counselor?.id ?? "new"}`}
+                name="wardId"
+                value={wardId}
+                disabled={!stakeId}
+                onChange={(event) => {
+                  const nextWardId = event.currentTarget.value;
+                  setWardId(nextWardId);
+
+                  const selectedWard = wards.find(
+                    (ward) => String(ward.id) === nextWardId,
+                  );
+                  if (selectedWard) {
+                    setStakeId(String(selectedWard.stakeId));
+                  }
+                }}
+                className="w-full"
+              >
+                <NativeSelectOption value="">
+                  {stakeId ? "Sin asignar" : "Selecciona una estaca primero"}
+                </NativeSelectOption>
+                <NativeSelectOptGroup label="Barrios">
+                  {availableWards.map((ward) => (
+                    <NativeSelectOption key={ward.id} value={String(ward.id)}>
+                      {ward.name}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelectOptGroup>
+              </NativeSelect>
             </Field>
             <Field className="sm:col-span-2">
               <FieldLabel htmlFor={`counselor-company-${counselor?.id ?? "new"}`}>
