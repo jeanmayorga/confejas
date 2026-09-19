@@ -389,6 +389,112 @@ export async function mergeWardAction(
   }
 }
 
+export async function mergeWardsAction(
+  sourceWardIds: number[],
+  targetWardId: number,
+): Promise<UnitActionResult> {
+  try {
+    const session = await requireSession();
+    if (!canManageParticipants(session.user.role)) {
+      return {
+        success: false,
+        message: "No tienes permiso para fusionar barrios.",
+      };
+    }
+
+    if (!Array.isArray(sourceWardIds) || sourceWardIds.length === 0) {
+      return {
+        success: false,
+        message: "Selecciona al menos dos barrios para fusionar.",
+      };
+    }
+
+    const sourceIds = Array.from(
+      new Set(sourceWardIds.map((wardId) => positiveId(wardId, "barrio"))),
+    );
+    const targetId = positiveId(targetWardId, "barrio");
+
+    if (sourceIds.includes(targetId)) {
+      return {
+        success: false,
+        message: "El barrio que conserves no puede eliminarse.",
+      };
+    }
+
+    const selectedWards = await db
+      .select({
+        id: wards.id,
+        name: wards.name,
+        stakeId: wards.stakeId,
+      })
+      .from(wards)
+      .where(inArray(wards.id, [...sourceIds, targetId]));
+    const target = selectedWards.find((ward) => ward.id === targetId);
+    const sources = selectedWards.filter((ward) => sourceIds.includes(ward.id));
+
+    if (!target || sources.length !== sourceIds.length) {
+      return {
+        success: false,
+        message: "Uno de los barrios seleccionados ya no existe.",
+      };
+    }
+
+    if (
+      sources.some((source) => source.stakeId !== target.stakeId) ||
+      sources.some((source) => source.stakeId !== sources[0]?.stakeId)
+    ) {
+      return {
+        success: false,
+        message: "Solo puedes fusionar barrios de la misma estaca.",
+      };
+    }
+
+    const [participantAssignment] = await db
+      .select({ value: count() })
+      .from(participants)
+      .where(inArray(participants.wardId, sourceIds));
+    const participantCount = Number(participantAssignment?.value ?? 0);
+
+    const [, deletedWards] = await db.batch([
+      db
+        .update(participants)
+        .set({ wardId: target.id })
+        .where(inArray(participants.wardId, sourceIds)),
+      db
+        .delete(wards)
+        .where(inArray(wards.id, sourceIds))
+        .returning({ id: wards.id }),
+    ]);
+
+    if (deletedWards.length !== sourceIds.length) {
+      return {
+        success: false,
+        message: "Uno de los barrios seleccionados ya no existe.",
+      };
+    }
+
+    revalidateUnitPaths();
+    const sourceLabel = sources.map((source) => source.name).join(", ");
+    const sourceVerb = sources.length === 1 ? "se fusionó" : "se fusionaron";
+    return {
+      success: true,
+      message:
+        sourceLabel +
+        " " +
+        sourceVerb +
+        " con " +
+        target.name +
+        ". Se movieron " +
+        participantCount +
+        " " +
+        (participantCount === 1 ? "participante" : "participantes") +
+        ".",
+    };
+  } catch (error) {
+    return { success: false, message: getSafeError(error) };
+  }
+}
+
 export async function deleteWardsAction(
   wardIds: number[],
 ): Promise<UnitActionResult> {

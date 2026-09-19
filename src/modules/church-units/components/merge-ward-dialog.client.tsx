@@ -30,7 +30,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { mergeWardAction } from "@/modules/church-units/server/actions";
+import { mergeWardsAction } from "@/modules/church-units/server/actions";
 
 type WardOption = {
   id: number;
@@ -53,11 +53,17 @@ export function MergeWardDialog({
   const [open, setOpen] = useState(false);
   const [keepWardId, setKeepWardId] = useState(wards[0]?.id.toString() ?? "");
   const [pending, startTransition] = useTransition();
-  const canMerge = wards.length === 2;
+  const canMerge = wards.length >= 2;
   const keepWard = wards.find(
     (ward) => ward.id.toString() === keepWardId,
   );
-  const sourceWard = wards.find((ward) => ward.id.toString() !== keepWardId);
+  const sourceWards = wards.filter(
+    (ward) => ward.id.toString() !== keepWardId,
+  );
+  const participantCount = sourceWards.reduce(
+    (total, ward) => total + ward.participantCount,
+    0,
+  );
 
   function handleOpenChange(nextOpen: boolean) {
     if (pending) {
@@ -72,12 +78,15 @@ export function MergeWardDialog({
   }
 
   function handleMerge() {
-    if (!canMerge || !keepWard || !sourceWard) {
+    if (!canMerge || !keepWard || sourceWards.length === 0) {
       return;
     }
 
     startTransition(async () => {
-      const result = await mergeWardAction(sourceWard.id, keepWard.id);
+      const result = await mergeWardsAction(
+        sourceWards.map((ward) => ward.id),
+        keepWard.id,
+      );
 
       if (!result.success) {
         toast.error(result.message);
@@ -108,7 +117,7 @@ export function MergeWardDialog({
             </Button>
           }
         />
-        <TooltipContent>Selecciona exactamente dos barrios</TooltipContent>
+        <TooltipContent>Selecciona al menos dos barrios</TooltipContent>
       </Tooltip>
     );
   }
@@ -134,15 +143,15 @@ export function MergeWardDialog({
             />
           }
         />
-        <TooltipContent>Fusionar barrio</TooltipContent>
+        <TooltipContent>Fusionar barrios</TooltipContent>
       </Tooltip>
 
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Fusionar barrios</DialogTitle>
           <DialogDescription>
-            Los participantes del barrio que no conserves se moverán al barrio
-            que elijas y ese registro se eliminará.
+            Los participantes de los barrios que no conserves se moverán al
+            barrio que elijas y esos registros se eliminarán.
           </DialogDescription>
         </DialogHeader>
 
@@ -195,13 +204,13 @@ export function MergeWardDialog({
           </Field>
         </FieldGroup>
 
-        {keepWard && sourceWard ? (
+        {keepWard && sourceWards.length > 0 ? (
           <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
-            Se moverán {sourceWard.participantCount}{" "}
-            {sourceWard.participantCount === 1
-              ? "participante"
-              : "participantes"}{" "}
-            a {keepWard.name}. Esta acción no se puede deshacer.
+            Se moverán {participantCount}{" "}
+            {participantCount === 1 ? "participante" : "participantes"} a{" "}
+            {keepWard.name}. Se eliminarán {sourceWards.length}{" "}
+            {sourceWards.length === 1 ? "barrio" : "barrios"}. Esta acción no
+            se puede deshacer.
           </p>
         ) : null}
 
@@ -217,7 +226,7 @@ export function MergeWardDialog({
           <Button
             type="button"
             variant="destructive"
-            disabled={pending || !keepWard || !sourceWard}
+            disabled={pending || !keepWard || sourceWards.length === 0}
             onClick={handleMerge}
           >
             {pending ? <Spinner data-icon="inline-start" /> : null}
