@@ -6,13 +6,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Empty,
   EmptyDescription,
   EmptyHeader,
@@ -41,36 +34,25 @@ export function UnitsDirectory({ units }: UnitsDirectoryProps) {
   const stakes = units.map(({ id, name }) => ({ id, name }));
 
   return (
-    <Card>
-      <CardHeader className="border-b">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <CardTitle>Estacas y barrios</CardTitle>
-            <CardDescription className="mt-1">
-              Organiza las unidades y consulta sus participantes.
-            </CardDescription>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <StakeFormDialog />
-            <WardFormDialog stakes={stakes} />
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-0">
-        {units.length === 0 ? (
-          <Empty className="min-h-64">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <HugeiconsIcon icon={MapPinpoint01Icon} strokeWidth={2} />
-              </EmptyMedia>
-              <EmptyTitle>Aún no hay unidades</EmptyTitle>
-              <EmptyDescription>
-                Crea una estaca para empezar a registrar sus barrios.
-              </EmptyDescription>
-              <StakeFormDialog />
-            </EmptyHeader>
-          </Empty>
-        ) : (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap justify-end gap-2">
+        <StakeFormDialog />
+        <WardFormDialog stakes={stakes} />
+      </div>
+      {units.length === 0 ? (
+        <Empty className="min-h-64 rounded-xl border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <HugeiconsIcon icon={MapPinpoint01Icon} strokeWidth={2} />
+            </EmptyMedia>
+            <EmptyTitle>Aún no hay unidades</EmptyTitle>
+            <EmptyDescription>
+              Crea una estaca para empezar a registrar sus barrios.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <div className="overflow-hidden rounded-xl border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -138,8 +120,8 @@ export function UnitsDirectory({ units }: UnitsDirectoryProps) {
               })}
             </TableBody>
           </Table>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </div>
   );
 }
