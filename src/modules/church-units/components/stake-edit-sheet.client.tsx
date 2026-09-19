@@ -70,11 +70,18 @@ export function StakeEditSheet({ stake, stakes }: StakeEditSheetProps) {
           render={
             <Button
               type="button"
-              variant="secondary"
-              size="icon-md"
+              variant="outline"
+              size="sm"
               aria-label={"Editar " + stake.name + " y sus barrios"}
               onClick={() => handleOpenChange(true)}
-            />
+            >
+              <HugeiconsIcon
+                icon={PencilIcon}
+                strokeWidth={2}
+                data-icon="inline-start"
+              />
+              Editar
+            </Button>
           }
         >
           <HugeiconsIcon icon={PencilIcon} strokeWidth={2} />

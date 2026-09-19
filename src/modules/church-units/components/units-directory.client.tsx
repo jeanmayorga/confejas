@@ -16,6 +16,7 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  TableFooter,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
@@ -62,9 +63,6 @@ export function UnitsDirectory({ units }: UnitsDirectoryProps) {
                     <h2 id={`stake-${stake.id}`} className="font-medium">
                       {stake.name}
                     </h2>
-                    <p className="text-sm text-muted-foreground">
-                      {participantCount} participantes
-                    </p>
                   </div>
                   <div className="flex shrink-0 justify-end gap-1">
                     <StakeEditSheet stake={stake} stakes={stakes} />
@@ -108,6 +106,14 @@ export function UnitsDirectory({ units }: UnitsDirectoryProps) {
                       ))
                     )}
                   </TableBody>
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell className="font-medium">Total</TableCell>
+                      <TableCell className="font-medium">
+                        {participantCount}
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
                 </Table>
               </section>
             );
