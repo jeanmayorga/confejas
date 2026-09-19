@@ -208,7 +208,8 @@ function CompanyCard({
           </div>
 
           {company.counselors.length > 0 ? (
-            <Table className="mt-3 min-w-[420px]">
+            <div className="mt-3 overflow-hidden rounded-lg border border-border/50">
+              <Table className="min-w-[420px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Consejero</TableHead>
@@ -243,7 +244,8 @@ function CompanyCard({
                 </TableRow>
               ))}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">
               Sin consejeros asignados.
@@ -266,7 +268,8 @@ function CompanyCard({
           </div>
 
           {company.participants.length > 0 ? (
-            <Table className="mt-3 min-w-[900px]">
+            <div className="mt-3 overflow-hidden rounded-lg border border-border/50">
+              <Table className="min-w-[900px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombres</TableHead>
@@ -429,7 +432,8 @@ function CompanyCard({
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
           ) : (
             <Empty className="min-h-40 p-6">
               <EmptyHeader>
