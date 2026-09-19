@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { DataPagination } from "@/components/data-pagination";
 import { PageHeader } from "@/components/page-header";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -26,6 +27,14 @@ const dateFormatter = new Intl.DateTimeFormat("es-EC", {
   dateStyle: "medium",
   timeStyle: "short",
 });
+
+function getUserInitials(name: string) {
+  const nameParts = name.trim().split(/\s+/);
+
+  return `${nameParts[0]?.charAt(0) ?? "U"}${
+    nameParts.length > 1 ? (nameParts.at(-1)?.charAt(0) ?? "") : ""
+  }`.toLocaleUpperCase("es");
+}
 
 function formatDate(value: Date | string | null) {
   if (!value) return "Nunca";
@@ -76,7 +85,16 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
           <TableBody>
             {result.rows.map((user) => (
               <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.name}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <Avatar aria-hidden="true">
+                      <AvatarFallback className="font-medium">
+                        {getUserInitials(user.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium">{user.name}</span>
+                  </div>
+                </TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
                   <Badge
