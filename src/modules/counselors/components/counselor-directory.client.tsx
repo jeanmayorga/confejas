@@ -406,7 +406,7 @@ export function CounselorDirectory({
                       {companyId && companyName ? (
                         <button
                           type="button"
-                          className="flex h-full w-full items-center truncate text-left font-normal text-foreground transition-colors hover:text-primary hover:underline"
+                          className="flex h-full w-full items-center truncate text-left font-normal text-primary hover:underline"
                           onClick={(event) => {
                             event.stopPropagation();
                             openCompany({
