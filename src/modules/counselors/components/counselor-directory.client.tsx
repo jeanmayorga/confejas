@@ -79,6 +79,10 @@ type CounselorDirectoryProps = {
   canDelete: boolean;
 };
 
+function getCompanyGroupKey(counselor: CounselorDirectoryItem) {
+  return counselor.companyId ?? "__unassigned__";
+}
+
 const diacriticPattern = /\p{Diacritic}/gu;
 const counselorNameCollator = new Intl.Collator("es", { sensitivity: "base" });
 const companyNameCollator = new Intl.Collator("es", {
@@ -364,22 +368,54 @@ export function CounselorDirectory({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visibleCounselors.map((counselor) => (
-                <TableRow
-                  key={counselor.id}
-                  tabIndex={0}
-                  aria-label={`Ver a ${counselor.name}`}
-                  className="h-9 max-h-9 cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-                  onClick={() => openCounselor(counselor)}
-                  onKeyDown={(event) => handleRowKeyDown(event, counselor)}
-                >
-                  <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden truncate">
-                    {counselor.companyName ? (
-                      counselor.companyName
-                    ) : (
-                      <span className="text-muted-foreground">Sin asignar</span>
-                    )}
-                  </TableCell>
+              {visibleCounselors.map((counselor, index) => {
+                const companySortActive = sort.startsWith("company_");
+                const companyGroupKey = getCompanyGroupKey(counselor);
+                const previousCounselor = visibleCounselors[index - 1];
+                const isFirstCompanyRow =
+                  !companySortActive ||
+                  !previousCounselor ||
+                  getCompanyGroupKey(previousCounselor) !== companyGroupKey;
+                let companyRowSpan = 1;
+
+                if (companySortActive && isFirstCompanyRow) {
+                  for (
+                    let nextIndex = index + 1;
+                    nextIndex < visibleCounselors.length;
+                    nextIndex += 1
+                  ) {
+                    if (
+                      getCompanyGroupKey(visibleCounselors[nextIndex]) !==
+                      companyGroupKey
+                    ) {
+                      break;
+                    }
+
+                    companyRowSpan += 1;
+                  }
+                }
+
+                return (
+                  <TableRow
+                    key={counselor.id}
+                    tabIndex={0}
+                    aria-label={`Ver a ${counselor.name}`}
+                    className="h-9 max-h-9 cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                    onClick={() => openCounselor(counselor)}
+                    onKeyDown={(event) => handleRowKeyDown(event, counselor)}
+                  >
+                    {isFirstCompanyRow ? (
+                      <TableCell
+                        rowSpan={companyRowSpan}
+                        className="max-w-0 overflow-hidden truncate align-middle"
+                      >
+                        {counselor.companyName ? (
+                          counselor.companyName
+                        ) : (
+                          <span className="text-muted-foreground">Sin asignar</span>
+                        )}
+                      </TableCell>
+                    ) : null}
                   <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden truncate">
                     <div className="flex items-center gap-2">
                       <Avatar size="sm" className="!size-5" aria-hidden="true">
@@ -433,8 +469,9 @@ export function CounselorDirectory({
                       ) : null}
                     </div>
                   </TableCell>
-                </TableRow>
-              ))}
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}
