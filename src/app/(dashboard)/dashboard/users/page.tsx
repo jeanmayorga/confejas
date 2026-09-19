@@ -23,6 +23,7 @@ type UsersPageProps = {
 
 const dateFormatter = new Intl.DateTimeFormat("es-EC", {
   dateStyle: "medium",
+  timeStyle: "short",
 });
 
 export default async function UsersPage({ searchParams }: UsersPageProps) {
@@ -48,25 +49,23 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
       />
 
       <div className="flex flex-col overflow-hidden rounded-lg border border-border/50 bg-card">
-        <Table aria-label="Usuarios autorizados">
+        <Table className="min-w-[900px]" aria-label="Usuarios autorizados">
           <TableHeader className="bg-muted/50">
             <TableRow>
-              <TableHead>Usuario</TableHead>
+              <TableHead>Nombre</TableHead>
+              <TableHead>Email</TableHead>
               <TableHead>Rol</TableHead>
-              <TableHead className="hidden md:table-cell">Estado</TableHead>
-              <TableHead className="hidden lg:table-cell">Creado</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Creado</TableHead>
+              <TableHead>Conectado?</TableHead>
               <TableHead className="w-28 text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {result.rows.map((user) => (
               <TableRow key={user.id}>
-                <TableCell>
-                  <div className="font-medium">{user.name}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {user.email}
-                  </div>
-                </TableCell>
+                <TableCell className="font-medium">{user.name}</TableCell>
+                <TableCell>{user.email}</TableCell>
                 <TableCell>
                   <Badge
                     variant={
@@ -81,17 +80,19 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                     {user.banned ? "Bloqueado" : "Activo"}
                   </Badge>
                 </TableCell>
-                <TableCell className="hidden lg:table-cell">
+                <TableCell>
                   {dateFormatter.format(user.createdAt)}
                 </TableCell>
                 <TableCell>
-                  <div className="flex justify-end gap-1">
-                    <UserFormDialog user={user} />
-                    <UserDangerActions
-                      user={user}
-                      isCurrentUser={session.user.id === user.id}
-                    />
-                  </div>
+                  <Badge variant={user.connected ? "default" : "outline"}>
+                    {user.connected ? "Sí" : "No"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <UserDangerActions
+                    user={user}
+                    isCurrentUser={session.user.id === user.id}
+                  />
                 </TableCell>
               </TableRow>
             ))}
