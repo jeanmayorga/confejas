@@ -49,14 +49,8 @@ import {
 import { CounselorFormDialog } from "@/modules/counselors/components/counselor-form-dialog.client";
 import { DeleteCounselorButton } from "@/modules/counselors/components/delete-counselor-button.client";
 
-type CounselorSortField = "company" | "name" | "stake";
-type CounselorSort =
-  | "company_asc"
-  | "company_desc"
-  | "name_asc"
-  | "name_desc"
-  | "stake_asc"
-  | "stake_desc";
+type CounselorSortField = "company";
+type CounselorSort = "company_asc" | "company_desc";
 
 type CounselorDirectoryItem = {
   id: string;
@@ -203,39 +197,23 @@ export function CounselorDirectory({
         )
       : counselors;
 
-    const field = sort.slice(0, -4) as CounselorSortField;
-    const isDescending = sort.endsWith("_desc");
-    const direction = isDescending ? -1 : 1;
-
     return [...filteredCounselors].sort((left, right) => {
-      const leftValue =
-        field === "company"
-          ? left.companyName
-          : field === "stake"
-            ? left.stakeName
-            : left.name;
-      const rightValue =
-        field === "company"
-          ? right.companyName
-          : field === "stake"
-            ? right.stakeName
-            : right.name;
-      const leftIsMissing = !leftValue;
-      const rightIsMissing = !rightValue;
+      if (left.companyName === null && right.companyName !== null) return 1;
+      if (left.companyName !== null && right.companyName === null) return -1;
 
-      if (leftIsMissing !== rightIsMissing) {
-        return leftIsMissing ? 1 : -1;
-      }
-
-      const collator = field === "name" ? counselorNameCollator : companyNameCollator;
-      const primary = collator.compare(leftValue ?? "", rightValue ?? "");
+      const primary = companyNameCollator.compare(
+        left.companyName ?? "",
+        right.companyName ?? "",
+      );
 
       if (primary !== 0) {
-        return primary * direction;
+        return primary * (sort === "company_desc" ? -1 : 1);
       }
 
-      return counselorNameCollator.compare(left.name, right.name) ||
-        left.id.localeCompare(right.id);
+      return (
+        counselorNameCollator.compare(left.name, right.name) ||
+        left.id.localeCompare(right.id)
+      );
     });
   }, [counselors, normalizedSearch, sort]);
 
@@ -372,18 +350,8 @@ export function CounselorDirectory({
                   sort={sort}
                   onSortChange={setSort}
                 />
-                <SortableTableHead
-                  label="Consejero"
-                  field="name"
-                  sort={sort}
-                  onSortChange={setSort}
-                />
-                <SortableTableHead
-                  label="Estaca"
-                  field="stake"
-                  sort={sort}
-                  onSortChange={setSort}
-                />
+                <TableHead>Consejero</TableHead>
+                <TableHead>Estaca</TableHead>
                 <TableHead>Contacto</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
