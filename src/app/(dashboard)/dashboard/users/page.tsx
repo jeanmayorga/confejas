@@ -79,7 +79,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
               <TableHead>Estado</TableHead>
               <TableHead>Creado</TableHead>
               <TableHead>Última conexión</TableHead>
-              <TableHead className="w-28 text-right">Acciones</TableHead>
+              <TableHead className="w-28">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -117,7 +117,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                 <TableCell>
                   {formatDate(user.lastConnectionAt)}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell>
                   <UserDangerActions
                     user={user}
                     isCurrentUser={session.user.id === user.id}
