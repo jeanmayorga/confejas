@@ -57,7 +57,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <TooltipProvider>{children}</TooltipProvider>
           </QueryProvider>
         </NuqsAdapter>
-        <Toaster position="top-right" />
+        <Toaster position="top-center" />
       </body>
     </html>
   );
