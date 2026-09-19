@@ -2,7 +2,7 @@
 
 import { createHash } from "node:crypto";
 
-import { and, count, eq, inArray, sql } from "drizzle-orm";
+import { and, count, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import type { NeonHttpQueryResult } from "drizzle-orm/neon-http";
 import { revalidatePath } from "next/cache";
 
@@ -1239,6 +1239,45 @@ export async function createCompanyAction(): Promise<CompanyActionResult> {
     return { success: true, message: `${name} creada correctamente.` };
   } catch (error) {
     return { success: false, message: getSafeError(error) };
+  }
+}
+
+export async function clearCompanyParticipantsAction(): Promise<CompanyActionResult> {
+  try {
+    const session = await requireSession();
+
+    if (!canManageParticipants(session.user.role)) {
+      return {
+        success: false,
+        message: "No tienes permiso para quitar participantes de las compañías.",
+      };
+    }
+
+    const unassignedParticipants = await db
+      .update(participants)
+      .set({ companyId: null })
+      .where(isNotNull(participants.companyId))
+      .returning({ id: participants.id });
+
+    revalidateCompanyPaths();
+
+    if (unassignedParticipants.length === 0) {
+      return {
+        success: true,
+        message: "No había participantes asignados a una compañía.",
+      };
+    }
+
+    return {
+      success: true,
+      message: `${unassignedParticipants.length.toLocaleString("es-EC")} participantes quedaron sin compañía. Sus registros se conservan.`,
+    };
+  } catch {
+    return {
+      success: false,
+      message:
+        "No se pudieron quitar los participantes de las compañías. Inténtalo nuevamente.",
+    };
   }
 }
 
