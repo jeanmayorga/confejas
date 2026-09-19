@@ -326,8 +326,9 @@ function CompanyCard({
 
           {company.participants.length > 0 ? (
             <TableFrame className="mt-3">
-              <Table className="min-w-[680px] table-fixed">
+              <Table className="min-w-[720px] table-fixed">
                 <colgroup>
+                  <col className="w-12" />
                   <col className="w-24" />
                   <col />
                   <col className="w-[76px]" />
@@ -336,6 +337,7 @@ function CompanyCard({
                 </colgroup>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="text-center">#</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Nombres</TableHead>
                     <TableHead>Edad</TableHead>
@@ -344,8 +346,11 @@ function CompanyCard({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                {company.participants.map((participant) => (
+                {company.participants.map((participant, index) => (
                   <TableRow key={participant.id}>
+                    <TableCell className="text-center tabular-nums text-muted-foreground">
+                      {index + 1}
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
