@@ -29,6 +29,9 @@ export function getCounselorCredentialsEmail({
   const safeEmail = escapeHtml(email);
   const safePassword = escapeHtml(password);
   const safeCompanyName = escapeHtml(companyName);
+  const loginUrl = escapeHtml(
+    new URL("/login", process.env.BETTER_AUTH_URL ?? "http://localhost:3000").toString(),
+  );
 
   return {
     subject: "Tus credenciales de acceso - Conferencia JAS 2026",
@@ -95,6 +98,13 @@ export function getCounselorCredentialsEmail({
                         </tr>
                         <tr>
                           <td style="padding:4px 0;font-size:14px;line-height:1.5;color:#475569">&#10003;&nbsp; Consultar los participantes de tu compañía</td>
+                        </tr>
+                      </table>
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:30px 0 0;width:100%;border-collapse:collapse">
+                        <tr>
+                          <td align="center">
+                            <a href="${loginUrl}" style="display:inline-block;border-radius:10px;background-color:#0b78c5;padding:14px 24px;color:#ffffff;font-size:15px;line-height:1.2;font-weight:700;text-decoration:none">Ingresar a la plataforma</a>
+                          </td>
                         </tr>
                       </table>
                       <p style="margin:26px 0 0;padding:14px 16px;border-radius:10px;background-color:#fff8e8;font-size:13px;line-height:1.6;color:#805b12"><strong>Importante:</strong> esta es una contraseña temporal. Por seguridad, no compartas estas credenciales.</p>
