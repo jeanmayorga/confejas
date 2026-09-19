@@ -236,8 +236,8 @@ function CompanyCard({
   const companyLabel = getCompanyDisplayName(company.name, position);
 
   return (
-    <Card aria-labelledby={titleId} aria-busy={management.busy}>
-      <CardHeader className="border-b">
+    <Card className="py-4" aria-labelledby={titleId} aria-busy={management.busy}>
+      <CardHeader className="border-b !pb-3">
         <CardTitle id={titleId} className="text-lg">
           {companyLabel}
         </CardTitle>
