@@ -293,16 +293,9 @@ function CompanyCard({
         />
 
         <section aria-labelledby={`${titleId}-counselors`}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 id={`${titleId}-counselors`} className="text-sm font-semibold">
-              Consejeros
-            </h3>
-            <Badge
-              variant={company.counselorCount === 2 ? "default" : "secondary"}
-            >
-              {company.counselorCount} de 2 habituales
-            </Badge>
-          </div>
+          <h3 id={`${titleId}-counselors`} className="text-sm font-semibold">
+            Consejeros
+          </h3>
 
           {company.counselors.length > 0 ? (
             <TableFrame className="mt-3">
@@ -346,16 +339,9 @@ function CompanyCard({
         <Separator />
 
         <section aria-labelledby={`${titleId}-participants`}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 id={`${titleId}-participants`} className="text-sm font-semibold">
-              Participantes
-            </h3>
-            <Badge
-              variant={company.participantCount > 0 ? "default" : "secondary"}
-            >
-              {company.participantCount.toLocaleString("es-EC")}
-            </Badge>
-          </div>
+          <h3 id={`${titleId}-participants`} className="text-sm font-semibold">
+            Participantes
+          </h3>
 
           {company.participants.length > 0 ? (
             <TableFrame className="mt-3">
