@@ -69,9 +69,12 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
     <SidebarProvider>
       <AppSidebar user={user} />
       <SidebarInset className="min-w-0 md:my-2 md:mr-2 md:overflow-clip md:rounded-3xl md:border md:shadow-sm">
-        <header className="flex min-h-16 items-center justify-between gap-2 border-b bg-background px-4 sm:px-6 lg:px-8">
+        <header className="flex min-h-16 items-center justify-between gap-2 border-b border-primary-foreground/20 bg-primary px-4 text-primary-foreground sm:px-6 md:border-border md:bg-background md:text-foreground lg:px-8">
           <div className="flex items-center gap-2">
-            <SidebarTrigger className="md:hidden" aria-label="Abrir menú" />
+            <SidebarTrigger
+              className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground md:hidden"
+              aria-label="Abrir menú"
+            />
             <h1 className="text-base font-semibold tracking-tight">
               Conferencia JAS 2026
             </h1>
@@ -112,7 +115,7 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
                   ) : null}
                   <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>
-                <span className="hidden max-w-32 truncate text-sm font-medium sm:inline">
+                <span className="hidden max-w-32 truncate text-sm font-medium text-primary-foreground md:text-foreground sm:inline">
                   {user.name}
                 </span>
               </DropdownMenuTrigger>
