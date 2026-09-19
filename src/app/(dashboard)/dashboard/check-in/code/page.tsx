@@ -14,7 +14,6 @@ export const metadata: Metadata = {
 
 type CodeCheckInPageProps = {
   searchParams: Promise<{
-    error?: string | string[];
     participantId?: string | string[];
     saved?: string | string[];
   }>;
@@ -29,7 +28,6 @@ export default async function CodeCheckInPage({
     ? query.participantId[0]
     : query.participantId;
   const savedValue = Array.isArray(query.saved) ? query.saved[0] : query.saved;
-  const errorValue = Array.isArray(query.error) ? query.error[0] : query.error;
 
   return (
     <div className="flex flex-col gap-6">
@@ -55,7 +53,6 @@ export default async function CodeCheckInPage({
 
       <ParticipantCodeLookup key={participantId ?? "code-lookup"} />
       <ParticipantCheckInSheetLoader
-        assignmentError={errorValue === "assignment"}
         participantId={participantId}
         returnPath="/dashboard/check-in/code"
         saved={savedValue === "1"}
