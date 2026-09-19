@@ -22,7 +22,7 @@ function getSafeCallbackUrl(value: string | string[] | undefined) {
   const callbackUrl = Array.isArray(value) ? value[0] : value;
 
   if (!callbackUrl?.startsWith("/") || callbackUrl.startsWith("//")) {
-    return "/dashboard";
+    return "/";
   }
 
   return callbackUrl;

@@ -103,6 +103,7 @@ function DetailItem({
 type ParticipantDetailsProps = {
   participant: ParticipantTableRow;
   canManage?: boolean;
+  canChangeStatus?: boolean;
   canDelete?: boolean;
   className?: string;
   onEdit?: () => void;
@@ -132,6 +133,7 @@ const participantStatusDotClassNames = {
 export function ParticipantDetails({
   participant,
   canManage = false,
+  canChangeStatus = canManage,
   canDelete = false,
   className,
   onEdit = () => {},
@@ -188,7 +190,7 @@ export function ParticipantDetails({
               {getParticipantInitials(participant.firstNames, participant.lastNames)}
             </AvatarFallback>
           </Avatar>
-          {canManage ? (
+          {canChangeStatus ? (
             <Select
               items={PARTICIPANT_STATUS_OPTIONS}
               value={participant.status}

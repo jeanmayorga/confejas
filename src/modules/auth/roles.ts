@@ -35,8 +35,15 @@ export function canManageUsers(value: RoleValue) {
 }
 
 export function canViewParticipantDirectory(value: RoleValue) {
-  return getUserRoles(value).some((role) =>
-    ["admin", "staff", "counselor"].includes(role),
+  return getUserRoles(value).some((role) => ["admin", "staff"].includes(role));
+}
+
+export function usesCounselorApp(value: RoleValue) {
+  const roles = getUserRoles(value);
+
+  return (
+    roles.includes("counselor") &&
+    !roles.some((role) => ["admin", "staff"].includes(role))
   );
 }
 

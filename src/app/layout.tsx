@@ -22,11 +22,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Confejas",
   description: "Plataforma de gestión de Confejas.",
-  applicationName: "Confejas Staff",
+  applicationName: "Confejas",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Confejas Staff",
+    title: "Confejas",
   },
   formatDetection: {
     telephone: false,
