@@ -15,17 +15,11 @@ import { requireParticipantManagementAccess } from "@/modules/auth/server/sessio
 import { CompaniesDirectory } from "@/modules/companies/components/companies-directory.client";
 import { CompanyDistributionDialog } from "@/modules/companies/components/company-distribution-dialog.client";
 import { CompanyFormDialog } from "@/modules/companies/components/company-form-dialog.client";
-import {
-  getCompanyDistributionOverview,
-  listCompanies,
-} from "@/modules/companies/server/queries";
+import { listCompanies } from "@/modules/companies/server/queries";
 
 export default async function CompaniesPage() {
   const session = await requireParticipantManagementAccess();
-  const [companies, distributionOverview] = await Promise.all([
-    listCompanies(),
-    getCompanyDistributionOverview(),
-  ]);
+  const companies = await listCompanies();
   const canDelete = canDeleteParticipants(session.user.role);
 
   return (
@@ -35,11 +29,8 @@ export default async function CompaniesPage() {
         description="Administra tus compañías y sus participantes."
         actions={
           <>
-          <CompanyDistributionDialog
-            companyCount={companies.length}
-            overview={distributionOverview}
-          />
-          <CompanyFormDialog />
+            <CompanyDistributionDialog />
+            <CompanyFormDialog />
           </>
         }
       />
