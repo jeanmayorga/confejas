@@ -67,7 +67,7 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
     <SidebarProvider>
       <AppSidebar user={user} />
       <SidebarInset className="min-w-0 md:my-2 md:mr-2 md:overflow-clip md:rounded-3xl md:border md:shadow-sm">
-        <header className="flex min-h-16 items-center justify-between gap-2 border-b border-primary-foreground/20 bg-primary px-4 text-primary-foreground sm:px-6 md:border-border md:bg-background md:text-foreground lg:px-8">
+        <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-2 border-b border-primary-foreground/20 bg-primary px-4 text-primary-foreground sm:px-6 md:top-2 md:rounded-t-3xl md:border-border md:bg-background md:text-foreground lg:px-8">
           <div className="flex items-center gap-2">
             <SidebarTrigger
               variant="outline"
