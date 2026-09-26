@@ -20,9 +20,18 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardAction,
@@ -31,6 +40,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import {
   Empty,
   EmptyContent,
@@ -62,6 +82,7 @@ import {
   type ParticipantStatus,
 } from "@/modules/participants/status";
 import { getCompanyDisplayName } from "@/modules/companies/company-label";
+import { getCompanyMoveUnavailableReason } from "@/modules/companies/company-move-options";
 import { sortParticipantsByName } from "@/modules/companies/participant-order";
 import { CompanyCapacityDialog } from "@/modules/companies/components/company-capacity-dialog.client";
 import { CreateCompanyButton } from "@/modules/companies/components/create-company-button.client";
@@ -110,6 +131,12 @@ type DraggedCompanyParticipants = {
 type PendingCompanyMove = DraggedCompanyParticipants & {
   id: number;
   targetCompanyId: string | null;
+};
+
+type RequestedCompanyMove = {
+  participantId: string;
+  sourceCompanyId: string;
+  targetCompanyId: string;
 };
 
 const participantStatusClassNames = {
@@ -298,6 +325,7 @@ export function CompaniesDirectory({
   >([]);
   const nextPendingMoveIdRef = useRef(0);
   const [moving, setMoving] = useState(false);
+  const [requestedMove, setRequestedMove] = useState<RequestedCompanyMove | null>(null);
   const [refreshing, startTransition] = useTransition();
   const dragDisabled = moving || refreshing;
   const draggedParticipantIds = useMemo(
@@ -320,6 +348,35 @@ export function CompaniesDirectory({
       ),
     [capacity, companies, pendingCompanyMoves],
   );
+  const requestedSource = displayedCompanies.find(
+    (company) => company.id === requestedMove?.sourceCompanyId,
+  );
+  const requestedParticipant = requestedSource?.participants.find(
+    (participant) => participant.id === requestedMove?.participantId,
+  );
+  const requestedTarget = displayedCompanies.find(
+    (company) => company.id === requestedMove?.targetCompanyId,
+  );
+  const requestedSourceLabel = requestedSource
+    ? getCompanyDisplayName(
+        requestedSource.name,
+        displayedCompanies.indexOf(requestedSource) + 1,
+      )
+    : "su compañía";
+  const requestedTargetLabel = requestedTarget
+    ? getCompanyDisplayName(
+        requestedTarget.name,
+        displayedCompanies.indexOf(requestedTarget) + 1,
+      )
+    : "la compañía elegida";
+  const requestedMoveUnavailableReason = requestedMove && requestedParticipant && requestedTarget
+    ? getCompanyMoveUnavailableReason(
+        requestedMove.sourceCompanyId,
+        requestedParticipant.sex,
+        requestedTarget,
+        capacity,
+      )
+    : "La asignación cambió. Cierra esta ventana y vuelve a intentarlo.";
 
   function clearDragState() {
     setDraggedParticipant(null);
@@ -625,6 +682,36 @@ export function CompaniesDirectory({
     void operation.catch(() => undefined).finally(() => setMoving(false));
   }
 
+  function confirmRequestedMove() {
+    if (
+      !requestedMove ||
+      !requestedParticipant ||
+      !requestedTarget ||
+      requestedMoveUnavailableReason ||
+      dragDisabled
+    ) {
+      return;
+    }
+
+    const participant = requestedParticipant;
+    const sourceCompanyId = requestedMove.sourceCompanyId;
+    const targetCompany = requestedTarget;
+
+    setRequestedMove(null);
+    moveDraggedParticipants(
+      {
+        source: "company",
+        participants: [{
+          participantId: participant.id,
+          companyId: sourceCompanyId,
+          name: getParticipantName(participant),
+          participant,
+        }],
+      },
+      targetCompany,
+    );
+  }
+
   function handleUnassignedDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     const dragged = draggedParticipant;
@@ -724,6 +811,16 @@ export function CompaniesDirectory({
             onCompanyParticipantsSelectionChange={
               handleCompanyParticipantsSelectionChange
             }
+            companies={displayedCompanies}
+            onParticipantMoveRequest={(participantId, targetCompanyId) => {
+              if (!dragDisabled) {
+                setRequestedMove({
+                  participantId,
+                  sourceCompanyId: company.id,
+                  targetCompanyId,
+                });
+              }
+            }}
             onDragOver={handleCompanyDragOver}
             onDragLeave={handleCompanyDragLeave}
             onDrop={handleCompanyDrop}
@@ -749,6 +846,37 @@ export function CompaniesDirectory({
           handleUnassignedParticipantsSelectionChange
         }
       />
+      <AlertDialog
+        open={requestedMove !== null}
+        onOpenChange={(open) => {
+          if (!open && !moving) {
+            setRequestedMove(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Mover participante?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {`¿Seguro quieres mover a ${requestedParticipant ? getParticipantName(requestedParticipant) : "este participante"} de ${requestedSourceLabel} a ${requestedTargetLabel}? Su registro se conservará.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {requestedMoveUnavailableReason && requestedMove ? (
+            <p role="alert" className="text-sm text-destructive">
+              {requestedMoveUnavailableReason}
+            </p>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={moving}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={dragDisabled || Boolean(requestedMoveUnavailableReason)}
+              onClick={confirmRequestedMove}
+            >
+              Sí, mover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -1138,6 +1266,7 @@ function UnassignedParticipantsCard({
 
 function CompanyCard({
   company,
+  companies,
   position,
   canDelete,
   capacity,
@@ -1149,11 +1278,13 @@ function CompanyCard({
   onParticipantDragEnd,
   onParticipantSelectionChange,
   onCompanyParticipantsSelectionChange,
+  onParticipantMoveRequest,
   onDragOver,
   onDragLeave,
   onDrop,
 }: {
   company: CompanyDirectoryItem;
+  companies: CompanyDirectoryItem[];
   position: number;
   canDelete: boolean;
   capacity: DistributionCapacity;
@@ -1175,6 +1306,7 @@ function CompanyCard({
     company: CompanyDirectoryItem,
     checked: boolean,
   ) => void;
+  onParticipantMoveRequest: (participantId: string, targetCompanyId: string) => void;
   onDragOver: (
     event: DragEvent<HTMLDivElement>,
     company: CompanyDirectoryItem,
@@ -1187,6 +1319,10 @@ function CompanyCard({
 }) {
   const titleId = `company-${company.id}-title`;
   const companyLabel = getCompanyDisplayName(company.name, position);
+  const [contextParticipantId, setContextParticipantId] = useState<string | null>(null);
+  const contextParticipant = company.participants.find(
+    (participant) => participant.id === contextParticipantId,
+  );
   const selectedParticipantCount = company.participants.filter((participant) =>
     selectedParticipantIds.has(participant.id),
   ).length;
@@ -1315,7 +1451,16 @@ function CompanyCard({
                     <TableHead>Sexo</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <ContextMenu>
+                  <ContextMenuTrigger
+                    render={<TableBody />}
+                    onContextMenuCapture={(event) => {
+                      const row = (event.target as Element).closest<HTMLTableRowElement>(
+                        "tr[data-participant-id]",
+                      );
+                      setContextParticipantId(row?.dataset.participantId ?? null);
+                    }}
+                  >
                   {company.participants.map((participant, index) =>
                     (() => {
                       const isSelected = selectedParticipantIds.has(
@@ -1328,10 +1473,11 @@ function CompanyCard({
                       return (
                         <TableRow
                           key={participant.id}
+                          data-participant-id={participant.id}
                           draggable={!dragDisabled}
                           aria-grabbed={isDragged}
                           aria-selected={isSelected}
-                          title="Arrastra a Participantes sin compañía para quitarlo de esta compañía."
+                          title="Arrastra a Participantes sin compañía para quitarlo de esta compañía, o haz clic derecho para moverlo a otra."
                           className={cn(
                             "cursor-grab active:cursor-grabbing",
                             isSelected && "bg-primary/5 hover:bg-primary/10",
@@ -1405,7 +1551,45 @@ function CompanyCard({
                       );
                     })(),
                   )}
-                </TableBody>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuGroup>
+                      <ContextMenuSub>
+                        <ContextMenuSubTrigger
+                          openOnHover
+                          disabled={dragDisabled || !contextParticipant}
+                        >
+                          Mover a otra compañía
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent className="max-h-[70dvh] min-w-64 overflow-y-auto">
+                          <ContextMenuGroup>
+                            {contextParticipant ? companies.map((destination, index) => {
+                              const unavailableReason = getCompanyMoveUnavailableReason(
+                                company.id,
+                                contextParticipant.sex,
+                                destination,
+                                capacity,
+                              );
+
+                              return (
+                                <ContextMenuItem
+                                  key={destination.id}
+                                  disabled={dragDisabled || Boolean(unavailableReason)}
+                                  onClick={() => onParticipantMoveRequest(contextParticipant.id, destination.id)}
+                                >
+                                  <span>{getCompanyDisplayName(destination.name, index + 1)}</span>
+                                  <span className="ml-auto text-xs text-muted-foreground">
+                                    {unavailableReason ?? `${destination.participantCount}/${capacity.female + capacity.male}`}
+                                  </span>
+                                </ContextMenuItem>
+                              );
+                            }) : null}
+                          </ContextMenuGroup>
+                        </ContextMenuSubContent>
+                      </ContextMenuSub>
+                    </ContextMenuGroup>
+                  </ContextMenuContent>
+                </ContextMenu>
               </Table>
             </TableFrame>
           ) : (
