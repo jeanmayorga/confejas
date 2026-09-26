@@ -17,6 +17,7 @@ import Tick02Icon from "@hugeicons/core-free-icons/Tick02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { toast } from "sonner";
 
+import { MobileUnassignedSheet } from "@/components/mobile-unassigned-sheet.client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   AlertDialog,
@@ -86,6 +87,10 @@ import {
   getParticipantStatusLabel,
   type ParticipantStatus,
 } from "@/modules/participants/status";
+import {
+  UnassignedStatusFilter,
+  type UnassignedStatusFilterValue,
+} from "@/modules/participants/components/unassigned-status-filter.client";
 
 import {
   applyOptimisticLodgingMove,
@@ -183,6 +188,8 @@ function getAgeLabel(age: number | null) {
 }
 
 function UnassignedParticipantsPanel({
+  titleId,
+  inSheet,
   participants,
   rooms,
   canManage,
@@ -200,6 +207,8 @@ function UnassignedParticipantsPanel({
   onDragLeave,
   onDrop,
 }: {
+  titleId: string;
+  inSheet: boolean;
   participants: LodgingParticipantSummary[];
   rooms: LodgingRoomTarget[];
   canManage: boolean;
@@ -231,22 +240,22 @@ function UnassignedParticipantsPanel({
   onDrop: (event: DragEvent<HTMLDivElement>) => void;
 }) {
   const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<UnassignedStatusFilterValue>("all");
   const [contextParticipantId, setContextParticipantId] = useState<
     string | null
   >(null);
   const filteredParticipants = useMemo(() => {
     const normalizedSearch = normalizeSearch(search);
 
-    if (!normalizedSearch) {
-      return participants;
-    }
-
-    return participants.filter((participant) =>
-      normalizeSearch(
-        `${participant.firstNames} ${participant.lastNames} ${participant.preferredName ?? ""} ${participant.wardName}`,
-      ).includes(normalizedSearch),
+    return participants.filter(
+      (participant) =>
+        (status === "all" || participant.status === status) &&
+        (!normalizedSearch ||
+          normalizeSearch(
+            `${participant.firstNames} ${participant.lastNames} ${participant.preferredName ?? ""} ${participant.wardName}`,
+          ).includes(normalizedSearch)),
     );
-  }, [participants, search]);
+  }, [participants, search, status]);
   const contextParticipant = participants.find(
     (participant) => participant.id === contextParticipantId,
   );
@@ -259,12 +268,13 @@ function UnassignedParticipantsPanel({
 
   return (
     <aside
-      className="order-first min-w-0 self-start xl:order-last xl:sticky xl:top-6"
-      aria-labelledby="unassigned-lodging-title"
+      className={cn("min-w-0 self-start xl:sticky xl:top-6", inSheet && "h-full")}
+      aria-labelledby={titleId}
     >
       <Card
         className={cn(
           "max-h-[50dvh] gap-0 py-3 transition-[background-color,box-shadow] xl:max-h-[calc(100dvh-3rem)]",
+          inSheet && "h-full max-h-none",
           draggedParticipant?.source === "room" &&
             "bg-primary/5 ring-1 ring-primary/40",
           isDropTarget && "bg-primary/5 ring-2 ring-primary ring-offset-2",
@@ -274,7 +284,7 @@ function UnassignedParticipantsPanel({
         onDrop={onDrop}
       >
         <CardHeader className="border-b !pb-3">
-          <CardTitle id="unassigned-lodging-title" className="text-lg">
+          <CardTitle id={titleId} className="text-lg">
             Participantes sin alojamiento
           </CardTitle>
           <CardDescription>
@@ -297,6 +307,9 @@ function UnassignedParticipantsPanel({
               aria-label="Buscar participantes sin alojamiento"
             />
           </InputGroup>
+          <div className="pt-2">
+            <UnassignedStatusFilter value={status} onChange={setStatus} />
+          </div>
           {canManage && filteredParticipants.length > 0 ? (
             <div className="flex flex-wrap items-center gap-2 pt-2 text-xs text-muted-foreground">
               <Checkbox
@@ -473,11 +486,13 @@ function UnassignedParticipantsPanel({
             <Empty className="min-h-32 px-6 py-8">
               <EmptyHeader>
                 <EmptyTitle>
-                  {search ? "Sin coincidencias" : "Todos tienen alojamiento"}
+                  {search || status !== "all"
+                    ? "Sin coincidencias"
+                    : "Todos tienen alojamiento"}
                 </EmptyTitle>
                 <EmptyDescription>
-                  {search
-                    ? "Prueba con otro nombre o barrio."
+                  {search || status !== "all"
+                    ? "Prueba con otro nombre, barrio o estado."
                     : "No hay participantes pendientes de dormitorio."}
                 </EmptyDescription>
               </EmptyHeader>
@@ -487,10 +502,12 @@ function UnassignedParticipantsPanel({
 
         <CardFooter className="justify-between border-t !pt-3">
           <span className="font-medium">
-            {search ? "Resultados" : "Total sin alojamiento"}
+            {search || status !== "all"
+              ? "Resultados"
+              : "Total sin alojamiento"}
           </span>
           <Badge variant="secondary" aria-live="polite">
-            {search
+            {search || status !== "all"
               ? `${filteredParticipants.length.toLocaleString("es-EC")} de ${participants.length.toLocaleString("es-EC")}`
               : participants.length.toLocaleString("es-EC")}
           </Badge>
@@ -535,6 +552,7 @@ export function LodgingBoard({
     LodgingParticipantSummary[] | null
   >(null);
   const [moving, setMoving] = useState(false);
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const [refreshing, startTransition] = useTransition();
   const dragDisabled = !canManage || moving || refreshing;
   const displayedOverview = useMemo(
@@ -841,6 +859,55 @@ export function LodgingBoard({
       }
       return next;
     });
+  }
+
+  function renderUnassignedPanel(inSheet: boolean) {
+    return (
+      <UnassignedParticipantsPanel
+        titleId={
+          inSheet
+            ? "unassigned-lodging-mobile-title"
+            : "unassigned-lodging-title"
+        }
+        inSheet={inSheet}
+        participants={displayedOverview.unassignedParticipants}
+        rooms={displayedRooms}
+        canManage={canManage}
+        draggedParticipant={draggedParticipant}
+        selectedParticipantIds={selectedUnassignedParticipantIds}
+        isDropTarget={isUnassignedDropTarget}
+        dragDisabled={dragDisabled}
+        onParticipantSelectionChange={(participantId, checked) =>
+          handleSelectionChange(
+            setSelectedUnassignedParticipantIds,
+            participantId,
+            checked,
+          )
+        }
+        onParticipantsSelectionChange={(participants, checked) =>
+          handleGroupSelectionChange(
+            setSelectedUnassignedParticipantIds,
+            participants,
+            checked,
+          )
+        }
+        onParticipantDragStart={handleUnassignedParticipantDragStart}
+        onParticipantDragEnd={clearDragState}
+        onPickRoomsRequest={(participants) => {
+          if (inSheet) setMobilePanelOpen(false);
+          setPickerParticipants(participants);
+        }}
+        onMoveRequest={(participant, targetRoomName) => {
+          if (!dragDisabled) {
+            if (inSheet) setMobilePanelOpen(false);
+            setRequestedChange({ participants: [participant], targetRoomName });
+          }
+        }}
+        onDragOver={handleUnassignedDragOver}
+        onDragLeave={handleUnassignedDragLeave}
+        onDrop={handleUnassignedDrop}
+      />
+    );
   }
 
   return (
@@ -1295,43 +1362,18 @@ export function LodgingBoard({
             );
           })}
         </div>
-        <UnassignedParticipantsPanel
-          participants={displayedOverview.unassignedParticipants}
-          rooms={displayedRooms}
-          canManage={canManage}
-          draggedParticipant={draggedParticipant}
-          selectedParticipantIds={selectedUnassignedParticipantIds}
-          isDropTarget={isUnassignedDropTarget}
-          dragDisabled={dragDisabled}
-          onParticipantSelectionChange={(participantId, checked) =>
-            handleSelectionChange(
-              setSelectedUnassignedParticipantIds,
-              participantId,
-              checked,
-            )
-          }
-          onParticipantsSelectionChange={(participants, checked) =>
-            handleGroupSelectionChange(
-              setSelectedUnassignedParticipantIds,
-              participants,
-              checked,
-            )
-          }
-          onParticipantDragStart={handleUnassignedParticipantDragStart}
-          onParticipantDragEnd={clearDragState}
-          onPickRoomsRequest={setPickerParticipants}
-          onMoveRequest={(participant, targetRoomName) => {
-            if (!dragDisabled)
-              setRequestedChange({
-                participants: [participant],
-                targetRoomName,
-              });
-          }}
-          onDragOver={handleUnassignedDragOver}
-          onDragLeave={handleUnassignedDragLeave}
-          onDrop={handleUnassignedDrop}
-        />
+        <div className="hidden xl:block">{renderUnassignedPanel(false)}</div>
       </div>
+
+      <MobileUnassignedSheet
+        title="Sin alojamiento"
+        description="Busca y filtra participantes sin dormitorio."
+        icon={<HugeiconsIcon icon={BedBunkIcon} strokeWidth={2} data-icon="inline-start" />}
+        open={mobilePanelOpen}
+        onOpenChange={setMobilePanelOpen}
+      >
+        {renderUnassignedPanel(true)}
+      </MobileUnassignedSheet>
 
       <AlertDialog
         open={requestedChange !== null}
