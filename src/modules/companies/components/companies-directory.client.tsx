@@ -46,6 +46,7 @@ import {
   ContextMenuContent,
   ContextMenuGroup,
   ContextMenuItem,
+  ContextMenuSeparator,
   ContextMenuSub,
   ContextMenuSubContent,
   ContextMenuSubTrigger,
@@ -133,10 +134,10 @@ type PendingCompanyMove = DraggedCompanyParticipants & {
   targetCompanyId: string | null;
 };
 
-type RequestedCompanyMove = {
+type RequestedCompanyAssignmentChange = {
   participantId: string;
   sourceCompanyId: string;
-  targetCompanyId: string;
+  targetCompanyId: string | null;
 };
 
 const participantStatusClassNames = {
@@ -325,7 +326,8 @@ export function CompaniesDirectory({
   >([]);
   const nextPendingMoveIdRef = useRef(0);
   const [moving, setMoving] = useState(false);
-  const [requestedMove, setRequestedMove] = useState<RequestedCompanyMove | null>(null);
+  const [requestedChange, setRequestedChange] =
+    useState<RequestedCompanyAssignmentChange | null>(null);
   const [refreshing, startTransition] = useTransition();
   const dragDisabled = moving || refreshing;
   const draggedParticipantIds = useMemo(
@@ -349,13 +351,13 @@ export function CompaniesDirectory({
     [capacity, companies, pendingCompanyMoves],
   );
   const requestedSource = displayedCompanies.find(
-    (company) => company.id === requestedMove?.sourceCompanyId,
+    (company) => company.id === requestedChange?.sourceCompanyId,
   );
   const requestedParticipant = requestedSource?.participants.find(
-    (participant) => participant.id === requestedMove?.participantId,
+    (participant) => participant.id === requestedChange?.participantId,
   );
   const requestedTarget = displayedCompanies.find(
-    (company) => company.id === requestedMove?.targetCompanyId,
+    (company) => company.id === requestedChange?.targetCompanyId,
   );
   const requestedSourceLabel = requestedSource
     ? getCompanyDisplayName(
@@ -369,14 +371,19 @@ export function CompaniesDirectory({
         displayedCompanies.indexOf(requestedTarget) + 1,
       )
     : "la compañía elegida";
-  const requestedMoveUnavailableReason = requestedMove && requestedParticipant && requestedTarget
-    ? getCompanyMoveUnavailableReason(
-        requestedMove.sourceCompanyId,
-        requestedParticipant.sex,
-        requestedTarget,
-        capacity,
-      )
-    : "La asignación cambió. Cierra esta ventana y vuelve a intentarlo.";
+  const requestedChangeUnavailableReason = !requestedChange
+    ? null
+    : !requestedParticipant ||
+        (requestedChange.targetCompanyId !== null && !requestedTarget)
+      ? "La asignación cambió. Cierra esta ventana y vuelve a intentarlo."
+      : requestedTarget
+        ? getCompanyMoveUnavailableReason(
+            requestedChange.sourceCompanyId,
+            requestedParticipant.sex,
+            requestedTarget,
+            capacity,
+          )
+        : null;
 
   function clearDragState() {
     setDraggedParticipant(null);
@@ -635,6 +642,9 @@ export function CompaniesDirectory({
           throw new Error(result.message);
         }
 
+        void queryClient.invalidateQueries({
+          queryKey: ["company-unassigned-participants"],
+        });
         startTransition(() => {
           router.refresh();
         });
@@ -682,22 +692,24 @@ export function CompaniesDirectory({
     void operation.catch(() => undefined).finally(() => setMoving(false));
   }
 
-  function confirmRequestedMove() {
+  function confirmRequestedChange() {
+    const targetCompany =
+      requestedChange?.targetCompanyId === null ? null : requestedTarget;
+
     if (
-      !requestedMove ||
+      !requestedChange ||
       !requestedParticipant ||
-      !requestedTarget ||
-      requestedMoveUnavailableReason ||
+      targetCompany === undefined ||
+      requestedChangeUnavailableReason ||
       dragDisabled
     ) {
       return;
     }
 
     const participant = requestedParticipant;
-    const sourceCompanyId = requestedMove.sourceCompanyId;
-    const targetCompany = requestedTarget;
+    const sourceCompanyId = requestedChange.sourceCompanyId;
 
-    setRequestedMove(null);
+    setRequestedChange(null);
     moveDraggedParticipants(
       {
         source: "company",
@@ -814,10 +826,19 @@ export function CompaniesDirectory({
             companies={displayedCompanies}
             onParticipantMoveRequest={(participantId, targetCompanyId) => {
               if (!dragDisabled) {
-                setRequestedMove({
+                setRequestedChange({
                   participantId,
                   sourceCompanyId: company.id,
                   targetCompanyId,
+                });
+              }
+            }}
+            onParticipantRemoveRequest={(participantId) => {
+              if (!dragDisabled) {
+                setRequestedChange({
+                  participantId,
+                  sourceCompanyId: company.id,
+                  targetCompanyId: null,
                 });
               }
             }}
@@ -847,32 +868,45 @@ export function CompaniesDirectory({
         }
       />
       <AlertDialog
-        open={requestedMove !== null}
+        open={requestedChange !== null}
         onOpenChange={(open) => {
           if (!open && !moving) {
-            setRequestedMove(null);
+            setRequestedChange(null);
           }
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Mover participante?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {requestedChange?.targetCompanyId === null
+                ? "¿Eliminar de la compañía?"
+                : "¿Mover participante?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {`¿Seguro quieres mover a ${requestedParticipant ? getParticipantName(requestedParticipant) : "este participante"} de ${requestedSourceLabel} a ${requestedTargetLabel}? Su registro se conservará.`}
+              {requestedChange?.targetCompanyId === null
+                ? `¿Seguro quieres eliminar a ${requestedParticipant ? getParticipantName(requestedParticipant) : "este participante"} de ${requestedSourceLabel}? Su ficha se conservará y aparecerá en Participantes sin compañía.`
+                : `¿Seguro quieres mover a ${requestedParticipant ? getParticipantName(requestedParticipant) : "este participante"} de ${requestedSourceLabel} a ${requestedTargetLabel}? Su registro se conservará.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {requestedMoveUnavailableReason && requestedMove ? (
+          {requestedChangeUnavailableReason ? (
             <p role="alert" className="text-sm text-destructive">
-              {requestedMoveUnavailableReason}
+              {requestedChangeUnavailableReason}
             </p>
           ) : null}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={moving}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              disabled={dragDisabled || Boolean(requestedMoveUnavailableReason)}
-              onClick={confirmRequestedMove}
+              variant={
+                requestedChange?.targetCompanyId === null
+                  ? "destructive"
+                  : "default"
+              }
+              disabled={dragDisabled || Boolean(requestedChangeUnavailableReason)}
+              onClick={confirmRequestedChange}
             >
-              Sí, mover
+              {requestedChange?.targetCompanyId === null
+                ? "Sí, eliminar de la compañía"
+                : "Sí, mover"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1279,6 +1313,7 @@ function CompanyCard({
   onParticipantSelectionChange,
   onCompanyParticipantsSelectionChange,
   onParticipantMoveRequest,
+  onParticipantRemoveRequest,
   onDragOver,
   onDragLeave,
   onDrop,
@@ -1307,6 +1342,7 @@ function CompanyCard({
     checked: boolean,
   ) => void;
   onParticipantMoveRequest: (participantId: string, targetCompanyId: string) => void;
+  onParticipantRemoveRequest: (participantId: string) => void;
   onDragOver: (
     event: DragEvent<HTMLDivElement>,
     company: CompanyDirectoryItem,
@@ -1477,7 +1513,7 @@ function CompanyCard({
                           draggable={!dragDisabled}
                           aria-grabbed={isDragged}
                           aria-selected={isSelected}
-                          title="Arrastra a Participantes sin compañía para quitarlo de esta compañía, o haz clic derecho para moverlo a otra."
+                          title="Haz clic derecho para moverlo o eliminarlo de esta compañía, o arrástralo a Participantes sin compañía."
                           className={cn(
                             "cursor-grab active:cursor-grabbing",
                             isSelected && "bg-primary/5 hover:bg-primary/10",
@@ -1587,6 +1623,20 @@ function CompanyCard({
                           </ContextMenuGroup>
                         </ContextMenuSubContent>
                       </ContextMenuSub>
+                    </ContextMenuGroup>
+                    <ContextMenuSeparator />
+                    <ContextMenuGroup>
+                      <ContextMenuItem
+                        variant="destructive"
+                        disabled={dragDisabled || !contextParticipant}
+                        onClick={() => {
+                          if (contextParticipant) {
+                            onParticipantRemoveRequest(contextParticipant.id);
+                          }
+                        }}
+                      >
+                        Eliminar de la compañía
+                      </ContextMenuItem>
                     </ContextMenuGroup>
                   </ContextMenuContent>
                 </ContextMenu>
