@@ -2,9 +2,7 @@
 
 import { ReactNode, useState } from "react";
 import { useRouter } from "next/navigation";
-import Bell01Icon from "@hugeicons/core-free-icons/Notification01Icon";
 import Logout01Icon from "@hugeicons/core-free-icons/Logout01Icon";
-import Message01Icon from "@hugeicons/core-free-icons/Message01Icon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -72,7 +70,8 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
         <header className="flex min-h-16 items-center justify-between gap-2 border-b border-primary-foreground/20 bg-primary px-4 text-primary-foreground sm:px-6 md:border-border md:bg-background md:text-foreground lg:px-8">
           <div className="flex items-center gap-2">
             <SidebarTrigger
-              className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground md:hidden"
+              variant="outline"
+              className="text-foreground md:hidden"
               aria-label="Abrir menú"
             />
             <h1 className="text-base font-semibold tracking-tight">
@@ -93,12 +92,6 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
                 <kbd className="text-[10px] text-muted-foreground">⌘K</kbd>
               </InputGroupAddon>
             </InputGroup>
-            <Button variant="outline" size="icon-sm" aria-label="Mensajes">
-              <HugeiconsIcon icon={Message01Icon} strokeWidth={2} />
-            </Button>
-            <Button variant="outline" size="icon-sm" aria-label="Notificaciones">
-              <HugeiconsIcon icon={Bell01Icon} strokeWidth={2} />
-            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
