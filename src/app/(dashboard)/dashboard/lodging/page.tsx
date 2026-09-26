@@ -15,7 +15,7 @@ export default async function LodgingPage() {
     <div className="flex min-h-full flex-col gap-6">
       <PageHeader
         title="Alojamiento"
-        description="Cada bloque es un edificio. Allí puedes ver sus dormitorios, las camas disponibles y los nombres de las personas asignadas."
+        description="Revisa los dormitorios y las personas que todavía no tienen alojamiento."
         actions={
           canManage ? (
             <LodgingAutoAssignDialog

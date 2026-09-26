@@ -8,7 +8,6 @@ import Building06Icon from "@hugeicons/core-free-icons/Building06Icon";
 import Cancel01Icon from "@hugeicons/core-free-icons/Cancel01Icon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import Tick02Icon from "@hugeicons/core-free-icons/Tick02Icon";
-import UserGroupIcon from "@hugeicons/core-free-icons/UserGroupIcon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { toast } from "sonner";
 
@@ -42,6 +41,11 @@ import {
 } from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   Progress,
   ProgressLabel,
@@ -104,6 +108,112 @@ function getDisplayName(participant: LodgingParticipantSummary) {
   return `${participant.firstNames} ${participant.lastNames}`;
 }
 
+function UnassignedParticipantsPanel({
+  participants,
+}: {
+  participants: LodgingParticipantSummary[];
+}) {
+  const [search, setSearch] = useState("");
+  const filteredParticipants = useMemo(() => {
+    const normalizedSearch = normalizeSearch(search);
+
+    if (!normalizedSearch) {
+      return participants;
+    }
+
+    return participants.filter((participant) =>
+      normalizeSearch(
+        `${participant.firstNames} ${participant.lastNames} ${participant.preferredName ?? ""} ${participant.wardName}`,
+      ).includes(normalizedSearch),
+    );
+  }, [participants, search]);
+
+  return (
+    <aside
+      className="order-first min-w-0 self-start xl:order-last xl:sticky xl:top-6"
+      aria-labelledby="unassigned-lodging-title"
+    >
+      <Card className="max-h-[50dvh] gap-0 py-3 xl:max-h-[calc(100dvh-3rem)]">
+        <CardHeader className="border-b !pb-3">
+          <CardTitle id="unassigned-lodging-title" className="text-lg">
+            Participantes sin alojamiento
+          </CardTitle>
+          <CardDescription>
+            Personas que todavía no tienen dormitorio asignado.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="border-b py-3">
+          <InputGroup>
+            <InputGroupAddon>
+              <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
+            </InputGroupAddon>
+            <InputGroupInput
+              type="search"
+              placeholder="Buscar participante"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              aria-label="Buscar participantes sin alojamiento"
+            />
+          </InputGroup>
+        </CardContent>
+
+        <CardContent className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-0">
+          {filteredParticipants.length > 0 ? (
+            <ul aria-label="Participantes sin alojamiento">
+              {filteredParticipants.map((participant) => (
+                <li
+                  key={participant.id}
+                  className="flex min-w-0 items-center gap-3 px-6 py-3 not-last:border-b"
+                >
+                  <Avatar size="sm" aria-hidden="true">
+                    <AvatarFallback>{getInitials(participant)}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className="truncate font-medium"
+                      title={getDisplayName(participant)}
+                    >
+                      {getDisplayName(participant)}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {participant.wardName}
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="shrink-0">
+                    {participant.sex === "Femenino"
+                      ? "Mujer"
+                      : participant.sex === "Masculino"
+                        ? "Varón"
+                        : "Sin definir"}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="px-6 py-10 text-center text-sm text-muted-foreground">
+              {search
+                ? "No encontramos participantes con esa búsqueda."
+                : "Todos los participantes tienen alojamiento."}
+            </p>
+          )}
+        </CardContent>
+
+        <CardFooter className="justify-between border-t !pt-3">
+          <span className="font-medium">
+            {search ? "Resultados" : "Total sin alojamiento"}
+          </span>
+          <Badge variant="secondary" aria-live="polite">
+            {search
+              ? `${filteredParticipants.length.toLocaleString("es-EC")} de ${participants.length.toLocaleString("es-EC")}`
+              : participants.length.toLocaleString("es-EC")}
+          </Badge>
+        </CardFooter>
+      </Card>
+    </aside>
+  );
+}
+
 export function LodgingBoard({
   buildings,
   unassignedParticipants,
@@ -112,12 +222,12 @@ export function LodgingBoard({
   const router = useRouter();
   const [activeRoom, setActiveRoom] = useState<ActiveRoom | null>(null);
   const [search, setSearch] = useState("");
-  const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(
-    null,
-  );
-  const [pendingParticipantId, setPendingParticipantId] = useState<string | null>(
-    null,
-  );
+  const [selectedParticipantId, setSelectedParticipantId] = useState<
+    string | null
+  >(null);
+  const [pendingParticipantId, setPendingParticipantId] = useState<
+    string | null
+  >(null);
   const [isPending, startTransition] = useTransition();
 
   const eligibleParticipants = useMemo(() => {
@@ -125,7 +235,8 @@ export function LodgingBoard({
       return [];
     }
 
-    const expectedSex = sexPresentation[activeRoom.buildingSex].participantValue;
+    const expectedSex =
+      sexPresentation[activeRoom.buildingSex].participantValue;
     const normalizedSearch = normalizeSearch(search);
 
     return unassignedParticipants.filter((participant) => {
@@ -190,187 +301,192 @@ export function LodgingBoard({
 
   return (
     <>
-      <div className="flex flex-col gap-6">
-        {buildings.map((building) => {
-          const buildingPercent = getOccupancyPercent(
-            building.assignedParticipants,
-            building.participantCapacity,
-          );
-          const presentation = sexPresentation[building.sex];
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div className="flex min-w-0 flex-col gap-5">
+          {buildings.map((building) => {
+            const buildingPercent = getOccupancyPercent(
+              building.assignedParticipants,
+              building.participantCapacity,
+            );
+            const presentation = sexPresentation[building.sex];
 
-          return (
-            <section
-              key={building.id}
-              aria-labelledby={`building-${building.id}-title`}
-            >
-              <Card>
-                <CardHeader>
-                  <CardTitle
-                    id={`building-${building.id}-title`}
-                    className="flex items-center gap-2 text-xl"
-                  >
-                    <HugeiconsIcon icon={Building06Icon} strokeWidth={2} />
-                    Edificio {building.name}
-                  </CardTitle>
-                  <CardDescription>
-                    {building.rooms.length} dormitorios listos ·{" "}
-                    {building.participantCapacity} camas para{" "}
-                    {presentation.label.toLowerCase()} ·{" "}
-                    {building.coordinatorCapacity} camas de coordinación
-                  </CardDescription>
-                  <CardAction>
-                    <Badge variant={buildingPercent === 100 ? "default" : "secondary"}>
-                      {buildingPercent}% ocupado
-                    </Badge>
-                  </CardAction>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-5">
-                  <Progress value={buildingPercent}>
-                    <ProgressLabel>
-                      {building.assignedParticipants} camas ocupadas ·{" "}
-                      {building.availableParticipantCapacity} disponibles
-                    </ProgressLabel>
-                    <ProgressValue />
-                  </Progress>
+            return (
+              <section
+                key={building.id}
+                aria-labelledby={`building-${building.id}-title`}
+              >
+                <Card>
+                  <CardHeader>
+                    <CardTitle
+                      id={`building-${building.id}-title`}
+                      className="flex items-center gap-2 text-xl"
+                    >
+                      <HugeiconsIcon icon={Building06Icon} strokeWidth={2} />
+                      Edificio {building.name}
+                    </CardTitle>
+                    <CardDescription>
+                      {building.rooms.length} dormitorios listos ·{" "}
+                      {building.participantCapacity} camas para{" "}
+                      {presentation.label.toLowerCase()} ·{" "}
+                      {building.coordinatorCapacity} camas de coordinación
+                    </CardDescription>
+                    <CardAction>
+                      <Badge
+                        variant={
+                          buildingPercent === 100 ? "default" : "secondary"
+                        }
+                      >
+                        {buildingPercent}% ocupado
+                      </Badge>
+                    </CardAction>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-5">
+                    <Progress value={buildingPercent}>
+                      <ProgressLabel>
+                        {building.assignedParticipants} camas ocupadas ·{" "}
+                        {building.availableParticipantCapacity} disponibles
+                      </ProgressLabel>
+                      <ProgressValue />
+                    </Progress>
 
-                  <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
-                    {building.rooms.map((room) => {
-                      const roomPercent = getOccupancyPercent(
-                        room.assignedParticipants,
-                        room.participantCapacity,
-                      );
+                    <div className="flex flex-col gap-4">
+                      {building.rooms.map((room) => {
+                        const roomPercent = getOccupancyPercent(
+                          room.assignedParticipants,
+                          room.participantCapacity,
+                        );
 
-                      return (
-                        <Card key={room.id} size="sm" className="min-w-0">
-                          <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                              <HugeiconsIcon icon={BedBunkIcon} strokeWidth={2} />
-                              Dormitorio {room.number}
-                            </CardTitle>
-                            <CardDescription>
-                              {room.availableParticipantCapacity} cupos disponibles
-                            </CardDescription>
-                            <CardAction>
-                              <Badge
-                                variant={
-                                  roomPercent === 100
-                                    ? "default"
-                                    : room.assignedParticipants > 0
-                                      ? "outline"
-                                      : "secondary"
-                                }
-                              >
-                                {room.assignedParticipants}/{room.participantCapacity}
-                              </Badge>
-                            </CardAction>
-                          </CardHeader>
-                          <CardContent className="flex min-h-64 flex-col gap-4">
-                            <Progress value={roomPercent}>
-                              <ProgressLabel>Ocupación</ProgressLabel>
-                              <ProgressValue />
-                            </Progress>
-
-                            <Separator />
-
-                            {room.occupants.length > 0 ? (
-                              <ul
-                                className="flex max-h-72 flex-col gap-2 overflow-y-auto pr-1"
-                                aria-label={`Participantes en dormitorio ${room.number} de ${building.name}`}
-                              >
-                                {room.occupants.map((participant) => (
-                                  <li
-                                    key={participant.id}
-                                    className="flex min-w-0 items-center gap-2 rounded-2xl bg-muted/50 p-2"
-                                  >
-                                    <Avatar size="sm">
-                                      <AvatarFallback>
-                                        {getInitials(participant)}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <div className="min-w-0 flex-1">
-                                      <p className="truncate text-sm font-medium">
-                                        {getDisplayName(participant)}
-                                      </p>
-                                      <p className="truncate text-xs text-muted-foreground">
-                                        {participant.wardName}
-                                      </p>
-                                    </div>
-                                    {canManage ? (
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon-xs"
-                                        aria-label={`Quitar a ${getDisplayName(participant)} del dormitorio`}
-                                        title="Quitar del dormitorio"
-                                        disabled={isPending}
-                                        onClick={() =>
-                                          updateAssignment(participant.id, null)
-                                        }
-                                      >
-                                        {pendingParticipantId === participant.id ? (
-                                          <Spinner />
-                                        ) : (
-                                          <HugeiconsIcon
-                                            icon={Cancel01Icon}
-                                            strokeWidth={2}
-                                          />
-                                        )}
-                                      </Button>
-                                    ) : null}
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <Empty className="min-h-40 p-5">
-                                <EmptyHeader>
-                                  <EmptyMedia variant="icon">
-                                    <HugeiconsIcon
-                                      icon={UserGroupIcon}
-                                      strokeWidth={2}
-                                    />
-                                  </EmptyMedia>
-                                  <EmptyTitle>Habitación vacía</EmptyTitle>
-                                  <EmptyDescription>
-                                    Todavía no hay participantes asignados.
-                                  </EmptyDescription>
-                                </EmptyHeader>
-                              </Empty>
-                            )}
-                          </CardContent>
-                          {canManage ? (
-                            <CardFooter>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="w-full"
-                                disabled={
-                                  isPending ||
-                                  room.availableParticipantCapacity === 0
-                                }
-                                onClick={() =>
-                                  openAssignmentDialog(building, room)
-                                }
-                              >
+                        return (
+                          <Card key={room.id} size="sm" className="min-w-0">
+                            <CardHeader>
+                              <CardTitle className="flex items-center gap-2">
                                 <HugeiconsIcon
-                                  icon={Add01Icon}
+                                  icon={BedBunkIcon}
                                   strokeWidth={2}
-                                  data-icon="inline-start"
                                 />
-                                {room.availableParticipantCapacity === 0
-                                  ? "Habitación llena"
-                                  : "Agregar participante"}
-                              </Button>
-                            </CardFooter>
-                          ) : null}
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            </section>
-          );
-        })}
+                                Dormitorio {room.number}
+                              </CardTitle>
+                              <CardDescription>
+                                {room.availableParticipantCapacity} cupos
+                                disponibles
+                              </CardDescription>
+                              <CardAction>
+                                <Badge
+                                  variant={
+                                    roomPercent === 100
+                                      ? "default"
+                                      : room.assignedParticipants > 0
+                                        ? "outline"
+                                        : "secondary"
+                                  }
+                                >
+                                  {room.assignedParticipants}/
+                                  {room.participantCapacity}
+                                </Badge>
+                              </CardAction>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-3">
+                              <Progress value={roomPercent}>
+                                <ProgressLabel>Ocupación</ProgressLabel>
+                                <ProgressValue />
+                              </Progress>
+
+                              <Separator />
+
+                              {room.occupants.length > 0 ? (
+                                <ul
+                                  className="flex max-h-72 flex-col gap-2 overflow-y-auto pr-1"
+                                  aria-label={`Participantes en dormitorio ${room.number} de ${building.name}`}
+                                >
+                                  {room.occupants.map((participant) => (
+                                    <li
+                                      key={participant.id}
+                                      className="flex min-w-0 items-center gap-2 rounded-2xl bg-muted/50 p-2"
+                                    >
+                                      <Avatar size="sm">
+                                        <AvatarFallback>
+                                          {getInitials(participant)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm font-medium">
+                                          {getDisplayName(participant)}
+                                        </p>
+                                        <p className="truncate text-xs text-muted-foreground">
+                                          {participant.wardName}
+                                        </p>
+                                      </div>
+                                      {canManage ? (
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon-xs"
+                                          aria-label={`Quitar a ${getDisplayName(participant)} del dormitorio`}
+                                          title="Quitar del dormitorio"
+                                          disabled={isPending}
+                                          onClick={() =>
+                                            updateAssignment(
+                                              participant.id,
+                                              null,
+                                            )
+                                          }
+                                        >
+                                          {pendingParticipantId ===
+                                          participant.id ? (
+                                            <Spinner />
+                                          ) : (
+                                            <HugeiconsIcon
+                                              icon={Cancel01Icon}
+                                              strokeWidth={2}
+                                            />
+                                          )}
+                                        </Button>
+                                      ) : null}
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="py-3 text-center text-sm text-muted-foreground">
+                                  Sin participantes asignados.
+                                </p>
+                              )}
+                            </CardContent>
+                            {canManage ? (
+                              <CardFooter>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="w-full"
+                                  disabled={
+                                    isPending ||
+                                    room.availableParticipantCapacity === 0
+                                  }
+                                  onClick={() =>
+                                    openAssignmentDialog(building, room)
+                                  }
+                                >
+                                  <HugeiconsIcon
+                                    icon={Add01Icon}
+                                    strokeWidth={2}
+                                    data-icon="inline-start"
+                                  />
+                                  {room.availableParticipantCapacity === 0
+                                    ? "Habitación llena"
+                                    : "Agregar participante"}
+                                </Button>
+                              </CardFooter>
+                            ) : null}
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </section>
+            );
+          })}
+        </div>
+        <UnassignedParticipantsPanel participants={unassignedParticipants} />
       </div>
 
       <Dialog
@@ -478,7 +594,9 @@ export function LodgingBoard({
           </div>
 
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" disabled={isPending} />}>
+            <DialogClose
+              render={<Button variant="outline" disabled={isPending} />}
+            >
               Cancelar
             </DialogClose>
             <Button
