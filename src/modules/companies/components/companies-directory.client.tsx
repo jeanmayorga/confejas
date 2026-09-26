@@ -1063,13 +1063,16 @@ function UnassignedParticipantsCard({
 
   return (
     <aside
-      className={cn("self-start xl:sticky xl:top-6", inSheet && "h-full")}
+      className={cn(
+        "self-start xl:sticky xl:top-6",
+        inSheet && "flex min-h-0 flex-1 flex-col self-stretch",
+      )}
       aria-labelledby={titleId}
     >
       <Card
         className={cn(
           "max-h-[calc(100dvh-3rem)] gap-0 py-3 transition-[background-color,box-shadow]",
-          inSheet && "h-full max-h-none",
+          inSheet && "min-h-0 flex-1 max-h-none",
           draggedCompanyParticipants && "bg-primary/5 ring-1 ring-primary/40",
           isDropTarget && "bg-primary/5 ring-2 ring-primary ring-offset-2",
         )}
@@ -1077,7 +1080,7 @@ function UnassignedParticipantsCard({
         onDragLeave={onDragLeave}
         onDrop={onDrop}
       >
-        <CardHeader className="border-b !pb-2">
+        <CardHeader className="shrink-0 border-b !pb-2">
           <CardTitle id={titleId} className="text-lg">
             Participantes sin compañía
           </CardTitle>
@@ -1100,7 +1103,7 @@ function UnassignedParticipantsCard({
           ) : null}
         </CardHeader>
 
-        <CardContent className="border-b py-3">
+        <CardContent className="shrink-0 border-b py-3">
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap gap-2">
               <CompanyDistributionDialog
@@ -1193,7 +1196,7 @@ function UnassignedParticipantsCard({
           <CardContent className="flex min-h-0 flex-1 flex-col p-0">
             <div
               ref={listViewportRef}
-              className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y"
             >
               <TableFrame className="rounded-none border-0">
                 <Table

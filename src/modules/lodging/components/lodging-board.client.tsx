@@ -82,6 +82,15 @@ import {
 } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFrame,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import {
   getParticipantStatusLabel,
@@ -360,13 +369,16 @@ function UnassignedParticipantsPanel({
 
   return (
     <aside
-      className={cn("min-w-0 self-start xl:sticky xl:top-6", inSheet && "h-full")}
+      className={cn(
+        "min-w-0 self-start xl:sticky xl:top-6",
+        inSheet && "flex min-h-0 flex-1 flex-col self-stretch",
+      )}
       aria-labelledby={titleId}
     >
       <Card
         className={cn(
           "max-h-[50dvh] gap-0 py-3 transition-[background-color,box-shadow] xl:max-h-[calc(100dvh-3rem)]",
-          inSheet && "h-full max-h-none",
+          inSheet && "min-h-0 flex-1 max-h-none",
           draggedParticipant?.source === "room" &&
             "bg-primary/5 ring-1 ring-primary/40",
           isDropTarget && "bg-primary/5 ring-2 ring-primary ring-offset-2",
@@ -375,7 +387,7 @@ function UnassignedParticipantsPanel({
         onDragLeave={onDragLeave}
         onDrop={onDrop}
       >
-        <CardHeader className="border-b !pb-3">
+        <CardHeader className="shrink-0 border-b !pb-3">
           <CardTitle id={titleId} className="text-lg">
             Participantes sin alojamiento
           </CardTitle>
@@ -386,7 +398,7 @@ function UnassignedParticipantsPanel({
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="border-b py-3">
+        <CardContent className="shrink-0 border-b py-3">
           <InputGroup>
             <InputGroupAddon>
               <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
@@ -439,7 +451,7 @@ function UnassignedParticipantsPanel({
           ) : null}
         </CardContent>
 
-        <CardContent className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-0">
+        <CardContent className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-0 touch-pan-y">
           {filteredParticipants.length > 0 ? (
             <ul aria-label="Participantes sin alojamiento">
                 {filteredParticipants.map((participant) => {
@@ -766,7 +778,7 @@ export function LodgingBoard({
   }
 
   function handleRoomParticipantDragStart(
-    event: DragEvent<HTMLLIElement>,
+    event: DragEvent<HTMLTableRowElement>,
     participant: LodgingParticipantSummary,
   ) {
     if (dragDisabled) {
@@ -1148,113 +1160,191 @@ export function LodgingBoard({
                                       ) : null}
                                     </div>
                                   ) : null}
-                                  <ul
-                                    className="flex max-h-72 flex-col gap-2 overflow-y-auto pr-1"
-                                    aria-label={`Participantes en dormitorio ${room.number} de ${building.name}`}
-                                  >
-                                      {room.occupants.map((participant) => {
-                                        const selected =
-                                          selectedRoomParticipantIds.has(
-                                            participant.id,
-                                          );
+                                  <TableFrame>
+                                    <Table
+                                      className="table-fixed"
+                                      aria-label={`Participantes en dormitorio ${room.number} de ${building.name}`}
+                                    >
+                                      <colgroup>
+                                        {canManage ? (
+                                          <col className="w-9 sm:w-11" />
+                                        ) : null}
+                                        <col className="hidden w-12 sm:table-column" />
+                                        <col className="hidden w-24 sm:table-column" />
+                                        <col />
+                                        {canManage ? (
+                                          <col className="w-10 sm:w-11" />
+                                        ) : null}
+                                      </colgroup>
+                                      <TableHeader>
+                                        <TableRow>
+                                          {canManage ? (
+                                            <TableHead className="text-center">
+                                              <span className="sr-only">
+                                                Seleccionar
+                                              </span>
+                                            </TableHead>
+                                          ) : null}
+                                          <TableHead className="hidden text-center sm:table-cell">
+                                            #
+                                          </TableHead>
+                                          <TableHead className="hidden sm:table-cell">
+                                            Estado
+                                          </TableHead>
+                                          <TableHead className="px-1 sm:px-3">
+                                            Participante
+                                          </TableHead>
+                                          {canManage ? (
+                                            <TableHead className="px-1 text-center sm:px-3">
+                                              <span className="sr-only">
+                                                Acciones
+                                              </span>
+                                            </TableHead>
+                                          ) : null}
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {room.occupants.map(
+                                          (participant, index) => {
+                                            const selected =
+                                              selectedRoomParticipantIds.has(
+                                                participant.id,
+                                              );
 
-                                        return (
-                                          <li
-                                            key={participant.id}
-                                            draggable={
-                                              canManage && !dragDisabled
-                                            }
-                                            aria-grabbed={
-                                              draggedParticipant?.participants.some(
-                                                (item) =>
-                                                  item.id === participant.id,
-                                              ) ?? false
-                                            }
-                                            title={
-                                              canManage
-                                                ? "Arrastra a otro dormitorio o a la lista de pendientes; abre el botón de tres puntos para más opciones."
-                                                : getDisplayName(participant)
-                                            }
-                                            className={cn(
-                                              "flex min-w-0 items-center gap-2 rounded-2xl bg-muted/50 p-2",
-                                              canManage &&
-                                                "cursor-grab active:cursor-grabbing",
-                                              selected &&
-                                                "ring-1 ring-primary/40",
-                                            )}
-                                            onDragStart={(event) =>
-                                              handleRoomParticipantDragStart(
-                                                event,
-                                                participant,
-                                              )
-                                            }
-                                            onDragEnd={clearDragState}
-                                          >
-                                            {canManage ? (
-                                              <Checkbox
-                                                checked={selected}
-                                                onCheckedChange={(checked) =>
-                                                  handleSelectionChange(
-                                                    setSelectedRoomParticipantIds,
-                                                    participant.id,
-                                                    checked,
+                                            return (
+                                              <TableRow
+                                                key={participant.id}
+                                                draggable={
+                                                  canManage && !dragDisabled
+                                                }
+                                                aria-grabbed={
+                                                  draggedParticipant?.participants.some(
+                                                    (item) =>
+                                                      item.id ===
+                                                      participant.id,
+                                                  ) ?? false
+                                                }
+                                                aria-selected={selected}
+                                                title={
+                                                  canManage
+                                                    ? "Arrastra a otro dormitorio o a la lista de pendientes; abre el botón de tres puntos para más opciones."
+                                                    : getDisplayName(participant)
+                                                }
+                                                className={cn(
+                                                  canManage &&
+                                                    "cursor-grab active:cursor-grabbing",
+                                                  selected &&
+                                                    "bg-primary/5 hover:bg-primary/10",
+                                                )}
+                                                onDragStart={(event) =>
+                                                  handleRoomParticipantDragStart(
+                                                    event,
+                                                    participant,
                                                   )
                                                 }
-                                                onPointerDown={(event) =>
-                                                  event.stopPropagation()
-                                                }
-                                                aria-label={`Seleccionar a ${getDisplayName(participant)}`}
-                                                disabled={dragDisabled}
-                                              />
-                                            ) : null}
-                                            <Avatar
-                                              size="sm"
-                                              aria-hidden="true"
-                                            >
-                                              <AvatarFallback>
-                                                {getInitials(participant)}
-                                              </AvatarFallback>
-                                            </Avatar>
-                                            <div className="min-w-0 flex-1">
-                                              <p className="truncate text-sm font-medium">
-                                                {getDisplayName(participant)}
-                                              </p>
-                                              <p className="truncate text-xs text-muted-foreground">
-                                                {participant.wardName} ·{" "}
-                                                {getAgeLabel(participant.age)}
-                                              </p>
-                                            </div>
-                                            <ParticipantStatusBadge
-                                              status={participant.status}
-                                            />
-                                            {canManage ? (
-                                              <LodgingParticipantActionsMenu
-                                                participant={participant}
-                                                rooms={displayedRooms}
-                                                disabled={dragDisabled}
-                                                onMoveRequest={(
-                                                  participant,
-                                                  targetRoomName,
-                                                ) =>
-                                                  setRequestedChange({
-                                                    participants: [participant],
-                                                    targetRoomName,
-                                                  })
-                                                }
-                                                onRemoveRequest={(
-                                                  participant,
-                                                ) =>
-                                                  setRequestedChange({
-                                                    participants: [participant],
-                                                    targetRoomName: null,
-                                                  })
-                                                }
-                                              />
-                                            ) : null}
-                                          </li>
-                                        );
-                                      })}
-                                  </ul>
+                                                onDragEnd={clearDragState}
+                                              >
+                                                {canManage ? (
+                                                  <TableCell className="text-center">
+                                                    <Checkbox
+                                                      checked={selected}
+                                                      onCheckedChange={(
+                                                        checked,
+                                                      ) =>
+                                                        handleSelectionChange(
+                                                          setSelectedRoomParticipantIds,
+                                                          participant.id,
+                                                          checked,
+                                                        )
+                                                      }
+                                                      onPointerDown={(event) =>
+                                                        event.stopPropagation()
+                                                      }
+                                                      aria-label={`Seleccionar a ${getDisplayName(participant)}`}
+                                                      disabled={dragDisabled}
+                                                    />
+                                                  </TableCell>
+                                                ) : null}
+                                                <TableCell className="hidden text-center tabular-nums text-muted-foreground sm:table-cell">
+                                                  {index + 1}
+                                                </TableCell>
+                                                <TableCell className="hidden sm:table-cell">
+                                                  <ParticipantStatusBadge
+                                                    status={participant.status}
+                                                  />
+                                                </TableCell>
+                                                <TableCell className="max-w-0 overflow-hidden px-1 whitespace-normal sm:px-3">
+                                                  <div className="flex min-w-0 items-center gap-2">
+                                                    <Avatar
+                                                      size="sm"
+                                                      aria-hidden="true"
+                                                      className="hidden sm:flex"
+                                                    >
+                                                      <AvatarFallback>
+                                                        {getInitials(
+                                                          participant,
+                                                        )}
+                                                      </AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="min-w-0 py-1">
+                                                      <span className="block break-words font-medium">
+                                                        {getDisplayName(
+                                                          participant,
+                                                        )}
+                                                      </span>
+                                                      <span className="block text-xs text-muted-foreground">
+                                                        {participant.wardName} ·{" "}
+                                                        {getAgeLabel(
+                                                          participant.age,
+                                                        )}
+                                                      </span>
+                                                      <span className="mt-1 inline-flex sm:hidden">
+                                                        <ParticipantStatusBadge
+                                                          status={
+                                                            participant.status
+                                                          }
+                                                        />
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                </TableCell>
+                                                {canManage ? (
+                                                  <TableCell className="px-1 text-center sm:px-3">
+                                                    <LodgingParticipantActionsMenu
+                                                      participant={participant}
+                                                      rooms={displayedRooms}
+                                                      disabled={dragDisabled}
+                                                      onMoveRequest={(
+                                                        participant,
+                                                        targetRoomName,
+                                                      ) =>
+                                                        setRequestedChange({
+                                                          participants: [
+                                                            participant,
+                                                          ],
+                                                          targetRoomName,
+                                                        })
+                                                      }
+                                                      onRemoveRequest={(
+                                                        participant,
+                                                      ) =>
+                                                        setRequestedChange({
+                                                          participants: [
+                                                            participant,
+                                                          ],
+                                                          targetRoomName: null,
+                                                        })
+                                                      }
+                                                    />
+                                                  </TableCell>
+                                                ) : null}
+                                              </TableRow>
+                                            );
+                                          },
+                                        )}
+                                      </TableBody>
+                                    </Table>
+                                  </TableFrame>
                                 </>
                               ) : (
                                 <Empty className="min-h-24 p-3">
