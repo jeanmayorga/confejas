@@ -15,6 +15,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
+import MoreHorizontalIcon from "@hugeicons/core-free-icons/MoreHorizontalIcon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
@@ -33,6 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardAction,
@@ -43,16 +45,16 @@ import {
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuGroup,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Empty,
   EmptyContent,
@@ -1425,10 +1427,6 @@ function CompanyCard({
 }) {
   const titleId = `company-${company.id}-title`;
   const companyLabel = getCompanyDisplayName(company.name, position);
-  const [contextParticipantId, setContextParticipantId] = useState<string | null>(null);
-  const contextParticipant = company.participants.find(
-    (participant) => participant.id === contextParticipantId,
-  );
   const selectedParticipantCount = company.participants.filter((participant) =>
     selectedParticipantIds.has(participant.id),
   ).length;
@@ -1525,14 +1523,15 @@ function CompanyCard({
 
           {company.participants.length > 0 ? (
             <TableFrame className="mt-3">
-              <Table className="min-w-[580px] table-fixed">
+              <Table className="table-fixed sm:min-w-[620px]">
                 <colgroup>
-                  <col className="w-11" />
-                  <col className="w-12" />
-                  <col className="w-24" />
+                  <col className="w-9 sm:w-11" />
+                  <col className="hidden w-12 sm:table-column" />
+                  <col className="w-20 sm:w-24" />
                   <col />
-                  <col className="w-[76px]" />
-                  <col className="w-20" />
+                  <col className="hidden w-[76px] sm:table-column" />
+                  <col className="hidden w-20 sm:table-column" />
+                  <col className="w-10 sm:w-11" />
                 </colgroup>
                 <TableHeader>
                   <TableRow>
@@ -1550,23 +1549,19 @@ function CompanyCard({
                         aria-label={`Seleccionar todos los participantes de ${companyLabel}`}
                       />
                     </TableHead>
-                    <TableHead className="text-center">#</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Nombres</TableHead>
-                    <TableHead>Edad</TableHead>
-                    <TableHead>Sexo</TableHead>
+                    <TableHead className="hidden text-center sm:table-cell">
+                      #
+                    </TableHead>
+                    <TableHead className="px-1 sm:px-3">Estado</TableHead>
+                    <TableHead className="px-1 sm:px-3">Nombres</TableHead>
+                    <TableHead className="hidden sm:table-cell">Edad</TableHead>
+                    <TableHead className="hidden sm:table-cell">Sexo</TableHead>
+                    <TableHead className="px-1 text-center sm:px-3">
+                      <span className="sr-only">Acciones</span>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
-                <ContextMenu>
-                  <ContextMenuTrigger
-                    render={<TableBody />}
-                    onContextMenuCapture={(event) => {
-                      const row = (event.target as Element).closest<HTMLTableRowElement>(
-                        "tr[data-participant-id]",
-                      );
-                      setContextParticipantId(row?.dataset.participantId ?? null);
-                    }}
-                  >
+                <TableBody>
                   {company.participants.map((participant, index) =>
                     (() => {
                       const isSelected = selectedParticipantIds.has(
@@ -1579,11 +1574,10 @@ function CompanyCard({
                       return (
                         <TableRow
                           key={participant.id}
-                          data-participant-id={participant.id}
                           draggable={!dragDisabled}
                           aria-grabbed={isDragged}
                           aria-selected={isSelected}
-                          title="Haz clic derecho para moverlo o eliminarlo de esta compañía, o arrástralo a Participantes sin compañía."
+                          title="Abre el botón de tres puntos para moverlo o eliminarlo de esta compañía, o arrástralo a Participantes sin compañía."
                           className={cn(
                             "cursor-grab active:cursor-grabbing",
                             isSelected && "bg-primary/5 hover:bg-primary/10",
@@ -1607,10 +1601,10 @@ function CompanyCard({
                               aria-label={`Seleccionar a ${getParticipantName(participant)}`}
                             />
                           </TableCell>
-                          <TableCell className="text-center tabular-nums text-muted-foreground">
+                          <TableCell className="hidden text-center tabular-nums text-muted-foreground sm:table-cell">
                             {index + 1}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="px-1 sm:px-3">
                             <Badge
                               variant="outline"
                               className={cn(
@@ -1621,9 +1615,13 @@ function CompanyCard({
                               {getParticipantStatusLabel(participant.status)}
                             </Badge>
                           </TableCell>
-                          <TableCell className="max-w-0 overflow-hidden">
-                            <div className="flex items-center gap-2">
-                              <Avatar size="sm" aria-hidden="true">
+                          <TableCell className="max-w-0 overflow-hidden px-1 whitespace-normal sm:px-3">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <Avatar
+                                size="sm"
+                                aria-hidden="true"
+                                className="hidden sm:flex"
+                              >
                                 <AvatarFallback
                                   className={cn(
                                     "!text-[9px] font-medium",
@@ -1638,78 +1636,41 @@ function CompanyCard({
                                   )}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="min-w-0 truncate whitespace-nowrap">
-                                <span className="font-medium">
+                              <div className="min-w-0">
+                                <span className="block break-words font-medium sm:truncate">
                                   {getParticipantName(participant)}
+                                </span>
+                                <span className="block text-xs text-muted-foreground sm:hidden">
+                                  {getParticipantAge(participant.age)} ·{" "}
+                                  {getParticipantSexLabel(participant.sex)}
                                 </span>
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden sm:table-cell">
                             {getParticipantAge(participant.age)}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden sm:table-cell">
                             <Badge variant="secondary">
                               {getParticipantSexLabel(participant.sex)}
                             </Badge>
+                          </TableCell>
+                          <TableCell className="px-1 text-center sm:px-3">
+                            <CompanyParticipantActionsMenu
+                              participant={participant}
+                              company={company}
+                              companies={companies}
+                              capacity={capacity}
+                              dragDisabled={dragDisabled}
+                              onMoveRequest={onParticipantMoveRequest}
+                              onRemoveRequest={onParticipantRemoveRequest}
+                            />
                           </TableCell>
                         </TableRow>
                       );
                     })(),
                   )}
-                  </ContextMenuTrigger>
-                  <ContextMenuContent>
-                    <ContextMenuGroup>
-                      <ContextMenuSub>
-                        <ContextMenuSubTrigger
-                          openOnHover
-                          disabled={dragDisabled || !contextParticipant}
-                        >
-                          Mover a otra compañía
-                        </ContextMenuSubTrigger>
-                        <ContextMenuSubContent className="max-h-[70dvh] min-w-64 overflow-y-auto">
-                          <ContextMenuGroup>
-                            {contextParticipant ? companies.map((destination, index) => {
-                              const unavailableReason = getCompanyMoveUnavailableReason(
-                                company.id,
-                                contextParticipant.sex,
-                                destination,
-                                capacity,
-                              );
-
-                              return (
-                                <ContextMenuItem
-                                  key={destination.id}
-                                  disabled={dragDisabled || Boolean(unavailableReason)}
-                                  onClick={() => onParticipantMoveRequest(contextParticipant.id, destination.id)}
-                                >
-                                  <span>{getCompanyDisplayName(destination.name, index + 1)}</span>
-                                  <span className="ml-auto text-xs text-muted-foreground">
-                                    {unavailableReason ?? `${destination.participantCount}/${capacity.female + capacity.male}`}
-                                  </span>
-                                </ContextMenuItem>
-                              );
-                            }) : null}
-                          </ContextMenuGroup>
-                        </ContextMenuSubContent>
-                      </ContextMenuSub>
-                    </ContextMenuGroup>
-                    <ContextMenuSeparator />
-                    <ContextMenuGroup>
-                      <ContextMenuItem
-                        variant="destructive"
-                        disabled={dragDisabled || !contextParticipant}
-                        onClick={() => {
-                          if (contextParticipant) {
-                            onParticipantRemoveRequest(contextParticipant.id);
-                          }
-                        }}
-                      >
-                        Eliminar de la compañía
-                      </ContextMenuItem>
-                    </ContextMenuGroup>
-                  </ContextMenuContent>
-                </ContextMenu>
+                </TableBody>
               </Table>
             </TableFrame>
           ) : (
@@ -1725,6 +1686,105 @@ function CompanyCard({
         </section>
       </CardContent>
     </Card>
+  );
+}
+
+function CompanyParticipantActionsMenu({
+  participant,
+  company,
+  companies,
+  capacity,
+  dragDisabled,
+  onMoveRequest,
+  onRemoveRequest,
+}: {
+  participant: CompanyParticipant;
+  company: CompanyDirectoryItem;
+  companies: CompanyDirectoryItem[];
+  capacity: DistributionCapacity;
+  dragDisabled: boolean;
+  onMoveRequest: (participantId: string, targetCompanyId: string) => void;
+  onRemoveRequest: (participantId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            disabled={dragDisabled}
+            draggable={false}
+            aria-label={`Acciones para ${getParticipantName(participant)}`}
+            onPointerDown={(event) => event.stopPropagation()}
+            onDragStart={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+          />
+        }
+      >
+        <HugeiconsIcon
+          icon={MoreHorizontalIcon}
+          strokeWidth={2}
+          aria-hidden="true"
+        />
+      </DropdownMenuTrigger>
+      {open ? (
+        <DropdownMenuContent align="end">
+          <DropdownMenuGroup>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger disabled={dragDisabled}>
+                Mover a otra compañía
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="max-h-[70dvh] min-w-64 overflow-y-auto">
+                <DropdownMenuGroup>
+                  {companies.map((destination, index) => {
+                    const unavailableReason = getCompanyMoveUnavailableReason(
+                      company.id,
+                      participant.sex,
+                      destination,
+                      capacity,
+                    );
+
+                    return (
+                      <DropdownMenuItem
+                        key={destination.id}
+                        disabled={dragDisabled || Boolean(unavailableReason)}
+                        onClick={() =>
+                          onMoveRequest(participant.id, destination.id)
+                        }
+                      >
+                        <span>
+                          {getCompanyDisplayName(destination.name, index + 1)}
+                        </span>
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {unavailableReason ??
+                            `${destination.participantCount}/${capacity.female + capacity.male}`}
+                        </span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={dragDisabled}
+              onClick={() => onRemoveRequest(participant.id)}
+            >
+              Eliminar de la compañía
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      ) : null}
+    </DropdownMenu>
   );
 }
 
