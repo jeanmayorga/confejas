@@ -1,9 +1,10 @@
 import "server-only";
 
-import { and, asc, count, eq, ne } from "drizzle-orm";
+import { and, asc, count, eq, ne, sql } from "drizzle-orm";
 
 import { wards } from "@/modules/church-units/server/schema";
 import { participants } from "@/modules/participants/server/schema";
+import type { ParticipantStatus } from "@/modules/participants/status";
 import { db } from "@/server/db";
 
 import { lodgingBuildings, lodgingRooms, type LodgingSex } from "./schema";
@@ -25,8 +26,11 @@ export type LodgingParticipantSummary = {
   firstNames: string;
   lastNames: string;
   preferredName: string | null;
+  age: number | null;
   sex: string | null;
+  status: ParticipantStatus;
   wardName: string;
+  roomName: string | null;
 };
 
 export type LodgingBuildingOverview = {
@@ -41,10 +45,7 @@ export type LodgingBuildingOverview = {
   availableParticipantCapacity: number;
 };
 
-export function getLodgingRoomName(
-  buildingName: string,
-  roomNumber: number,
-) {
+export function getLodgingRoomName(buildingName: string, roomNumber: number) {
   return `${buildingName} · Dormitorio ${roomNumber}`;
 }
 
@@ -69,7 +70,11 @@ export async function getLodgingOverview() {
         firstNames: participants.firstNames,
         lastNames: participants.lastNames,
         preferredName: participants.preferredName,
+        age: sql<
+          number | null
+        >`extract(year from age(current_date, ${participants.birthDate}))::integer`,
         sex: participants.sex,
+        status: participants.status,
         wardName: wards.name,
         roomName: participants.roomName,
       })
@@ -83,14 +88,14 @@ export async function getLodgingOverview() {
   ]);
   const assignmentsByRoom = new Map<string, LodgingParticipantSummary[]>();
 
-  for (const { roomName, ...participant } of participantRows) {
-    if (!roomName) {
+  for (const participant of participantRows) {
+    if (!participant.roomName) {
       continue;
     }
 
-    const occupants = assignmentsByRoom.get(roomName) ?? [];
+    const occupants = assignmentsByRoom.get(participant.roomName) ?? [];
     occupants.push(participant);
-    assignmentsByRoom.set(roomName, occupants);
+    assignmentsByRoom.set(participant.roomName, occupants);
   }
 
   const buildingMap = new Map<number, LodgingBuildingOverview>();
@@ -163,8 +168,11 @@ export async function getLodgingOverview() {
       firstNames: participant.firstNames,
       lastNames: participant.lastNames,
       preferredName: participant.preferredName,
+      age: participant.age,
       sex: participant.sex,
+      status: participant.status,
       wardName: participant.wardName,
+      roomName: participant.roomName,
     }));
   const totals = buildings.reduce(
     (result, building) => {
