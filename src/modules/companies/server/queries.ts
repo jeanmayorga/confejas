@@ -330,9 +330,11 @@ export async function listUnassignedParticipants(): Promise<
 export async function listUnassignedParticipantsPage({
   page = 1,
   search = "",
+  status,
 }: {
   page?: number;
   search?: string;
+  status?: ParticipantStatus;
 }) {
   const safePage = Number.isSafeInteger(page) && page > 0 ? page : 1;
   const safeSearch = search.trim().slice(0, 100);
@@ -349,7 +351,11 @@ export async function listUnassignedParticipantsPage({
         ilike(stakes.name, searchPattern),
       )
     : undefined;
-  const filters = and(isNull(participants.companyId), searchFilter);
+  const filters = and(
+    isNull(participants.companyId),
+    searchFilter,
+    status ? eq(participants.status, status) : undefined,
+  );
   const offset = (safePage - 1) * UNASSIGNED_PARTICIPANTS_PAGE_SIZE;
 
   const [rows, [totalRow]] = await Promise.all([
@@ -385,6 +391,7 @@ export async function listUnassignedParticipantsPage({
       Math.ceil(total / UNASSIGNED_PARTICIPANTS_PAGE_SIZE),
     ),
     search: safeSearch,
+    status: status ?? null,
   };
 }
 

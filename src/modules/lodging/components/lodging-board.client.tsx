@@ -11,12 +11,13 @@ import { useRouter } from "next/navigation";
 import Add01Icon from "@hugeicons/core-free-icons/Add01Icon";
 import BedBunkIcon from "@hugeicons/core-free-icons/BedBunkIcon";
 import Building06Icon from "@hugeicons/core-free-icons/Building06Icon";
-import Cancel01Icon from "@hugeicons/core-free-icons/Cancel01Icon";
+import MoreHorizontalIcon from "@hugeicons/core-free-icons/MoreHorizontalIcon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import Tick02Icon from "@hugeicons/core-free-icons/Tick02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { toast } from "sonner";
 
+import { MobileUnassignedSheet } from "@/components/mobile-unassigned-sheet.client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   AlertDialog,
@@ -41,16 +42,16 @@ import {
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuGroup,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogClose,
@@ -86,6 +87,10 @@ import {
   getParticipantStatusLabel,
   type ParticipantStatus,
 } from "@/modules/participants/status";
+import {
+  UnassignedStatusFilter,
+  type UnassignedStatusFilterValue,
+} from "@/modules/participants/components/unassigned-status-filter.client";
 
 import {
   applyOptimisticLodgingMove,
@@ -182,7 +187,107 @@ function getAgeLabel(age: number | null) {
   return age === null ? "Edad no registrada" : `${age} años`;
 }
 
+function LodgingParticipantActionsMenu({
+  participant,
+  rooms,
+  disabled,
+  onMoveRequest,
+  onRemoveRequest,
+}: {
+  participant: LodgingParticipantSummary;
+  rooms: LodgingRoomTarget[];
+  disabled: boolean;
+  onMoveRequest: (
+    participant: LodgingParticipantSummary,
+    targetRoomName: string,
+  ) => void;
+  onRemoveRequest?: (participant: LodgingParticipantSummary) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            disabled={disabled}
+            draggable={false}
+            aria-label={`Acciones para ${getDisplayName(participant)}`}
+            onPointerDown={(event) => event.stopPropagation()}
+            onDragStart={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+          />
+        }
+      >
+        <HugeiconsIcon
+          icon={MoreHorizontalIcon}
+          strokeWidth={2}
+          aria-hidden="true"
+        />
+      </DropdownMenuTrigger>
+      {open ? (
+        <DropdownMenuContent align="end">
+          <DropdownMenuGroup>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger disabled={disabled}>
+                {onRemoveRequest
+                  ? "Mover a otro dormitorio"
+                  : "Asignar a dormitorio"}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="max-h-[70dvh] min-w-64 overflow-y-auto">
+                <DropdownMenuGroup>
+                  {rooms.map((room) => {
+                    const unavailableReason = getLodgingMoveUnavailableReason(
+                      [participant],
+                      room,
+                    );
+
+                    return (
+                      <DropdownMenuItem
+                        key={room.id}
+                        disabled={disabled || Boolean(unavailableReason)}
+                        onClick={() => onMoveRequest(participant, room.name)}
+                      >
+                        <span>{room.name}</span>
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {unavailableReason ??
+                            `${room.assignedParticipants}/${room.participantCapacity}`}
+                        </span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </DropdownMenuGroup>
+          {onRemoveRequest ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuItem
+                  variant="destructive"
+                  disabled={disabled}
+                  onClick={() => onRemoveRequest(participant)}
+                >
+                  Quitar del dormitorio
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </>
+          ) : null}
+        </DropdownMenuContent>
+      ) : null}
+    </DropdownMenu>
+  );
+}
+
 function UnassignedParticipantsPanel({
+  titleId,
+  inSheet,
   participants,
   rooms,
   canManage,
@@ -200,6 +305,8 @@ function UnassignedParticipantsPanel({
   onDragLeave,
   onDrop,
 }: {
+  titleId: string;
+  inSheet: boolean;
   participants: LodgingParticipantSummary[];
   rooms: LodgingRoomTarget[];
   canManage: boolean;
@@ -231,25 +338,19 @@ function UnassignedParticipantsPanel({
   onDrop: (event: DragEvent<HTMLDivElement>) => void;
 }) {
   const [search, setSearch] = useState("");
-  const [contextParticipantId, setContextParticipantId] = useState<
-    string | null
-  >(null);
+  const [status, setStatus] = useState<UnassignedStatusFilterValue>("all");
   const filteredParticipants = useMemo(() => {
     const normalizedSearch = normalizeSearch(search);
 
-    if (!normalizedSearch) {
-      return participants;
-    }
-
-    return participants.filter((participant) =>
-      normalizeSearch(
-        `${participant.firstNames} ${participant.lastNames} ${participant.preferredName ?? ""} ${participant.wardName}`,
-      ).includes(normalizedSearch),
+    return participants.filter(
+      (participant) =>
+        (status === "all" || participant.status === status) &&
+        (!normalizedSearch ||
+          normalizeSearch(
+            `${participant.firstNames} ${participant.lastNames} ${participant.preferredName ?? ""} ${participant.wardName}`,
+          ).includes(normalizedSearch)),
     );
-  }, [participants, search]);
-  const contextParticipant = participants.find(
-    (participant) => participant.id === contextParticipantId,
-  );
+  }, [participants, search, status]);
   const selectedCount = filteredParticipants.filter((participant) =>
     selectedParticipantIds.has(participant.id),
   ).length;
@@ -259,12 +360,13 @@ function UnassignedParticipantsPanel({
 
   return (
     <aside
-      className="order-first min-w-0 self-start xl:order-last xl:sticky xl:top-6"
-      aria-labelledby="unassigned-lodging-title"
+      className={cn("min-w-0 self-start xl:sticky xl:top-6", inSheet && "h-full")}
+      aria-labelledby={titleId}
     >
       <Card
         className={cn(
           "max-h-[50dvh] gap-0 py-3 transition-[background-color,box-shadow] xl:max-h-[calc(100dvh-3rem)]",
+          inSheet && "h-full max-h-none",
           draggedParticipant?.source === "room" &&
             "bg-primary/5 ring-1 ring-primary/40",
           isDropTarget && "bg-primary/5 ring-2 ring-primary ring-offset-2",
@@ -274,7 +376,7 @@ function UnassignedParticipantsPanel({
         onDrop={onDrop}
       >
         <CardHeader className="border-b !pb-3">
-          <CardTitle id="unassigned-lodging-title" className="text-lg">
+          <CardTitle id={titleId} className="text-lg">
             Participantes sin alojamiento
           </CardTitle>
           <CardDescription>
@@ -297,6 +399,9 @@ function UnassignedParticipantsPanel({
               aria-label="Buscar participantes sin alojamiento"
             />
           </InputGroup>
+          <div className="pt-2">
+            <UnassignedStatusFilter value={status} onChange={setStatus} />
+          </div>
           {canManage && filteredParticipants.length > 0 ? (
             <div className="flex flex-wrap items-center gap-2 pt-2 text-xs text-muted-foreground">
               <Checkbox
@@ -336,23 +441,13 @@ function UnassignedParticipantsPanel({
 
         <CardContent className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-0">
           {filteredParticipants.length > 0 ? (
-            <ContextMenu>
-              <ContextMenuTrigger
-                render={<ul aria-label="Participantes sin alojamiento" />}
-                onContextMenuCapture={(event) => {
-                  const row = (event.target as Element).closest<HTMLLIElement>(
-                    "li[data-participant-id]",
-                  );
-                  setContextParticipantId(row?.dataset.participantId ?? null);
-                }}
-              >
+            <ul aria-label="Participantes sin alojamiento">
                 {filteredParticipants.map((participant) => {
                   const selected = selectedParticipantIds.has(participant.id);
 
                   return (
                     <li
                       key={participant.id}
-                      data-participant-id={participant.id}
                       draggable={canManage && !dragDisabled}
                       aria-grabbed={
                         draggedParticipant?.participants.some(
@@ -361,7 +456,7 @@ function UnassignedParticipantsPanel({
                       }
                       title={
                         canManage
-                          ? "Arrastra a un dormitorio o haz clic derecho para asignar."
+                          ? "Arrastra a un dormitorio o abre el botón de tres puntos para asignar."
                           : getDisplayName(participant)
                       }
                       className={cn(
@@ -419,65 +514,29 @@ function UnassignedParticipantsPanel({
                           </Badge>
                         </div>
                       </div>
+                      {canManage ? (
+                        <LodgingParticipantActionsMenu
+                          participant={participant}
+                          rooms={rooms}
+                          disabled={dragDisabled}
+                          onMoveRequest={onMoveRequest}
+                        />
+                      ) : null}
                     </li>
                   );
                 })}
-              </ContextMenuTrigger>
-              <ContextMenuContent>
-                <ContextMenuGroup>
-                  <ContextMenuSub>
-                    <ContextMenuSubTrigger
-                      openOnHover
-                      disabled={
-                        !canManage || dragDisabled || !contextParticipant
-                      }
-                    >
-                      Asignar a dormitorio
-                    </ContextMenuSubTrigger>
-                    <ContextMenuSubContent className="max-h-[70dvh] min-w-64 overflow-y-auto">
-                      <ContextMenuGroup>
-                        {contextParticipant
-                          ? rooms.map((room) => {
-                              const unavailableReason =
-                                getLodgingMoveUnavailableReason(
-                                  [contextParticipant],
-                                  room,
-                                );
-
-                              return (
-                                <ContextMenuItem
-                                  key={room.id}
-                                  disabled={
-                                    dragDisabled || Boolean(unavailableReason)
-                                  }
-                                  onClick={() =>
-                                    onMoveRequest(contextParticipant, room.name)
-                                  }
-                                >
-                                  <span>{room.name}</span>
-                                  <span className="ml-auto text-xs text-muted-foreground">
-                                    {unavailableReason ??
-                                      `${room.assignedParticipants}/${room.participantCapacity}`}
-                                  </span>
-                                </ContextMenuItem>
-                              );
-                            })
-                          : null}
-                      </ContextMenuGroup>
-                    </ContextMenuSubContent>
-                  </ContextMenuSub>
-                </ContextMenuGroup>
-              </ContextMenuContent>
-            </ContextMenu>
+            </ul>
           ) : (
             <Empty className="min-h-32 px-6 py-8">
               <EmptyHeader>
                 <EmptyTitle>
-                  {search ? "Sin coincidencias" : "Todos tienen alojamiento"}
+                  {search || status !== "all"
+                    ? "Sin coincidencias"
+                    : "Todos tienen alojamiento"}
                 </EmptyTitle>
                 <EmptyDescription>
-                  {search
-                    ? "Prueba con otro nombre o barrio."
+                  {search || status !== "all"
+                    ? "Prueba con otro nombre, barrio o estado."
                     : "No hay participantes pendientes de dormitorio."}
                 </EmptyDescription>
               </EmptyHeader>
@@ -487,10 +546,12 @@ function UnassignedParticipantsPanel({
 
         <CardFooter className="justify-between border-t !pt-3">
           <span className="font-medium">
-            {search ? "Resultados" : "Total sin alojamiento"}
+            {search || status !== "all"
+              ? "Resultados"
+              : "Total sin alojamiento"}
           </span>
           <Badge variant="secondary" aria-live="polite">
-            {search
+            {search || status !== "all"
               ? `${filteredParticipants.length.toLocaleString("es-EC")} de ${participants.length.toLocaleString("es-EC")}`
               : participants.length.toLocaleString("es-EC")}
           </Badge>
@@ -520,9 +581,6 @@ export function LodgingBoard({
   ] = useState<ReadonlySet<string>>(new Set());
   const [draggedParticipant, setDraggedParticipant] =
     useState<DraggedLodgingParticipants | null>(null);
-  const [contextParticipantId, setContextParticipantId] = useState<
-    string | null
-  >(null);
   const [roomDropTargetName, setRoomDropTargetName] = useState<string | null>(
     null,
   );
@@ -535,6 +593,7 @@ export function LodgingBoard({
     LodgingParticipantSummary[] | null
   >(null);
   const [moving, setMoving] = useState(false);
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const [refreshing, startTransition] = useTransition();
   const dragDisabled = !canManage || moving || refreshing;
   const displayedOverview = useMemo(
@@ -843,6 +902,55 @@ export function LodgingBoard({
     });
   }
 
+  function renderUnassignedPanel(inSheet: boolean) {
+    return (
+      <UnassignedParticipantsPanel
+        titleId={
+          inSheet
+            ? "unassigned-lodging-mobile-title"
+            : "unassigned-lodging-title"
+        }
+        inSheet={inSheet}
+        participants={displayedOverview.unassignedParticipants}
+        rooms={displayedRooms}
+        canManage={canManage}
+        draggedParticipant={draggedParticipant}
+        selectedParticipantIds={selectedUnassignedParticipantIds}
+        isDropTarget={isUnassignedDropTarget}
+        dragDisabled={dragDisabled}
+        onParticipantSelectionChange={(participantId, checked) =>
+          handleSelectionChange(
+            setSelectedUnassignedParticipantIds,
+            participantId,
+            checked,
+          )
+        }
+        onParticipantsSelectionChange={(participants, checked) =>
+          handleGroupSelectionChange(
+            setSelectedUnassignedParticipantIds,
+            participants,
+            checked,
+          )
+        }
+        onParticipantDragStart={handleUnassignedParticipantDragStart}
+        onParticipantDragEnd={clearDragState}
+        onPickRoomsRequest={(participants) => {
+          if (inSheet) setMobilePanelOpen(false);
+          setPickerParticipants(participants);
+        }}
+        onMoveRequest={(participant, targetRoomName) => {
+          if (!dragDisabled) {
+            if (inSheet) setMobilePanelOpen(false);
+            setRequestedChange({ participants: [participant], targetRoomName });
+          }
+        }}
+        onDragOver={handleUnassignedDragOver}
+        onDragLeave={handleUnassignedDragLeave}
+        onDrop={handleUnassignedDrop}
+      />
+    );
+  }
+
   return (
     <>
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
@@ -918,11 +1026,6 @@ export function LodgingBoard({
                         const allSelected =
                           room.occupants.length > 0 &&
                           selectedCount === room.occupants.length;
-                        const contextParticipant = room.occupants.find(
-                          (participant) =>
-                            participant.id === contextParticipantId,
-                        );
-
                         return (
                           <Card
                             key={room.id}
@@ -1045,25 +1148,10 @@ export function LodgingBoard({
                                       ) : null}
                                     </div>
                                   ) : null}
-                                  <ContextMenu>
-                                    <ContextMenuTrigger
-                                      render={
-                                        <ul
-                                          className="flex max-h-72 flex-col gap-2 overflow-y-auto pr-1"
-                                          aria-label={`Participantes en dormitorio ${room.number} de ${building.name}`}
-                                        />
-                                      }
-                                      onContextMenuCapture={(event) => {
-                                        const row = (
-                                          event.target as Element
-                                        ).closest<HTMLLIElement>(
-                                          "li[data-participant-id]",
-                                        );
-                                        setContextParticipantId(
-                                          row?.dataset.participantId ?? null,
-                                        );
-                                      }}
-                                    >
+                                  <ul
+                                    className="flex max-h-72 flex-col gap-2 overflow-y-auto pr-1"
+                                    aria-label={`Participantes en dormitorio ${room.number} de ${building.name}`}
+                                  >
                                       {room.occupants.map((participant) => {
                                         const selected =
                                           selectedRoomParticipantIds.has(
@@ -1073,7 +1161,6 @@ export function LodgingBoard({
                                         return (
                                           <li
                                             key={participant.id}
-                                            data-participant-id={participant.id}
                                             draggable={
                                               canManage && !dragDisabled
                                             }
@@ -1085,7 +1172,7 @@ export function LodgingBoard({
                                             }
                                             title={
                                               canManage
-                                                ? "Arrastra a otro dormitorio o a la lista de pendientes; clic derecho para más opciones."
+                                                ? "Arrastra a otro dormitorio o a la lista de pendientes; abre el botón de tres puntos para más opciones."
                                                 : getDisplayName(participant)
                                             }
                                             className={cn(
@@ -1141,113 +1228,33 @@ export function LodgingBoard({
                                               status={participant.status}
                                             />
                                             {canManage ? (
-                                              <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="icon-xs"
-                                                aria-label={`Quitar a ${getDisplayName(participant)} del dormitorio`}
-                                                title="Quitar del dormitorio"
+                                              <LodgingParticipantActionsMenu
+                                                participant={participant}
+                                                rooms={displayedRooms}
                                                 disabled={dragDisabled}
-                                                onClick={() =>
+                                                onMoveRequest={(
+                                                  participant,
+                                                  targetRoomName,
+                                                ) =>
+                                                  setRequestedChange({
+                                                    participants: [participant],
+                                                    targetRoomName,
+                                                  })
+                                                }
+                                                onRemoveRequest={(
+                                                  participant,
+                                                ) =>
                                                   setRequestedChange({
                                                     participants: [participant],
                                                     targetRoomName: null,
                                                   })
                                                 }
-                                              >
-                                                <HugeiconsIcon
-                                                  icon={Cancel01Icon}
-                                                  strokeWidth={2}
-                                                />
-                                              </Button>
+                                              />
                                             ) : null}
                                           </li>
                                         );
                                       })}
-                                    </ContextMenuTrigger>
-                                    <ContextMenuContent>
-                                      <ContextMenuGroup>
-                                        <ContextMenuSub>
-                                          <ContextMenuSubTrigger
-                                            openOnHover
-                                            disabled={
-                                              !canManage ||
-                                              dragDisabled ||
-                                              !contextParticipant
-                                            }
-                                          >
-                                            Mover a otro dormitorio
-                                          </ContextMenuSubTrigger>
-                                          <ContextMenuSubContent className="max-h-[70dvh] min-w-64 overflow-y-auto">
-                                            <ContextMenuGroup>
-                                              {contextParticipant
-                                                ? displayedRooms.map(
-                                                    (destination) => {
-                                                      const unavailableReason =
-                                                        getLodgingMoveUnavailableReason(
-                                                          [contextParticipant],
-                                                          destination,
-                                                        );
-
-                                                      return (
-                                                        <ContextMenuItem
-                                                          key={destination.id}
-                                                          disabled={
-                                                            dragDisabled ||
-                                                            Boolean(
-                                                              unavailableReason,
-                                                            )
-                                                          }
-                                                          onClick={() =>
-                                                            setRequestedChange({
-                                                              participants: [
-                                                                contextParticipant,
-                                                              ],
-                                                              targetRoomName:
-                                                                destination.name,
-                                                            })
-                                                          }
-                                                        >
-                                                          <span>
-                                                            {destination.name}
-                                                          </span>
-                                                          <span className="ml-auto text-xs text-muted-foreground">
-                                                            {unavailableReason ??
-                                                              `${destination.assignedParticipants}/${destination.participantCapacity}`}
-                                                          </span>
-                                                        </ContextMenuItem>
-                                                      );
-                                                    },
-                                                  )
-                                                : null}
-                                            </ContextMenuGroup>
-                                          </ContextMenuSubContent>
-                                        </ContextMenuSub>
-                                      </ContextMenuGroup>
-                                      <ContextMenuSeparator />
-                                      <ContextMenuGroup>
-                                        <ContextMenuItem
-                                          variant="destructive"
-                                          disabled={
-                                            !canManage ||
-                                            dragDisabled ||
-                                            !contextParticipant
-                                          }
-                                          onClick={() => {
-                                            if (contextParticipant)
-                                              setRequestedChange({
-                                                participants: [
-                                                  contextParticipant,
-                                                ],
-                                                targetRoomName: null,
-                                              });
-                                          }}
-                                        >
-                                          Quitar del dormitorio
-                                        </ContextMenuItem>
-                                      </ContextMenuGroup>
-                                    </ContextMenuContent>
-                                  </ContextMenu>
+                                  </ul>
                                 </>
                               ) : (
                                 <Empty className="min-h-24 p-3">
@@ -1295,43 +1302,18 @@ export function LodgingBoard({
             );
           })}
         </div>
-        <UnassignedParticipantsPanel
-          participants={displayedOverview.unassignedParticipants}
-          rooms={displayedRooms}
-          canManage={canManage}
-          draggedParticipant={draggedParticipant}
-          selectedParticipantIds={selectedUnassignedParticipantIds}
-          isDropTarget={isUnassignedDropTarget}
-          dragDisabled={dragDisabled}
-          onParticipantSelectionChange={(participantId, checked) =>
-            handleSelectionChange(
-              setSelectedUnassignedParticipantIds,
-              participantId,
-              checked,
-            )
-          }
-          onParticipantsSelectionChange={(participants, checked) =>
-            handleGroupSelectionChange(
-              setSelectedUnassignedParticipantIds,
-              participants,
-              checked,
-            )
-          }
-          onParticipantDragStart={handleUnassignedParticipantDragStart}
-          onParticipantDragEnd={clearDragState}
-          onPickRoomsRequest={setPickerParticipants}
-          onMoveRequest={(participant, targetRoomName) => {
-            if (!dragDisabled)
-              setRequestedChange({
-                participants: [participant],
-                targetRoomName,
-              });
-          }}
-          onDragOver={handleUnassignedDragOver}
-          onDragLeave={handleUnassignedDragLeave}
-          onDrop={handleUnassignedDrop}
-        />
+        <div className="hidden xl:block">{renderUnassignedPanel(false)}</div>
       </div>
+
+      <MobileUnassignedSheet
+        title="Sin alojamiento"
+        description="Busca y filtra participantes sin dormitorio."
+        icon={<HugeiconsIcon icon={BedBunkIcon} strokeWidth={2} data-icon="inline-start" />}
+        open={mobilePanelOpen}
+        onOpenChange={setMobilePanelOpen}
+      >
+        {renderUnassignedPanel(true)}
+      </MobileUnassignedSheet>
 
       <AlertDialog
         open={requestedChange !== null}

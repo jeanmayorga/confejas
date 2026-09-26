@@ -15,11 +15,13 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
+import MoreHorizontalIcon from "@hugeicons/core-free-icons/MoreHorizontalIcon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { MobileUnassignedSheet } from "@/components/mobile-unassigned-sheet.client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardAction,
@@ -42,16 +45,16 @@ import {
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuGroup,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Empty,
   EmptyContent,
@@ -78,6 +81,10 @@ import {
 import { Progress, ProgressTrack } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { getParticipantInitials } from "@/modules/participants/components/participant-details.client";
+import {
+  UnassignedStatusFilter,
+  type UnassignedStatusFilterValue,
+} from "@/modules/participants/components/unassigned-status-filter.client";
 import {
   getParticipantStatusLabel,
   type ParticipantStatus,
@@ -115,6 +122,7 @@ type UnassignedParticipantsPage = {
   total: number;
   totalPages: number;
   search: string;
+  status: UnassignedStatusFilterValue | null;
 };
 
 type DraggedCompanyParticipant = {
@@ -328,6 +336,7 @@ export function CompaniesDirectory({
   const [moving, setMoving] = useState(false);
   const [requestedChange, setRequestedChange] =
     useState<RequestedCompanyAssignmentChange | null>(null);
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const [refreshing, startTransition] = useTransition();
   const dragDisabled = moving || refreshing;
   const draggedParticipantIds = useMemo(
@@ -582,7 +591,10 @@ export function CompaniesDirectory({
                 matchesParticipantSearch(
                   participant,
                   current.pages[0].search,
-                ) && !existingParticipantIds.has(participant.id),
+                ) &&
+                (current.pages[0].status === null ||
+                  current.pages[0].status === participant.status) &&
+                !existingParticipantIds.has(participant.id),
             );
 
           if (additions.length === 0) {
@@ -784,6 +796,32 @@ export function CompaniesDirectory({
     moveDraggedParticipants(dragged, company);
   }
 
+  function renderUnassignedCard(inSheet: boolean) {
+    return (
+      <UnassignedParticipantsCard
+        titleId={
+          inSheet
+            ? "unassigned-participants-mobile-title"
+            : "unassigned-participants-title"
+        }
+        inSheet={inSheet}
+        capacity={capacity}
+        draggedParticipant={draggedParticipant}
+        draggedParticipantIds={draggedParticipantIds}
+        isDropTarget={isUnassignedDropTarget}
+        dragDisabled={dragDisabled}
+        selectedParticipantIds={selectedUnassignedParticipantIds}
+        onDragOver={handleUnassignedDragOver}
+        onDragLeave={handleUnassignedDragLeave}
+        onDrop={handleUnassignedDrop}
+        onParticipantDragStart={handleUnassignedParticipantDragStart}
+        onParticipantDragEnd={clearDragState}
+        onParticipantSelectionChange={handleUnassignedParticipantSelectionChange}
+        onParticipantsSelectionChange={handleUnassignedParticipantsSelectionChange}
+      />
+    );
+  }
+
   if (displayedCompanies.length === 0) {
     return (
       <Empty className="min-h-80">
@@ -848,25 +886,16 @@ export function CompaniesDirectory({
           />
         ))}
       </div>
-      <UnassignedParticipantsCard
-        capacity={capacity}
-        draggedParticipant={draggedParticipant}
-        draggedParticipantIds={draggedParticipantIds}
-        isDropTarget={isUnassignedDropTarget}
-        dragDisabled={dragDisabled}
-        selectedParticipantIds={selectedUnassignedParticipantIds}
-        onDragOver={handleUnassignedDragOver}
-        onDragLeave={handleUnassignedDragLeave}
-        onDrop={handleUnassignedDrop}
-        onParticipantDragStart={handleUnassignedParticipantDragStart}
-        onParticipantDragEnd={clearDragState}
-        onParticipantSelectionChange={
-          handleUnassignedParticipantSelectionChange
-        }
-        onParticipantsSelectionChange={
-          handleUnassignedParticipantsSelectionChange
-        }
-      />
+      <div className="hidden xl:block">{renderUnassignedCard(false)}</div>
+      <MobileUnassignedSheet
+        title="Sin compañía"
+        description="Busca y filtra participantes sin compañía."
+        icon={<HugeiconsIcon icon={Building03Icon} strokeWidth={2} data-icon="inline-start" />}
+        open={mobilePanelOpen}
+        onOpenChange={setMobilePanelOpen}
+      >
+        {renderUnassignedCard(true)}
+      </MobileUnassignedSheet>
       <AlertDialog
         open={requestedChange !== null}
         onOpenChange={(open) => {
@@ -916,6 +945,8 @@ export function CompaniesDirectory({
 }
 
 function UnassignedParticipantsCard({
+  titleId,
+  inSheet,
   capacity,
   draggedParticipant,
   draggedParticipantIds,
@@ -930,6 +961,8 @@ function UnassignedParticipantsCard({
   onParticipantSelectionChange,
   onParticipantsSelectionChange,
 }: {
+  titleId: string;
+  inSheet: boolean;
   capacity: DistributionCapacity;
   draggedParticipant: DraggedCompanyParticipants | null;
   draggedParticipantIds: ReadonlySet<string>;
@@ -954,19 +987,23 @@ function UnassignedParticipantsCard({
     checked: boolean,
   ) => void;
 }) {
-  const titleId = "unassigned-participants-title";
   const queryClient = useQueryClient();
   const listViewportRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<UnassignedStatusFilterValue>("all");
   const deferredSearch = useDeferredValue(search);
   const unassignedParticipantsQuery = useInfiniteQuery({
-    queryKey: ["company-unassigned-participants", deferredSearch],
+    queryKey: ["company-unassigned-participants", deferredSearch, status],
     queryFn: async ({ pageParam }) => {
       const params = new URLSearchParams({ page: String(pageParam) });
 
       if (deferredSearch) {
         params.set("query", deferredSearch);
+      }
+
+      if (status !== "all") {
+        params.set("status", status);
       }
 
       const response = await fetch(
@@ -1000,7 +1037,7 @@ function UnassignedParticipantsCard({
 
   useEffect(() => {
     listViewportRef.current?.scrollTo({ top: 0 });
-  }, [deferredSearch]);
+  }, [deferredSearch, status]);
 
   useEffect(() => {
     const listViewport = listViewportRef.current;
@@ -1025,10 +1062,14 @@ function UnassignedParticipantsCard({
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   return (
-    <aside className="self-start xl:sticky xl:top-6" aria-labelledby={titleId}>
+    <aside
+      className={cn("self-start xl:sticky xl:top-6", inSheet && "h-full")}
+      aria-labelledby={titleId}
+    >
       <Card
         className={cn(
           "max-h-[calc(100dvh-3rem)] gap-0 py-3 transition-[background-color,box-shadow]",
+          inSheet && "h-full max-h-none",
           draggedCompanyParticipants && "bg-primary/5 ring-1 ring-primary/40",
           isDropTarget && "bg-primary/5 ring-2 ring-primary ring-offset-2",
         )}
@@ -1084,27 +1125,33 @@ function UnassignedParticipantsCard({
                 aria-label="Buscar participantes sin compañía"
               />
             </InputGroup>
+            <UnassignedStatusFilter value={status} onChange={setStatus} />
           </div>
         </CardContent>
 
         {unassignedParticipantsQuery.isPending ? (
           <CardContent className="min-h-0 flex-1 p-0">
             <TableFrame className="rounded-none border-0">
-              <Table className="min-w-[440px] table-fixed">
+              <Table
+                className={cn(
+                  "table-fixed",
+                  inSheet ? "w-full" : "min-w-[440px]",
+                )}
+              >
                 <colgroup>
                   <col className="w-11" />
                   <col className="w-24" />
                   <col />
-                  <col className="w-[76px]" />
-                  <col className="w-20" />
+                  {!inSheet ? <col className="w-[76px]" /> : null}
+                  {!inSheet ? <col className="w-20" /> : null}
                 </colgroup>
                 <TableHeader>
                   <TableRow>
                     <TableHead />
                     <TableHead>Estado</TableHead>
                     <TableHead>Nombres</TableHead>
-                    <TableHead>Edad</TableHead>
-                    <TableHead>Sexo</TableHead>
+                    {!inSheet ? <TableHead>Edad</TableHead> : null}
+                    {!inSheet ? <TableHead>Sexo</TableHead> : null}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1122,12 +1169,16 @@ function UnassignedParticipantsCard({
                           <Skeleton className="h-3 w-32" />
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-3 w-12" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-5 w-14 rounded-full" />
-                      </TableCell>
+                      {!inSheet ? (
+                        <>
+                          <TableCell>
+                            <Skeleton className="h-3 w-12" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-5 w-14 rounded-full" />
+                          </TableCell>
+                        </>
+                      ) : null}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -1145,13 +1196,18 @@ function UnassignedParticipantsCard({
               className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
             >
               <TableFrame className="rounded-none border-0">
-                <Table className="min-w-[480px] table-fixed">
+                <Table
+                  className={cn(
+                    "table-fixed",
+                    inSheet ? "w-full" : "min-w-[480px]",
+                  )}
+                >
                   <colgroup>
                     <col className="w-11" />
                     <col className="w-24" />
                     <col />
-                    <col className="w-[76px]" />
-                    <col className="w-20" />
+                    {!inSheet ? <col className="w-[76px]" /> : null}
+                    {!inSheet ? <col className="w-20" /> : null}
                   </colgroup>
                   <TableHeader>
                     <TableRow>
@@ -1171,8 +1227,8 @@ function UnassignedParticipantsCard({
                       </TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead>Nombres</TableHead>
-                      <TableHead>Edad</TableHead>
-                      <TableHead>Sexo</TableHead>
+                      {!inSheet ? <TableHead>Edad</TableHead> : null}
+                      {!inSheet ? <TableHead>Sexo</TableHead> : null}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1230,7 +1286,7 @@ function UnassignedParticipantsCard({
                             </Badge>
                           </TableCell>
                           <TableCell className="max-w-0 overflow-hidden">
-                            <div className="flex items-center gap-2">
+                            <div className="flex min-w-0 items-center gap-2">
                               <Avatar size="sm" aria-hidden="true">
                                 <AvatarFallback
                                   className={cn(
@@ -1246,25 +1302,37 @@ function UnassignedParticipantsCard({
                                   )}
                                 </AvatarFallback>
                               </Avatar>
-                              <span className="min-w-0 truncate font-medium">
-                                {getParticipantName(participant)}
+                              <span className="min-w-0">
+                                <span className="block truncate font-medium">
+                                  {getParticipantName(participant)}
+                                </span>
+                                {inSheet ? (
+                                  <span className="block truncate text-xs text-muted-foreground">
+                                    {getParticipantAge(participant.age)} ·{" "}
+                                    {getParticipantSexLabel(participant.sex)}
+                                  </span>
+                                ) : null}
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell>
-                            {getParticipantAge(participant.age)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">
-                              {getParticipantSexLabel(participant.sex)}
-                            </Badge>
-                          </TableCell>
+                          {!inSheet ? (
+                            <>
+                              <TableCell>
+                                {getParticipantAge(participant.age)}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary">
+                                  {getParticipantSexLabel(participant.sex)}
+                                </Badge>
+                              </TableCell>
+                            </>
+                          ) : null}
                         </TableRow>
                       );
                     })}
                     {isFetchingNextPage ? (
                       <TableRow>
-                        <TableCell colSpan={5}>
+                        <TableCell colSpan={inSheet ? 3 : 5}>
                           <Skeleton className="h-3 w-28" />
                         </TableCell>
                       </TableRow>
@@ -1279,14 +1347,18 @@ function UnassignedParticipantsCard({
           </CardContent>
         ) : (
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            {deferredSearch
+            {deferredSearch || status !== "all"
               ? "No encontramos participantes sin compañía."
               : "No hay participantes sin compañía."}
           </CardContent>
         )}
 
         <CardFooter className="justify-between border-t !pt-3">
-          <span className="font-medium">Total de participantes</span>
+          <span className="font-medium">
+            {deferredSearch || status !== "all"
+              ? "Resultados"
+              : "Total de participantes"}
+          </span>
           <Badge variant="secondary">
             {unassignedParticipantsQuery.isPending
               ? "…"
@@ -1355,10 +1427,6 @@ function CompanyCard({
 }) {
   const titleId = `company-${company.id}-title`;
   const companyLabel = getCompanyDisplayName(company.name, position);
-  const [contextParticipantId, setContextParticipantId] = useState<string | null>(null);
-  const contextParticipant = company.participants.find(
-    (participant) => participant.id === contextParticipantId,
-  );
   const selectedParticipantCount = company.participants.filter((participant) =>
     selectedParticipantIds.has(participant.id),
   ).length;
@@ -1455,14 +1523,15 @@ function CompanyCard({
 
           {company.participants.length > 0 ? (
             <TableFrame className="mt-3">
-              <Table className="min-w-[580px] table-fixed">
+              <Table className="table-fixed sm:min-w-[620px]">
                 <colgroup>
-                  <col className="w-11" />
-                  <col className="w-12" />
-                  <col className="w-24" />
+                  <col className="w-9 sm:w-11" />
+                  <col className="hidden w-12 sm:table-column" />
+                  <col className="w-20 sm:w-24" />
                   <col />
-                  <col className="w-[76px]" />
-                  <col className="w-20" />
+                  <col className="hidden w-[76px] sm:table-column" />
+                  <col className="hidden w-20 sm:table-column" />
+                  <col className="w-10 sm:w-11" />
                 </colgroup>
                 <TableHeader>
                   <TableRow>
@@ -1480,23 +1549,19 @@ function CompanyCard({
                         aria-label={`Seleccionar todos los participantes de ${companyLabel}`}
                       />
                     </TableHead>
-                    <TableHead className="text-center">#</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Nombres</TableHead>
-                    <TableHead>Edad</TableHead>
-                    <TableHead>Sexo</TableHead>
+                    <TableHead className="hidden text-center sm:table-cell">
+                      #
+                    </TableHead>
+                    <TableHead className="px-1 sm:px-3">Estado</TableHead>
+                    <TableHead className="px-1 sm:px-3">Nombres</TableHead>
+                    <TableHead className="hidden sm:table-cell">Edad</TableHead>
+                    <TableHead className="hidden sm:table-cell">Sexo</TableHead>
+                    <TableHead className="px-1 text-center sm:px-3">
+                      <span className="sr-only">Acciones</span>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
-                <ContextMenu>
-                  <ContextMenuTrigger
-                    render={<TableBody />}
-                    onContextMenuCapture={(event) => {
-                      const row = (event.target as Element).closest<HTMLTableRowElement>(
-                        "tr[data-participant-id]",
-                      );
-                      setContextParticipantId(row?.dataset.participantId ?? null);
-                    }}
-                  >
+                <TableBody>
                   {company.participants.map((participant, index) =>
                     (() => {
                       const isSelected = selectedParticipantIds.has(
@@ -1509,11 +1574,10 @@ function CompanyCard({
                       return (
                         <TableRow
                           key={participant.id}
-                          data-participant-id={participant.id}
                           draggable={!dragDisabled}
                           aria-grabbed={isDragged}
                           aria-selected={isSelected}
-                          title="Haz clic derecho para moverlo o eliminarlo de esta compañía, o arrástralo a Participantes sin compañía."
+                          title="Abre el botón de tres puntos para moverlo o eliminarlo de esta compañía, o arrástralo a Participantes sin compañía."
                           className={cn(
                             "cursor-grab active:cursor-grabbing",
                             isSelected && "bg-primary/5 hover:bg-primary/10",
@@ -1537,10 +1601,10 @@ function CompanyCard({
                               aria-label={`Seleccionar a ${getParticipantName(participant)}`}
                             />
                           </TableCell>
-                          <TableCell className="text-center tabular-nums text-muted-foreground">
+                          <TableCell className="hidden text-center tabular-nums text-muted-foreground sm:table-cell">
                             {index + 1}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="px-1 sm:px-3">
                             <Badge
                               variant="outline"
                               className={cn(
@@ -1551,9 +1615,13 @@ function CompanyCard({
                               {getParticipantStatusLabel(participant.status)}
                             </Badge>
                           </TableCell>
-                          <TableCell className="max-w-0 overflow-hidden">
-                            <div className="flex items-center gap-2">
-                              <Avatar size="sm" aria-hidden="true">
+                          <TableCell className="max-w-0 overflow-hidden px-1 whitespace-normal sm:px-3">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <Avatar
+                                size="sm"
+                                aria-hidden="true"
+                                className="hidden sm:flex"
+                              >
                                 <AvatarFallback
                                   className={cn(
                                     "!text-[9px] font-medium",
@@ -1568,78 +1636,41 @@ function CompanyCard({
                                   )}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="min-w-0 truncate whitespace-nowrap">
-                                <span className="font-medium">
+                              <div className="min-w-0">
+                                <span className="block break-words font-medium sm:truncate">
                                   {getParticipantName(participant)}
+                                </span>
+                                <span className="block text-xs text-muted-foreground sm:hidden">
+                                  {getParticipantAge(participant.age)} ·{" "}
+                                  {getParticipantSexLabel(participant.sex)}
                                 </span>
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden sm:table-cell">
                             {getParticipantAge(participant.age)}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden sm:table-cell">
                             <Badge variant="secondary">
                               {getParticipantSexLabel(participant.sex)}
                             </Badge>
+                          </TableCell>
+                          <TableCell className="px-1 text-center sm:px-3">
+                            <CompanyParticipantActionsMenu
+                              participant={participant}
+                              company={company}
+                              companies={companies}
+                              capacity={capacity}
+                              dragDisabled={dragDisabled}
+                              onMoveRequest={onParticipantMoveRequest}
+                              onRemoveRequest={onParticipantRemoveRequest}
+                            />
                           </TableCell>
                         </TableRow>
                       );
                     })(),
                   )}
-                  </ContextMenuTrigger>
-                  <ContextMenuContent>
-                    <ContextMenuGroup>
-                      <ContextMenuSub>
-                        <ContextMenuSubTrigger
-                          openOnHover
-                          disabled={dragDisabled || !contextParticipant}
-                        >
-                          Mover a otra compañía
-                        </ContextMenuSubTrigger>
-                        <ContextMenuSubContent className="max-h-[70dvh] min-w-64 overflow-y-auto">
-                          <ContextMenuGroup>
-                            {contextParticipant ? companies.map((destination, index) => {
-                              const unavailableReason = getCompanyMoveUnavailableReason(
-                                company.id,
-                                contextParticipant.sex,
-                                destination,
-                                capacity,
-                              );
-
-                              return (
-                                <ContextMenuItem
-                                  key={destination.id}
-                                  disabled={dragDisabled || Boolean(unavailableReason)}
-                                  onClick={() => onParticipantMoveRequest(contextParticipant.id, destination.id)}
-                                >
-                                  <span>{getCompanyDisplayName(destination.name, index + 1)}</span>
-                                  <span className="ml-auto text-xs text-muted-foreground">
-                                    {unavailableReason ?? `${destination.participantCount}/${capacity.female + capacity.male}`}
-                                  </span>
-                                </ContextMenuItem>
-                              );
-                            }) : null}
-                          </ContextMenuGroup>
-                        </ContextMenuSubContent>
-                      </ContextMenuSub>
-                    </ContextMenuGroup>
-                    <ContextMenuSeparator />
-                    <ContextMenuGroup>
-                      <ContextMenuItem
-                        variant="destructive"
-                        disabled={dragDisabled || !contextParticipant}
-                        onClick={() => {
-                          if (contextParticipant) {
-                            onParticipantRemoveRequest(contextParticipant.id);
-                          }
-                        }}
-                      >
-                        Eliminar de la compañía
-                      </ContextMenuItem>
-                    </ContextMenuGroup>
-                  </ContextMenuContent>
-                </ContextMenu>
+                </TableBody>
               </Table>
             </TableFrame>
           ) : (
@@ -1655,6 +1686,105 @@ function CompanyCard({
         </section>
       </CardContent>
     </Card>
+  );
+}
+
+function CompanyParticipantActionsMenu({
+  participant,
+  company,
+  companies,
+  capacity,
+  dragDisabled,
+  onMoveRequest,
+  onRemoveRequest,
+}: {
+  participant: CompanyParticipant;
+  company: CompanyDirectoryItem;
+  companies: CompanyDirectoryItem[];
+  capacity: DistributionCapacity;
+  dragDisabled: boolean;
+  onMoveRequest: (participantId: string, targetCompanyId: string) => void;
+  onRemoveRequest: (participantId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            disabled={dragDisabled}
+            draggable={false}
+            aria-label={`Acciones para ${getParticipantName(participant)}`}
+            onPointerDown={(event) => event.stopPropagation()}
+            onDragStart={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+          />
+        }
+      >
+        <HugeiconsIcon
+          icon={MoreHorizontalIcon}
+          strokeWidth={2}
+          aria-hidden="true"
+        />
+      </DropdownMenuTrigger>
+      {open ? (
+        <DropdownMenuContent align="end">
+          <DropdownMenuGroup>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger disabled={dragDisabled}>
+                Mover a otra compañía
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="max-h-[70dvh] min-w-64 overflow-y-auto">
+                <DropdownMenuGroup>
+                  {companies.map((destination, index) => {
+                    const unavailableReason = getCompanyMoveUnavailableReason(
+                      company.id,
+                      participant.sex,
+                      destination,
+                      capacity,
+                    );
+
+                    return (
+                      <DropdownMenuItem
+                        key={destination.id}
+                        disabled={dragDisabled || Boolean(unavailableReason)}
+                        onClick={() =>
+                          onMoveRequest(participant.id, destination.id)
+                        }
+                      >
+                        <span>
+                          {getCompanyDisplayName(destination.name, index + 1)}
+                        </span>
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {unavailableReason ??
+                            `${destination.participantCount}/${capacity.female + capacity.male}`}
+                        </span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={dragDisabled}
+              onClick={() => onRemoveRequest(participant.id)}
+            >
+              Eliminar de la compañía
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      ) : null}
+    </DropdownMenu>
   );
 }
 
