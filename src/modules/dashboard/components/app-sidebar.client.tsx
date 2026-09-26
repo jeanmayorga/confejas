@@ -37,6 +37,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/modules/auth/client/auth-client";
@@ -71,6 +72,7 @@ function getInitials(name: string) {
 export function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { setOpenMobile } = useSidebar();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const homeHref = canViewParticipantDirectory(user.role)
     ? "/dashboard/participants"
@@ -148,6 +150,10 @@ export function AppSidebar({ user }: AppSidebarProps) {
     { label: "Configuración", items: configurationNavigation },
   ].filter((section) => section.items.length > 0);
 
+  function handleNavigation() {
+    setOpenMobile(false);
+  }
+
   async function handleSignOut() {
     setIsSigningOut(true);
 
@@ -168,7 +174,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
             <SidebarMenuButton
               size="lg"
               className="h-16 gap-3 bg-transparent px-2 hover:bg-transparent active:bg-transparent focus-visible:bg-transparent data-active:bg-transparent data-active:text-sidebar-foreground"
-              render={<Link href={homeHref} />}
+              render={<Link href={homeHref} onClick={handleNavigation} />}
             >
               <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-sm ring-1 ring-border">
                 <Image
@@ -211,7 +217,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                         tooltip={item.title}
                         aria-current={isActive ? "page" : undefined}
                         className="h-10 gap-3 px-3 hover:bg-primary hover:text-primary-foreground data-active:bg-primary data-active:text-primary-foreground data-active:hover:bg-primary data-active:hover:text-primary-foreground"
-                        render={<Link href={item.href} />}
+                        render={<Link href={item.href} onClick={handleNavigation} />}
                       >
                         <HugeiconsIcon
                           icon={item.icon}
