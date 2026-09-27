@@ -886,7 +886,7 @@ export function CompaniesDirectory({
           />
         ))}
       </div>
-      <div className="hidden xl:block">{renderUnassignedCard(false)}</div>
+      <div className="hidden xl:block xl:self-stretch">{renderUnassignedCard(false)}</div>
       <MobileUnassignedSheet
         title="Sin compañía"
         description="Busca y filtra participantes sin compañía."
@@ -1064,14 +1064,14 @@ function UnassignedParticipantsCard({
   return (
     <aside
       className={cn(
-        "self-start xl:sticky xl:top-6",
+        "self-start xl:sticky xl:top-24",
         inSheet && "flex min-h-0 flex-1 flex-col self-stretch",
       )}
       aria-labelledby={titleId}
     >
       <Card
         className={cn(
-          "max-h-[calc(100dvh-3rem)] gap-0 py-3 transition-[background-color,box-shadow]",
+          "max-h-[calc(100dvh-7rem)] gap-0 py-3 transition-[background-color,box-shadow]",
           inSheet && "min-h-0 flex-1 max-h-none",
           draggedCompanyParticipants && "bg-primary/5 ring-1 ring-primary/40",
           isDropTarget && "bg-primary/5 ring-2 ring-primary ring-offset-2",
