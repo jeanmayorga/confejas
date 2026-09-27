@@ -222,7 +222,7 @@ export function ParticipantDirectoryFilters({
     <form onSubmit={submitSearch}>
       <div className="flex flex-col gap-3">
         <InputGroup
-          className="w-64 shrink-0 rounded-full"
+          className="w-full rounded-full sm:max-w-80"
           data-disabled={pending || undefined}
         >
           <InputGroupAddon>
@@ -252,47 +252,49 @@ export function ParticipantDirectoryFilters({
           ) : null}
         </InputGroup>
 
-        <div className="flex min-w-0 items-center justify-between gap-2 overflow-x-auto">
-          <Tabs
-            className="shrink-0"
-            value={selectedStatusTab}
-            onValueChange={(value) => updateFilter("status", value)}
-          >
-            <TabsList className="max-w-full overflow-x-auto">
-              <TabsTrigger value="all">
-                Todos
-                <Badge
-                  className={cn(
-                    "min-w-5 rounded-full bg-muted-foreground/30 px-1 text-muted-foreground",
-                    selectedStatusTab === "all" &&
-                      "bg-primary text-primary-foreground",
-                  )}
-                >
-                  {allStatusCount}
-                </Badge>
-              </TabsTrigger>
-              {PARTICIPANT_STATUS_OPTIONS.map((option) => (
-                <TabsTrigger key={option.value} value={option.value}>
-                  {option.label}
+        <div className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-center">
+          <div className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain pb-1 xl:flex-1">
+            <Tabs
+              className="w-max"
+              value={selectedStatusTab}
+              onValueChange={(value) => updateFilter("status", value)}
+            >
+              <TabsList aria-label="Filtrar participantes por estado">
+                <TabsTrigger value="all">
+                  Todos
                   <Badge
                     className={cn(
                       "min-w-5 rounded-full bg-muted-foreground/30 px-1 text-muted-foreground",
-                      selectedFilters.status === option.value &&
+                      selectedStatusTab === "all" &&
                         "bg-primary text-primary-foreground",
                     )}
                   >
-                    {statusCounts[option.value]}
+                    {allStatusCount}
                   </Badge>
                 </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+                {PARTICIPANT_STATUS_OPTIONS.map((option) => (
+                  <TabsTrigger key={option.value} value={option.value}>
+                    {option.label}
+                    <Badge
+                      className={cn(
+                        "min-w-5 rounded-full bg-muted-foreground/30 px-1 text-muted-foreground",
+                        selectedFilters.status === option.value &&
+                          "bg-primary text-primary-foreground",
+                      )}
+                    >
+                      {statusCounts[option.value]}
+                    </Badge>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center xl:w-auto xl:shrink-0">
             <Button
               type="button"
               variant={isLive ? "default" : "outline"}
-              className="shrink-0"
+              className="w-full sm:w-auto"
               disabled={pending}
               aria-pressed={isLive}
               onClick={() => onLiveChange(!isLive)}
@@ -313,7 +315,7 @@ export function ParticipantDirectoryFilters({
             <Button
               type="button"
               variant="outline"
-              className="shrink-0"
+              className="w-full sm:w-auto"
               disabled={pending || isRefreshing}
               onClick={onRefresh}
             >
@@ -331,7 +333,7 @@ export function ParticipantDirectoryFilters({
                   <Button
                     type="button"
                     variant="outline"
-                    className="shrink-0"
+                    className="w-full sm:w-auto"
                     disabled={pending || isRefreshing}
                   />
                 }
@@ -458,7 +460,7 @@ export function ParticipantDirectoryFilters({
               tabIndex={exportDisabled ? -1 : undefined}
               className={cn(
                 buttonVariants({ variant: "outline" }),
-                "shrink-0",
+                "w-full sm:w-auto",
                 exportDisabled && "pointer-events-none opacity-50",
               )}
             >
@@ -467,7 +469,6 @@ export function ParticipantDirectoryFilters({
             </a>
           </div>
         </div>
-
       </div>
     </form>
   );
