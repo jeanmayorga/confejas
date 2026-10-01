@@ -9,8 +9,8 @@ import { createWelcomePdf } from "./welcome-pdf";
 
 export async function createParticipantWelcomePdf(participant: WelcomeParticipant) {
   const [footerImage, headerImage] = await Promise.all([
-    readFile(path.join(process.cwd(), "public", "welcome-footer.png")),
-    readFile(path.join(process.cwd(), "public", "welcome-header.png")),
+    readFile(path.join(process.cwd(), "public", "welcome-footer-pdf.jpg")),
+    readFile(path.join(process.cwd(), "public", "welcome-header-pdf.jpg")),
   ]);
 
   return createWelcomePdf(participant, footerImage, headerImage);

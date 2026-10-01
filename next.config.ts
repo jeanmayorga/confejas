@@ -5,7 +5,10 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["@hugeicons/core-free-icons"],
   },
   outputFileTracingIncludes: {
-    "/api/participants/*/welcome": ["./public/welcome-footer.png"],
+    "/api/participants/*/welcome": [
+      "./public/welcome-footer-pdf.jpg",
+      "./public/welcome-header-pdf.jpg",
+    ],
   },
 };
 
