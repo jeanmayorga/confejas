@@ -11,7 +11,51 @@ import {
 
 const BLUE = "#2e75ad";
 const DEEP_BLUE = "#155682";
-const QR_SIZE = 190;
+const QR_SIZE = 214;
+
+function drawHeaderWaves(doc: PDFKit.PDFDocument, pageWidth: number) {
+  doc.save().rect(0, 0, pageWidth, 251).fill("#126ba3").restore();
+  doc
+    .save()
+    .moveTo(0, 200)
+    .bezierCurveTo(115, 191, 212, 217, 323, 201)
+    .bezierCurveTo(431, 186, 509, 201, pageWidth, 208)
+    .lineTo(pageWidth, 251)
+    .lineTo(0, 251)
+    .closePath()
+    .fill("#73c8ed")
+    .restore();
+  doc
+    .save()
+    .moveTo(0, 213)
+    .bezierCurveTo(129, 228, 226, 200, 336, 220)
+    .bezierCurveTo(439, 238, 505, 210, pageWidth, 220)
+    .lineTo(pageWidth, 251)
+    .lineTo(0, 251)
+    .closePath()
+    .fill("#2e8dca")
+    .restore();
+  doc
+    .save()
+    .moveTo(0, 225)
+    .bezierCurveTo(126, 215, 222, 248, 350, 230)
+    .bezierCurveTo(449, 217, 527, 230, pageWidth, 232)
+    .lineTo(pageWidth, 251)
+    .lineTo(0, 251)
+    .closePath()
+    .fill("#43aee0")
+    .restore();
+  doc
+    .save()
+    .moveTo(0, 240)
+    .bezierCurveTo(140, 233, 213, 258, 340, 242)
+    .bezierCurveTo(461, 226, 511, 248, pageWidth, 238)
+    .lineTo(pageWidth, 251)
+    .lineTo(0, 251)
+    .closePath()
+    .fill("#ffffff")
+    .restore();
+}
 
 function fitText(
   doc: PDFKit.PDFDocument,
@@ -38,7 +82,7 @@ function drawQr(doc: PDFKit.PDFDocument, value: string) {
   const quietZone = 2;
   const moduleSize = QR_SIZE / (qr.modules.size + quietZone * 2);
   const x = (doc.page.width - QR_SIZE) / 2;
-  const y = 366;
+  const y = 352;
 
   doc.save().rect(x, y, QR_SIZE, QR_SIZE).fill("#ffffff").restore();
   doc.save().fillColor("#202020");
@@ -88,16 +132,7 @@ export function createWelcomePdf(
     doc.on("error", reject);
 
     doc.image(footerImage, 0, 600, { width: pageWidth });
-    doc.save().rect(0, 0, pageWidth, 220).fill("#126ba3").restore();
-    doc
-      .save()
-      .rect(0, 0, pageWidth, 220)
-      .clip()
-      .circle(565, -6, 174)
-      .fillColor("#4bb7e1")
-      .fillOpacity(0.24)
-      .fill()
-      .restore();
+    drawHeaderWaves(doc, pageWidth);
     doc
       .font("Helvetica-Bold")
       .fontSize(13)
@@ -120,15 +155,14 @@ export function createWelcomePdf(
       .font("Helvetica")
       .fontSize(22)
       .fillColor(DEEP_BLUE)
-      .text(WELCOME_INTRO, 49, 252, { width: 497, lineGap: 5 });
+      .text(WELCOME_INTRO, 49, 270, { width: 497, lineGap: 5 });
 
     doc
       .save()
-      .roundedRect(48, 354, 499, 235, 17)
+      .roundedRect(177, 340, 241, 238, 13)
       .lineWidth(1.3)
-      .fillColor("#f3faff")
       .strokeColor("#afd8ea")
-      .fillAndStroke()
+      .stroke()
       .restore();
 
     drawQr(doc, String(participant.sourceRecordId));
@@ -136,7 +170,7 @@ export function createWelcomePdf(
       .font("Helvetica-Bold")
       .fontSize(12)
       .fillColor(BLUE)
-      .text(`# ${participant.sourceRecordId}`, 0, 562, {
+      .text(`# ${participant.sourceRecordId}`, 0, 589, {
         width: pageWidth,
         align: "center",
         lineBreak: false,

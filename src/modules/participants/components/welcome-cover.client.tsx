@@ -30,51 +30,62 @@ export function WelcomeCover({
         aria-hidden="true"
       />
 
-      <header className="absolute inset-x-0 top-0 h-[26.1%] overflow-hidden bg-[#126ba3] text-white">
-        <div
-          className="absolute -top-[81%] -right-[24%] aspect-square w-[58%] rounded-full bg-[#4bb7e1]/25"
+      <header className="absolute inset-x-0 top-0 h-[29.8%] overflow-hidden text-white">
+        <svg
+          className="absolute inset-0 size-full"
+          viewBox="0 0 595 251"
+          preserveAspectRatio="none"
           aria-hidden="true"
-        />
+        >
+          <path fill="#126ba3" d="M0 0h595v251H0z" />
+          <path fill="#73c8ed" d="M0 200C115 191 212 217 323 201S509 201 595 208V251H0Z" />
+          <path fill="#2e8dca" d="M0 213C129 228 226 200 336 220S505 210 595 220V251H0Z" />
+          <path fill="#43aee0" d="M0 225C126 215 222 248 350 230S527 230 595 232V251H0Z" />
+          <path fill="#ffffff" d="M0 240C140 233 213 258 340 242S511 248 595 238V251H0Z" />
+        </svg>
         <p
-          className="absolute top-[19.5%] left-[8%] font-bold tracking-[0.1em] whitespace-nowrap"
+          className="absolute top-[17.1%] left-[8%] font-bold tracking-[0.1em] whitespace-nowrap"
           style={{ fontSize: "2.2cqw" }}
         >
           CONFERENCIA JAS 2026
         </p>
-        <div className="absolute top-[34.5%] left-[8%] h-[0.36cqw] w-[8.7%] bg-[#91d8ee]" aria-hidden="true" />
+        <div className="absolute top-[30.3%] left-[8%] h-[0.36cqw] w-[8.7%] bg-[#91d8ee]" aria-hidden="true" />
         <h1
-          className="absolute top-[42%] left-[8%] font-bold leading-none whitespace-nowrap"
+          className="absolute top-[36.3%] left-[8%] font-bold leading-none whitespace-nowrap"
           style={{ fontSize: "8.6cqw" }}
         >
           {WELCOME_HEADING}
         </h1>
         <p
           className="absolute left-[8%] w-[84%] overflow-hidden font-bold leading-[0.95] break-words"
-          style={{ fontSize: nameSize, top: name.length > 26 ? "63%" : "68%" }}
+          style={{ fontSize: nameSize, top: name.length > 26 ? "56%" : "60%" }}
         >
           {name}.
         </p>
       </header>
 
       <p
-        className="absolute top-[29.9%] left-[8.2%] w-[83.6%] leading-[1.25]"
+        className="absolute top-[32.1%] left-[8.2%] w-[83.6%] leading-[1.25]"
         style={{ fontSize: "3.7cqw" }}
       >
         {WELCOME_INTRO}
       </p>
 
-      <div className="absolute top-[42.05%] left-[8.05%] flex h-[27.9%] w-[83.8%] flex-col items-center justify-center gap-[0.8cqw] rounded-[2.9cqw] border border-[#afd8ea] bg-[#f3faff]">
+      <div className="absolute top-[40.4%] left-[29.75%] h-[28.25%] w-[40.5%] rounded-[2.2cqw] border border-[#afd8ea] bg-white">
         <QRCodeSVG
           value={String(participant.sourceRecordId)}
           level="H"
           marginSize={2}
-          className="aspect-square h-[81%] w-auto bg-white"
+          className="absolute inset-[5%] size-[90%]"
           title={`Código QR de ${participant.firstNames} ${participant.lastNames}`}
         />
-        <p className="font-bold text-[#2e75ad]" style={{ fontSize: "2cqw" }}>
-          # {participant.sourceRecordId}
-        </p>
       </div>
+      <p
+        className="absolute top-[69.9%] inset-x-0 text-center font-bold text-[#2e75ad]"
+        style={{ fontSize: "2cqw" }}
+      >
+        # {participant.sourceRecordId}
+      </p>
 
       <p
         className="absolute top-[74%] left-[8.2%] w-[65%] leading-[1.2] font-bold whitespace-pre-line text-[#2e75ad]"
