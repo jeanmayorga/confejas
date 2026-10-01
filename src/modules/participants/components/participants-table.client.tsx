@@ -756,6 +756,7 @@ export function ParticipantsTable({
                   <ParticipantDetails
                     participant={selectedParticipant}
                     canManage={canManage}
+                    canViewWelcome
                     canDelete={canDelete}
                     className="flex-1"
                     onEdit={() => openParticipantEdit(selectedParticipant)}

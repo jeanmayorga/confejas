@@ -8,7 +8,7 @@ import {
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,10 +31,12 @@ import { cn } from "@/lib/utils";
 import DashboardSquare01Icon from "@hugeicons/core-free-icons/DashboardSquare01Icon";
 import InformationCircleIcon from "@hugeicons/core-free-icons/InformationCircleIcon";
 import MedicalFileIcon from "@hugeicons/core-free-icons/MedicalFileIcon";
+import Pdf02Icon from "@hugeicons/core-free-icons/Pdf02Icon";
 import UserEdit01Icon from "@hugeicons/core-free-icons/UserEdit01Icon";
 import UserGroupIcon from "@hugeicons/core-free-icons/UserGroupIcon";
 import WhatsappIcon from "@hugeicons/core-free-icons/WhatsappIcon";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { DeleteParticipantButton } from "@/modules/participants/components/delete-participant-button.client";
 import { ParticipantQrDialog } from "@/modules/participants/components/participant-qr-dialog.client";
@@ -129,6 +131,7 @@ function DetailItem({
 type ParticipantDetailsProps = {
   participant: ParticipantTableRow;
   canManage?: boolean;
+  canViewWelcome?: boolean;
   canChangeStatus?: boolean;
   canDelete?: boolean;
   className?: string;
@@ -159,6 +162,7 @@ const participantStatusDotClassNames = {
 export function ParticipantDetails({
   participant,
   canManage = false,
+  canViewWelcome = false,
   canChangeStatus = canManage,
   canDelete = false,
   className,
@@ -289,6 +293,15 @@ export function ParticipantDetails({
             participantCode={participant.sourceRecordId}
             participantName={participantName}
           />
+          {canViewWelcome && participant.sourceRecordId ? (
+            <Link
+              href={`/dashboard/participants/${participant.id}/welcome`}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              <HugeiconsIcon icon={Pdf02Icon} data-icon="inline-start" />
+              Carta de bienvenida
+            </Link>
+          ) : null}
           {canManage ? (
             <Button type="button" variant="outline" size="sm" onClick={onEdit}>
               <HugeiconsIcon icon={UserEdit01Icon} data-icon="inline-start" />
