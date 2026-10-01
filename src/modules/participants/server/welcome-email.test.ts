@@ -31,6 +31,18 @@ test("email includes the public itinerary and all five intolerables in both form
   expect(email.text).toContain("viernes 9 y sábado 10 de octubre");
   expect(email.text).toContain("https://confejas.vercel.app/itinerario");
   expect(email.html).toContain('href="https://confejas.vercel.app/itinerario"');
+  expect(email.text.indexOf("LOS CINCO INTOLERABLES")).toBeLessThan(
+    email.text.indexOf("Puedes consultar el itinerario"),
+  );
+  expect(email.text.indexOf("Puedes consultar el itinerario")).toBeLessThan(
+    email.text.indexOf("Adjuntamos tu carta de invitación en PDF"),
+  );
+  expect(email.html.indexOf("Los cinco intolerables")).toBeLessThan(
+    email.html.indexOf("Ver itinerario"),
+  );
+  expect(email.html.indexOf("Ver itinerario")).toBeLessThan(
+    email.html.indexOf("Tu carta de invitación"),
+  );
 
   for (const phrase of [
     "comportamiento inmoral",
