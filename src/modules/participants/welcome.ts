@@ -7,8 +7,10 @@ export type WelcomeParticipant = {
 };
 
 export const WELCOME_HEADING = "Hola,";
+export const WELCOME_SUBHEADING = "¡Nos alegra que estés aquí!";
 export const WELCOME_INTRO =
-  "Al presentar este QR, conocerás tu compañía y tu habitación.";
+  "Esta conferencia tiene un lugar para ti. Muestra el QR al llegar a la conferencia y te ayudaremos con tu compañía y tu habitación.";
+export const WELCOME_CODE_LABEL = "TU CÓDIGO PERSONAL";
 export const WELCOME_FAREWELL =
   "Esperamos que disfrutes de la\nConferencia JAS 2026.";
 

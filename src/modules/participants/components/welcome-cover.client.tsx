@@ -4,9 +4,11 @@ import { QRCodeSVG } from "qrcode.react";
 
 import {
   getWelcomeName,
+  WELCOME_CODE_LABEL,
   WELCOME_FAREWELL,
   WELCOME_HEADING,
   WELCOME_INTRO,
+  WELCOME_SUBHEADING,
   type WelcomeParticipant,
 } from "@/modules/participants/welcome";
 
@@ -38,7 +40,7 @@ export function WelcomeCover({
           aria-hidden="true"
         />
         <p
-          className="absolute top-[9.9%] left-[8%] font-bold tracking-[0.1em] whitespace-nowrap"
+          className="absolute inset-x-0 top-[9.9%] text-center font-bold tracking-[0.1em] whitespace-nowrap"
           style={{ fontSize: "2.2cqw" }}
         >
           CONFERENCIA JAS 2026
@@ -46,20 +48,31 @@ export function WelcomeCover({
       </header>
 
       <h1
-        className="absolute top-[21.5%] left-[8%] w-[84%] font-black leading-[0.95] tracking-tight break-words text-[#155682]"
-        style={{ fontSize: greetingSize, WebkitTextStroke: "0.35px #155682" }}
+        className="absolute left-[8%] w-[84%] text-center font-black leading-[0.95] tracking-tight break-words text-[#155682]"
+        style={{
+          fontSize: greetingSize,
+          top: greeting.length > 28 ? "18.4%" : "20.1%",
+          WebkitTextStroke: "0.35px #155682",
+        }}
       >
         {greeting}
       </h1>
 
       <p
-        className="absolute top-[32.1%] left-[8.2%] w-[83.6%] leading-[1.25]"
+        className="absolute top-[26.8%] left-[8%] w-[84%] text-center font-bold text-[#155682]"
         style={{ fontSize: "3.7cqw" }}
+      >
+        {WELCOME_SUBHEADING}
+      </p>
+
+      <p
+        className="absolute top-[31.2%] left-[8.2%] w-[83.6%] text-center leading-[1.25]"
+        style={{ fontSize: "2.85cqw" }}
       >
         {WELCOME_INTRO}
       </p>
 
-      <div className="absolute top-[39.8%] left-[27.9%] h-[30.8%] w-[44.2%] rounded-[2.2cqw] border border-[#afd8ea] bg-white">
+      <div className="absolute top-[41%] left-[27.9%] h-[30.8%] w-[44.2%] rounded-[2.2cqw] border border-[#afd8ea] bg-white">
         <QRCodeSVG
           value={String(participant.sourceRecordId)}
           level="H"
@@ -68,16 +81,16 @@ export function WelcomeCover({
           title={`Código QR de ${participant.firstNames} ${participant.lastNames}`}
         />
       </div>
-      <p
-        className="absolute top-[71%] inset-x-0 text-center font-bold text-[#2e75ad]"
-        style={{ fontSize: "2cqw" }}
-      >
+      <p className="absolute top-[72.4%] inset-x-0 text-center font-bold tracking-[0.12em] text-[#2e75ad]" style={{ fontSize: "1.7cqw" }}>
+        {WELCOME_CODE_LABEL}
+      </p>
+      <p className="absolute top-[74.1%] inset-x-0 text-center font-bold text-[#155682]" style={{ fontSize: "2.5cqw" }}>
         # {participant.sourceRecordId}
       </p>
 
       <p
-        className="absolute top-[74%] left-[8.2%] w-[65%] leading-[1.2] font-bold whitespace-pre-line text-[#2e75ad]"
-        style={{ fontSize: "3.35cqw" }}
+        className="absolute top-[77.2%] left-[17.1%] w-[65.5%] text-center leading-[1.2] font-bold whitespace-pre-line text-[#2e75ad]"
+        style={{ fontSize: "3cqw" }}
       >
         {WELCOME_FAREWELL}
       </p>
