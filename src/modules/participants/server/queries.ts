@@ -409,6 +409,28 @@ export async function getParticipantById(
   return participant ?? null;
 }
 
+export async function getParticipantForWelcome(participantId: string) {
+  if (!isParticipantId(participantId)) {
+    return null;
+  }
+
+  const [participant] = await db
+    .select({
+      id: participants.id,
+      sourceRecordId: participants.sourceRecordId,
+      firstNames: participants.firstNames,
+      lastNames: participants.lastNames,
+      preferredName: participants.preferredName,
+      sex: participants.sex,
+      email: participants.email,
+    })
+    .from(participants)
+    .where(eq(participants.id, participantId))
+    .limit(1);
+
+  return participant ?? null;
+}
+
 export async function findParticipantIdByGovernmentId(value: string) {
   const governmentId = normalizeGovernmentId(value);
 
