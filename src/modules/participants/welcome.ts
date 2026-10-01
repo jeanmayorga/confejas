@@ -17,3 +17,16 @@ export const WELCOME_FAREWELL =
 export function getWelcomeName(participant: WelcomeParticipant) {
   return participant.preferredName?.trim() || participant.firstNames.trim();
 }
+
+export function getParticipantWelcomeFilename(
+  participant: Pick<WelcomeParticipant, "firstNames" | "lastNames">,
+) {
+  const name = `${participant.firstNames} ${participant.lastNames}`
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return `invitacion-${name || "participante"}.pdf`;
+}

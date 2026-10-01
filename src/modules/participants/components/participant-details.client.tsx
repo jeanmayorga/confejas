@@ -39,7 +39,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { DeleteParticipantButton } from "@/modules/participants/components/delete-participant-button.client";
-import { ParticipantQrDialog } from "@/modules/participants/components/participant-qr-dialog.client";
 import { SendWelcomeEmailButton } from "@/modules/participants/components/send-welcome-email-button.client";
 import { updateParticipantMedicalNotesAction } from "@/modules/participants/server/actions";
 import { getWhatsAppHref } from "@/modules/participants/whatsapp";
@@ -290,10 +289,6 @@ export function ParticipantDetails({
           Me gustaría que me llamen: {preferredName}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <ParticipantQrDialog
-            participantCode={participant.sourceRecordId}
-            participantName={participantName}
-          />
           {canViewWelcome && participant.sourceRecordId ? (
             <>
               <Link

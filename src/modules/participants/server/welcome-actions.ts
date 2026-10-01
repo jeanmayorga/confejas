@@ -57,7 +57,7 @@ export async function sendParticipantWelcomeEmailAction(
       subject: content.subject,
       text: content.text,
       html: content.html,
-      attachments: [getParticipantWelcomeAttachment(participant.sourceRecordId, pdf)],
+      attachments: [getParticipantWelcomeAttachment(participant, pdf)],
     });
 
     if (error) {

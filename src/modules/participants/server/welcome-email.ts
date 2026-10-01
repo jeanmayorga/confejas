@@ -1,4 +1,8 @@
-import { getWelcomeName, type WelcomeParticipant } from "@/modules/participants/welcome";
+import {
+  getParticipantWelcomeFilename,
+  getWelcomeName,
+  type WelcomeParticipant,
+} from "@/modules/participants/welcome";
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => {
@@ -38,11 +42,11 @@ export function getParticipantWelcomeEmail(participant: WelcomeParticipant) {
 }
 
 export function getParticipantWelcomeAttachment(
-  sourceRecordId: number,
+  participant: WelcomeParticipant,
   pdf: Buffer,
 ) {
   return {
-    filename: `invitacion-${sourceRecordId}.pdf`,
+    filename: getParticipantWelcomeFilename(participant),
     content: pdf.toString("base64"),
     contentType: "application/pdf",
   };

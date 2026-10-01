@@ -1,6 +1,7 @@
 import { requireParticipantDirectoryAccess } from "@/modules/auth/server/session";
 import { createParticipantWelcomePdf } from "@/modules/participants/server/welcome-document";
 import { getParticipantForWelcome } from "@/modules/participants/server/queries";
+import { getParticipantWelcomeFilename } from "@/modules/participants/welcome";
 
 export const runtime = "nodejs";
 
@@ -26,7 +27,7 @@ export async function GET(_request: Request, { params }: WelcomeRouteContext) {
   return new Response(new Uint8Array(pdf), {
     headers: {
       "Cache-Control": "private, no-store",
-      "Content-Disposition": `attachment; filename="invitacion-${participant.sourceRecordId}.pdf"`,
+      "Content-Disposition": `attachment; filename="${getParticipantWelcomeFilename(participant)}"`,
       "Content-Length": String(pdf.byteLength),
       "Content-Type": "application/pdf",
     },
