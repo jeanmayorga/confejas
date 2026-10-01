@@ -77,7 +77,7 @@ export function WelcomeCover({
           value={String(participant.sourceRecordId)}
           level="H"
           marginSize={2}
-          className="absolute top-[4.5%] left-[5%] aspect-square h-auto w-[90%]"
+          className="absolute top-[1.8%] left-[2.5%] aspect-square h-auto w-[95%]"
           title={`Código QR de ${participant.firstNames} ${participant.lastNames}`}
         />
       </div>

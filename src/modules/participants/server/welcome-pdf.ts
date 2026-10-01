@@ -13,7 +13,7 @@ import {
 
 const BLUE = "#2e75ad";
 const DEEP_BLUE = "#155682";
-const QR_SIZE = 236;
+const QR_SIZE = 250;
 
 function fitText(
   doc: PDFKit.PDFDocument,
@@ -40,7 +40,7 @@ function drawQr(doc: PDFKit.PDFDocument, value: string) {
   const quietZone = 2;
   const moduleSize = QR_SIZE / (qr.modules.size + quietZone * 2);
   const x = (doc.page.width - QR_SIZE) / 2;
-  const y = 356;
+  const y = 349.5;
 
   doc.save().rect(x, y, QR_SIZE, QR_SIZE).fill("#ffffff").restore();
   doc.save().fillColor("#202020");
