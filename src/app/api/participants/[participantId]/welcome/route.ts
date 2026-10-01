@@ -24,15 +24,16 @@ export async function GET(_request: Request, { params }: WelcomeRouteContext) {
     return new Response("El participante no tiene código QR.", { status: 409 });
   }
 
-  const footerImage = await readFile(
-    path.join(process.cwd(), "public", "welcome-footer.png"),
-  );
-  const pdf = await createWelcomePdf(participant, footerImage);
+  const [footerImage, headerImage] = await Promise.all([
+    readFile(path.join(process.cwd(), "public", "welcome-footer.png")),
+    readFile(path.join(process.cwd(), "public", "welcome-header.png")),
+  ]);
+  const pdf = await createWelcomePdf(participant, footerImage, headerImage);
 
   return new Response(new Uint8Array(pdf), {
     headers: {
       "Cache-Control": "private, no-store",
-      "Content-Disposition": `attachment; filename="bienvenida-${participant.sourceRecordId}.pdf"`,
+      "Content-Disposition": `attachment; filename="invitacion-${participant.sourceRecordId}.pdf"`,
       "Content-Length": String(pdf.byteLength),
       "Content-Type": "application/pdf",
     },

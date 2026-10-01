@@ -299,7 +299,7 @@ export function ParticipantDetails({
               className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
             >
               <HugeiconsIcon icon={Pdf02Icon} data-icon="inline-start" />
-              Carta de bienvenida
+              Carta de invitación
             </Link>
           ) : null}
           {canManage ? (

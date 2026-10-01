@@ -29,7 +29,7 @@ export default async function WelcomePage({ params }: WelcomePageProps) {
   return (
     <div className="flex min-h-full flex-col gap-5">
       <PageHeader
-        title="Carta de bienvenida"
+        title="Carta de invitación"
         description={`Vista previa para ${participantName}`}
         actions={
           <div className="flex flex-wrap gap-2">

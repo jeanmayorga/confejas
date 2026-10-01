@@ -8,7 +8,7 @@ export type WelcomeParticipant = {
 
 export const WELCOME_HEADING = "Hola,";
 export const WELCOME_INTRO =
-  "Al presentar este QR, conocerás tu compañía y habitación.";
+  "Al presentar este QR, conocerás tu compañía y tu habitación.";
 export const WELCOME_FAREWELL =
   "Esperamos que disfrutes de la\nConferencia JAS 2026.";
 
