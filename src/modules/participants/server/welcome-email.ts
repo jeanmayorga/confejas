@@ -4,6 +4,16 @@ import {
   type WelcomeParticipant,
 } from "@/modules/participants/welcome";
 
+const PUBLIC_ITINERARY_URL = "https://confejas.vercel.app/itinerario";
+
+const intolerables = [
+  "Participar o fomentar comportamiento inmoral de cualquier tipo, lo cual incluye infringir la ley de castidad o ver pornografía en cualquiera de sus formas.",
+  "Robar en tiendas, hurtos en general o vandalismo de cualquier tipo.",
+  "Faltar a la Palabra de Sabiduría, incluso la posesión de sustancias ilegales.",
+  "Posesión de armas de fuego de cualquier tipo.",
+  "Actos perjudiciales contra ti mismo u otras personas, ya sea en el aspecto físico o espiritual.",
+];
+
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => {
     const entities: Record<string, string> = {
@@ -21,10 +31,19 @@ function escapeHtml(value: string) {
 export function getParticipantWelcomeEmail(participant: WelcomeParticipant) {
   const name = getWelcomeName(participant);
   const safeName = escapeHtml(name);
+  const intolerablesText = intolerables
+    .map((item, index) => `${index + 1}. ${item}`)
+    .join("\n");
+  const intolerablesHtml = intolerables
+    .map(
+      (item) =>
+        `<li style="padding:0 0 10px;line-height:1.55">${escapeHtml(item)}</li>`,
+    )
+    .join("");
 
   return {
     subject: "Tu carta de invitación - Conferencia JAS 2026",
-    text: `Hola, ${name}.\n\n¡Nos alegra que estés aquí! Adjuntamos tu carta de invitación con tu código QR personal. Muéstralo al llegar a la conferencia y te ayudaremos con tu compañía y tu habitación.\n\nEsperamos que disfrutes de la Conferencia JAS 2026.\n\nEquipo de Conferencia JAS 2026`,
+    text: `Hola, ${name}.\n\n¡Nos alegra que estés aquí! Adjuntamos tu carta de invitación con tu código QR personal. Muéstralo al llegar a la conferencia y te ayudaremos con tu compañía y tu habitación.\n\nConsulta el itinerario del viernes 9 y sábado 10 de octubre aquí: ${PUBLIC_ITINERARY_URL}\n\nLOS CINCO INTOLERABLES\nSi incurres en cualquiera de los cinco intolerables, se te enviará a casa de inmediato:\n${intolerablesText}\n\nEsperamos que disfrutes de la Conferencia JAS 2026.\n\nEquipo de Conferencia JAS 2026`,
     html: `<!doctype html>
 <html lang="es">
   <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -34,7 +53,14 @@ export function getParticipantWelcomeEmail(participant: WelcomeParticipant) {
       <h1 style="margin:0 0 16px;font-size:26px;line-height:1.2">Hola, ${safeName}.</h1>
       <p style="margin:0 0 14px;font-size:16px;line-height:1.6">¡Nos alegra que estés aquí! Adjuntamos tu carta de invitación con tu código QR personal.</p>
       <p style="margin:0 0 14px;font-size:16px;line-height:1.6">Muéstralo al llegar a la conferencia y te ayudaremos con tu compañía y tu habitación.</p>
-      <p style="margin:0;font-size:16px;line-height:1.6">Esperamos que disfrutes de la Conferencia JAS 2026.</p>
+      <p style="margin:24px 0 8px;font-size:16px;line-height:1.6">Consulta el itinerario del viernes 9 y sábado 10 de octubre cuando lo necesites:</p>
+      <p style="margin:0 0 24px"><a href="${PUBLIC_ITINERARY_URL}" style="display:inline-block;padding:12px 18px;border-radius:8px;background:#046db0;color:#fff;font-size:15px;font-weight:700;text-decoration:none">Ver itinerario</a></p>
+      <div style="padding:20px;border:1px solid #d7e8f1;border-radius:12px;background:#f5faff;color:#23475c">
+        <h2 style="margin:0 0 10px;color:#155682;font-size:18px;line-height:1.35">Los cinco intolerables</h2>
+        <p style="margin:0 0 14px;font-size:14px;line-height:1.55">Si incurres en cualquiera de los cinco intolerables, se te enviará a casa de inmediato:</p>
+        <ol style="margin:0;padding-left:22px;font-size:14px">${intolerablesHtml}</ol>
+      </div>
+      <p style="margin:24px 0 0;font-size:16px;line-height:1.6">Esperamos que disfrutes de la Conferencia JAS 2026.</p>
     </div>
   </body>
 </html>`,
