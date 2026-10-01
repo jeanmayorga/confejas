@@ -2,15 +2,16 @@ import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
 
 import {
-  getWelcomeHeading,
   getWelcomeName,
   WELCOME_FAREWELL,
+  WELCOME_HEADING,
   WELCOME_INTRO,
   type WelcomeParticipant,
 } from "@/modules/participants/welcome";
 
 const BLUE = "#2e75ad";
-const QR_SIZE = 260;
+const DEEP_BLUE = "#155682";
+const QR_SIZE = 190;
 
 function fitText(
   doc: PDFKit.PDFDocument,
@@ -37,7 +38,7 @@ function drawQr(doc: PDFKit.PDFDocument, value: string) {
   const quietZone = 2;
   const moduleSize = QR_SIZE / (qr.modules.size + quietZone * 2);
   const x = (doc.page.width - QR_SIZE) / 2;
-  const y = 320;
+  const y = 366;
 
   doc.save().rect(x, y, QR_SIZE, QR_SIZE).fill("#ffffff").restore();
   doc.save().fillColor("#202020");
@@ -77,8 +78,7 @@ export function createWelcomePdf(
       },
     });
     const chunks: Buffer[] = [];
-    const name = `${getWelcomeName(participant)},`;
-    const heading = getWelcomeHeading(participant.sex);
+    const name = `${getWelcomeName(participant)}.`;
     const pageWidth = doc.page.width;
 
     doc.on("data", (chunk: Buffer | Uint8Array) => {
@@ -88,47 +88,66 @@ export function createWelcomePdf(
     doc.on("error", reject);
 
     doc.image(footerImage, 0, 600, { width: pageWidth });
-    doc.font("Helvetica-Bold").fillColor(BLUE);
-    doc.fontSize(31).text("CONFERENCIA JAS 2026", 39, 42, {
-      width: pageWidth - 78,
-      lineBreak: false,
-    });
+    doc.save().rect(0, 0, pageWidth, 220).fill("#126ba3").restore();
+    doc
+      .save()
+      .rect(0, 0, pageWidth, 220)
+      .clip()
+      .circle(565, -6, 174)
+      .fillColor("#4bb7e1")
+      .fillOpacity(0.24)
+      .fill()
+      .restore();
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(13)
+      .fillColor("#ffffff")
+      .text("CONFERENCIA JAS 2026", 48, 43, { characterSpacing: 1.4 });
+    doc.save().rect(48, 76, 52, 3).fill("#91d8ee").restore();
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(51)
+      .fillColor("#ffffff")
+      .text(WELCOME_HEADING, 47, 91, { lineBreak: false });
+    doc.fontSize(fitText(doc, name, 500, 52, 26));
+    if (doc.widthOfString(name) <= 500) {
+      doc.text(name, 47, 151, { width: 500, lineBreak: false });
+    } else {
+      doc.text(name, 47, 140, { width: 500, lineGap: -1 });
+    }
 
-    doc.font("Helvetica-Bold");
-    doc.fontSize(fitText(doc, heading, pageWidth - 60, 75, 46));
-    doc.text(heading, 30, 90, {
-      width: pageWidth - 60,
-      lineBreak: false,
-    });
+    doc
+      .font("Helvetica")
+      .fontSize(22)
+      .fillColor(DEEP_BLUE)
+      .text(WELCOME_INTRO, 49, 252, { width: 497, lineGap: 5 });
 
-    doc.font("Helvetica-Bold");
-    doc.fontSize(fitText(doc, name, pageWidth - 78, 34, 18));
-    doc.text(name, 39, 179, {
-      width: pageWidth - 78,
-      lineBreak: false,
-    });
-
-    doc.font("Helvetica").fontSize(29).text(WELCOME_INTRO, 39, 224, {
-      width: pageWidth - 78,
-      lineGap: 3,
-    });
+    doc
+      .save()
+      .roundedRect(48, 354, 499, 235, 17)
+      .lineWidth(1.3)
+      .fillColor("#f3faff")
+      .strokeColor("#afd8ea")
+      .fillAndStroke()
+      .restore();
 
     drawQr(doc, String(participant.sourceRecordId));
     doc
       .font("Helvetica-Bold")
       .fontSize(12)
-      .text(`# ${participant.sourceRecordId}`, 0, 585, {
+      .fillColor(BLUE)
+      .text(`# ${participant.sourceRecordId}`, 0, 562, {
         width: pageWidth,
         align: "center",
         lineBreak: false,
       });
 
     doc
-      .font("Helvetica")
-      .fontSize(24)
-      .text(WELCOME_FAREWELL, 70, 616, {
-        width: pageWidth - 140,
-        align: "center",
+      .font("Helvetica-Bold")
+      .fontSize(20)
+      .fillColor(BLUE)
+      .text(WELCOME_FAREWELL, 49, 623, {
+        width: 390,
         lineGap: 3,
       });
 

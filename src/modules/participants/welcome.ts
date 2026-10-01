@@ -6,23 +6,12 @@ export type WelcomeParticipant = {
   sourceRecordId: number | null;
 };
 
+export const WELCOME_HEADING = "Hola,";
 export const WELCOME_INTRO =
-  "Presenta este QR al ingresar.\nTe diremos tu compañía y habitación.";
+  "Al presentar este QR, conocerás tu compañía y habitación.";
 export const WELCOME_FAREWELL =
-  "Esperamos que disfrutes\nde la conferencia";
+  "Esperamos que disfrutes de la\nConferencia JAS 2026.";
 
 export function getWelcomeName(participant: WelcomeParticipant) {
   return participant.preferredName?.trim() || participant.firstNames.trim();
-}
-
-export function getWelcomeHeading(sex: string | null) {
-  if (sex === "Masculino") {
-    return "¡BIENVENIDO!";
-  }
-
-  if (sex === "Femenino") {
-    return "¡BIENVENIDA!";
-  }
-
-  return "¡QUÉ GUSTO VERTE!";
 }
