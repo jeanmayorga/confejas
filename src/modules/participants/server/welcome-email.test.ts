@@ -19,6 +19,33 @@ test("email invitation escapes participant names in HTML", () => {
   expect(email.html).not.toContain("Hola, Alexandra <script>.");
 });
 
+test("email includes the public itinerary and all five intolerables in both formats", () => {
+  const email = getParticipantWelcomeEmail({
+    firstNames: "Jean Paul",
+    lastNames: "Mayorga Cobo",
+    preferredName: "Jean Paul",
+    sex: null,
+    sourceRecordId: 88,
+  });
+
+  expect(email.text).toContain("viernes 9 y sábado 10 de octubre");
+  expect(email.text).toContain("https://confejas.vercel.app/itinerario");
+  expect(email.html).toContain('href="https://confejas.vercel.app/itinerario"');
+
+  for (const phrase of [
+    "comportamiento inmoral",
+    "Robar en tiendas",
+    "Palabra de Sabiduría",
+    "armas de fuego",
+    "Actos perjudiciales",
+  ]) {
+    expect(email.text).toContain(phrase);
+    expect(email.html).toContain(phrase);
+  }
+
+  expect(email.html.match(/<li /g)).toHaveLength(5);
+});
+
 test("welcome PDF attachment keeps its filename, MIME type, and bytes", () => {
   const pdf = Buffer.from("%PDF-1.3\nexample bytes", "utf8");
   const attachment = getParticipantWelcomeAttachment(
