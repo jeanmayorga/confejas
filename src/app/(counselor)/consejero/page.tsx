@@ -2,6 +2,7 @@ import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { CounselorHomeCalendar } from "@/modules/counselor-app/components/home-calendar";
 import { getCounselorAppContext } from "@/modules/counselor-app/server/queries";
 
 export default async function CounselorHomePage() {
@@ -28,6 +29,8 @@ export default async function CounselorHomePage() {
           </div>
         </CardContent>
       </Card>
+
+      <CounselorHomeCalendar />
     </div>
   );
 }
