@@ -9,6 +9,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { requireParticipantDirectoryAccess } from "@/modules/auth/server/session";
 import { WelcomeCover } from "@/modules/participants/components/welcome-cover.client";
+import { SendWelcomeEmailButton } from "@/modules/participants/components/send-welcome-email-button.client";
 import { getParticipantForWelcome } from "@/modules/participants/server/queries";
 
 type WelcomePageProps = {
@@ -48,6 +49,11 @@ export default async function WelcomePage({ params }: WelcomePageProps) {
               <HugeiconsIcon icon={Pdf02Icon} data-icon="inline-start" />
               Descargar PDF
             </a>
+            <SendWelcomeEmailButton
+              participantId={participant.id}
+              email={participant.email}
+              size="default"
+            />
           </div>
         }
       />

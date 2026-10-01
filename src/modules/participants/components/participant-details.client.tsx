@@ -40,6 +40,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { DeleteParticipantButton } from "@/modules/participants/components/delete-participant-button.client";
 import { ParticipantQrDialog } from "@/modules/participants/components/participant-qr-dialog.client";
+import { SendWelcomeEmailButton } from "@/modules/participants/components/send-welcome-email-button.client";
 import { updateParticipantMedicalNotesAction } from "@/modules/participants/server/actions";
 import { getWhatsAppHref } from "@/modules/participants/whatsapp";
 import {
@@ -294,13 +295,19 @@ export function ParticipantDetails({
             participantName={participantName}
           />
           {canViewWelcome && participant.sourceRecordId ? (
-            <Link
-              href={`/dashboard/participants/${participant.id}/welcome`}
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-            >
-              <HugeiconsIcon icon={Pdf02Icon} data-icon="inline-start" />
-              Carta de invitación
-            </Link>
+            <>
+              <Link
+                href={`/dashboard/participants/${participant.id}/welcome`}
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+              >
+                <HugeiconsIcon icon={Pdf02Icon} data-icon="inline-start" />
+                Carta de invitación
+              </Link>
+              <SendWelcomeEmailButton
+                participantId={participant.id}
+                email={participant.email}
+              />
+            </>
           ) : null}
           {canManage ? (
             <Button type="button" variant="outline" size="sm" onClick={onEdit}>

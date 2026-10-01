@@ -422,6 +422,7 @@ export async function getParticipantForWelcome(participantId: string) {
       lastNames: participants.lastNames,
       preferredName: participants.preferredName,
       sex: participants.sex,
+      email: participants.email,
     })
     .from(participants)
     .where(eq(participants.id, participantId))

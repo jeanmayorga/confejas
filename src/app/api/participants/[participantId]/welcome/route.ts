@@ -1,9 +1,6 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-
 import { requireParticipantDirectoryAccess } from "@/modules/auth/server/session";
+import { createParticipantWelcomePdf } from "@/modules/participants/server/welcome-document";
 import { getParticipantForWelcome } from "@/modules/participants/server/queries";
-import { createWelcomePdf } from "@/modules/participants/server/welcome-pdf";
 
 export const runtime = "nodejs";
 
@@ -24,11 +21,7 @@ export async function GET(_request: Request, { params }: WelcomeRouteContext) {
     return new Response("El participante no tiene código QR.", { status: 409 });
   }
 
-  const [footerImage, headerImage] = await Promise.all([
-    readFile(path.join(process.cwd(), "public", "welcome-footer.png")),
-    readFile(path.join(process.cwd(), "public", "welcome-header.png")),
-  ]);
-  const pdf = await createWelcomePdf(participant, footerImage, headerImage);
+  const pdf = await createParticipantWelcomePdf(participant);
 
   return new Response(new Uint8Array(pdf), {
     headers: {
