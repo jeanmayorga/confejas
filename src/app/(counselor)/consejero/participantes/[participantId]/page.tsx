@@ -54,6 +54,7 @@ export default async function CounselorParticipantPage({
         participant={{
           ...participant,
           checkedInAt: participant.checkedInAt?.toISOString() ?? null,
+          welcomeEmailSentAt: participant.welcomeEmailSentAt?.toISOString() ?? null,
         }}
       />
     </div>

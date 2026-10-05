@@ -36,6 +36,7 @@ export async function GET(request: Request) {
     rows: result.rows.map((participant) => ({
       ...participant,
       checkedInAt: participant.checkedInAt?.toISOString() ?? null,
+      welcomeEmailSentAt: participant.welcomeEmailSentAt?.toISOString() ?? null,
     })),
   });
 }

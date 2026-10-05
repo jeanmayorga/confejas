@@ -4,6 +4,7 @@ import MailSend02Icon from "@hugeicons/core-free-icons/MailSend02Icon";
 import Tick02Icon from "@hugeicons/core-free-icons/Tick02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,14 +14,17 @@ import { sendParticipantWelcomeEmailAction } from "@/modules/participants/server
 type SendWelcomeEmailButtonProps = {
   participantId: string;
   email: string | null;
+  onSent?: () => void;
   size?: "default" | "sm";
 };
 
 export function SendWelcomeEmailButton({
   participantId,
   email,
+  onSent,
   size = "sm",
 }: SendWelcomeEmailButtonProps) {
+  const router = useRouter();
   const [sent, setSent] = useState(false);
   const [pending, startTransition] = useTransition();
   const hasValidEmail = Boolean(
@@ -46,6 +50,8 @@ export function SendWelcomeEmailButton({
 
         toast.success(result.message);
         setSent(true);
+        onSent?.();
+        router.refresh();
       } catch {
         toast.error("No se pudo enviar la invitación. Inténtalo nuevamente.");
       }

@@ -27,6 +27,7 @@ export default async function ParticipantPage({ params }: ParticipantPageProps) 
   const detailParticipant = {
     ...participant,
     checkedInAt: participant.checkedInAt?.toISOString() ?? null,
+    welcomeEmailSentAt: participant.welcomeEmailSentAt?.toISOString() ?? null,
   };
 
   return (
