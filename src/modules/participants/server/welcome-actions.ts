@@ -1,9 +1,14 @@
 "use server";
 
+import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+
 import { getResendClient, RESEND_FROM_EMAIL } from "@/lib/resend";
 import { canManageParticipants } from "@/modules/auth/roles";
 import { requireSession } from "@/modules/auth/server/session";
 import { isParticipantId } from "@/modules/participants/qr";
+import { participants } from "@/modules/participants/server/schema";
+import { db } from "@/server/db";
 
 import { createParticipantWelcomePdf } from "./welcome-document";
 import {
@@ -51,7 +56,7 @@ export async function sendParticipantWelcomeEmailAction(
   try {
     const pdf = await createParticipantWelcomePdf(participant);
     const content = getParticipantWelcomeEmail(participant);
-    const { error } = await getResendClient().emails.send({
+    const { data, error } = await getResendClient().emails.send({
       from: RESEND_FROM_EMAIL,
       to: email,
       subject: content.subject,
@@ -60,12 +65,31 @@ export async function sendParticipantWelcomeEmailAction(
       attachments: [getParticipantWelcomeAttachment(participant, pdf)],
     });
 
-    if (error) {
+    if (error || !data?.id) {
       return {
         success: false,
         message: "No se pudo enviar la invitación. Inténtalo nuevamente.",
       };
     }
+
+    try {
+      await db
+        .update(participants)
+        .set({
+          welcomeEmailSentAt: new Date(),
+          welcomeEmailSentTo: email,
+          welcomeEmailResendId: data.id,
+        })
+        .where(eq(participants.id, participant.id));
+    } catch {
+      return {
+        success: true,
+        message: `Invitación enviada a ${email}, pero no se pudo registrar el envío.`,
+      };
+    }
+
+    revalidatePath(`/dashboard/participants/${participant.id}`);
+    revalidatePath(`/dashboard/participants/${participant.id}/welcome`);
 
     return {
       success: true,

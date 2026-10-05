@@ -91,6 +91,8 @@ export type ParticipantTableRow = {
   age: number | null;
   sex: string | null;
   email: string | null;
+  welcomeEmailSentAt: string | null;
+  welcomeEmailSentTo: string | null;
   phone: string | null;
   shirtSize: string | null;
   isChurchMember: boolean | null;

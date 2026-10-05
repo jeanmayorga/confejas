@@ -301,6 +301,7 @@ export function ParticipantDetails({
               <SendWelcomeEmailButton
                 participantId={participant.id}
                 email={participant.email}
+                onSent={onDataChanged}
               />
             </>
           ) : null}
@@ -428,6 +429,14 @@ export function ParticipantDetails({
               <DetailItem
                 label="Correo electrónico"
                 value={present(participant.email)}
+              />
+              <DetailItem
+                label="Invitación por correo"
+                value={
+                  participant.welcomeEmailSentAt
+                    ? `Enviada el ${checkInDateFormatter.format(new Date(participant.welcomeEmailSentAt))} a ${participant.welcomeEmailSentTo ?? participant.email ?? "—"}`
+                    : "No enviada"
+                }
               />
               <DetailItem
                 label="Cédula"

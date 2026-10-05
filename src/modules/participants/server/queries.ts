@@ -212,6 +212,8 @@ export async function listParticipants({
         age: sql<number | null>`extract(year from age(current_date, ${participants.birthDate}))::integer`,
         sex: participants.sex,
         email: participants.email,
+        welcomeEmailSentAt: participants.welcomeEmailSentAt,
+        welcomeEmailSentTo: participants.welcomeEmailSentTo,
         phone: participants.phone,
         shirtSize: participants.shirtSize,
         isChurchMember: participants.isChurchMember,
@@ -372,6 +374,8 @@ export async function getParticipantById(
       sex: participants.sex,
       phone: participants.phone,
       email: participants.email,
+      welcomeEmailSentAt: participants.welcomeEmailSentAt,
+      welcomeEmailSentTo: participants.welcomeEmailSentTo,
       shirtSize: participants.shirtSize,
       isChurchMember: participants.isChurchMember,
       status: participants.status,
@@ -423,6 +427,8 @@ export async function getParticipantForWelcome(participantId: string) {
       preferredName: participants.preferredName,
       sex: participants.sex,
       email: participants.email,
+      welcomeEmailSentAt: participants.welcomeEmailSentAt,
+      welcomeEmailSentTo: participants.welcomeEmailSentTo,
     })
     .from(participants)
     .where(eq(participants.id, participantId))

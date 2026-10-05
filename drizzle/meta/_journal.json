@@ -141,6 +141,13 @@
       "when": 1789838193127,
       "tag": "0019_pretty_stranger",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791243594540,
+      "tag": "0020_sudden_vindicator",
+      "breakpoints": true
     }
   ]
 }
