@@ -167,9 +167,16 @@ export function CounselorCalendar({ initialNow }: { initialNow: string }) {
                 )}
                 style={{ top, height }}
               >
-                <p className="font-mono text-[10px] font-medium text-primary">
-                  {item.activity.time}
-                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-mono text-[10px] font-medium text-primary">
+                    {item.activity.time}
+                  </p>
+                  {isCurrent ? (
+                    <span className="shrink-0 text-[10px] font-bold text-primary">
+                      En curso
+                    </span>
+                  ) : null}
+                </div>
                 <h2 className="text-xs font-semibold leading-4">
                   {item.activity.title}
                 </h2>
