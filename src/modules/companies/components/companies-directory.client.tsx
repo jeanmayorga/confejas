@@ -103,6 +103,7 @@ import {
 } from "@/modules/companies/distribution";
 import { moveCompanyParticipantsAction } from "@/modules/companies/server/participant-management";
 import type {
+  CompanyCounselor,
   CompanyListItem,
   CompanyParticipant,
 } from "@/modules/companies/server/queries";
@@ -164,14 +165,18 @@ function getParticipantAge(age: number | null) {
   return age === null ? "Edad no registrada" : `${age} años`;
 }
 
-function getCounselorInitials(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0))
-    .join("")
-    .toLocaleUpperCase("es");
+function getCounselorInitials(counselor: CompanyCounselor) {
+  const firstNames = counselor.firstNames?.trim();
+  const lastNames = counselor.lastNames?.trim();
+
+  if (firstNames && lastNames) {
+    return getParticipantInitials(firstNames, lastNames);
+  }
+
+  const nameParts = counselor.name.trim().split(/\s+/);
+  return `${nameParts[0]?.charAt(0) ?? "C"}${
+    nameParts.length > 1 ? (nameParts.at(-1)?.charAt(0) ?? "") : ""
+  }`.toLocaleUpperCase("es");
 }
 
 function getParticipantSexLabel(value: string | null) {
@@ -1517,8 +1522,13 @@ function CompanyCard({
                       <TableCell className="min-w-0 flex-1 whitespace-normal border-r-0 px-3 py-3 md:table-cell md:whitespace-nowrap md:border-r md:py-[3px]">
                         <div className="flex min-w-0 items-start gap-2 md:items-center">
                           <Avatar size="sm" aria-hidden="true">
-                            <AvatarFallback className="bg-muted text-[9px] font-medium text-muted-foreground">
-                              {getCounselorInitials(counselor.name)}
+                            <AvatarFallback
+                              className={cn(
+                                "!text-[9px] font-medium",
+                                participantStatusClassNames.registered,
+                              )}
+                            >
+                              {getCounselorInitials(counselor)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
