@@ -1,5 +1,6 @@
 "use client";
 
+import Calendar03Icon from "@hugeicons/core-free-icons/Calendar03Icon";
 import Home01Icon from "@hugeicons/core-free-icons/Home01Icon";
 import Settings01Icon from "@hugeicons/core-free-icons/Settings01Icon";
 import UserMultiple02Icon from "@hugeicons/core-free-icons/UserMultiple02Icon";
@@ -24,6 +25,13 @@ const navigationItems = [
       pathname.startsWith("/consejero/participantes"),
   },
   {
+    label: "Calendario",
+    href: "/consejero/calendario",
+    icon: Calendar03Icon,
+    isActive: (pathname: string) =>
+      pathname.startsWith("/consejero/calendario"),
+  },
+  {
     label: "Configuración",
     href: "/consejero/configuracion",
     icon: Settings01Icon,
@@ -40,7 +48,7 @@ export function CounselorBottomNavigation() {
       aria-label="Navegación principal"
       className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-xl border-t bg-background/95 px-2 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur supports-[backdrop-filter]:bg-background/90"
     >
-      <div className="grid h-18 grid-cols-3 gap-1">
+      <div className="grid h-18 grid-cols-4 gap-1">
         {navigationItems.map((item) => {
           const isActive = item.isActive(pathname);
 
@@ -50,7 +58,7 @@ export function CounselorBottomNavigation() {
               href={item.href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "group flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-2 text-[11px] font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+                "group flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:text-[11px]",
                 isActive && "text-foreground",
               )}
             >

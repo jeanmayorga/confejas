@@ -70,6 +70,7 @@ export async function updateCounselorParticipantStatusAction(
     }
 
     revalidatePath("/consejero/participantes");
+    revalidatePath("/consejero");
     revalidatePath(`/consejero/participantes/${participantId}`);
     revalidatePath("/dashboard/participants");
 

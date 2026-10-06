@@ -1,6 +1,7 @@
 export const conferenceDays = [
   {
     id: "viernes-9",
+    date: "2026-10-09",
     dayNumber: "09",
     shortTitle: "Viernes 9",
     title: "Viernes 9 de octubre",
@@ -43,6 +44,7 @@ export const conferenceDays = [
   },
   {
     id: "sabado-10",
+    date: "2026-10-10",
     dayNumber: "10",
     shortTitle: "Sábado 10",
     title: "Sábado 10 de octubre",
