@@ -133,13 +133,8 @@ export function CounselorParticipantList({
               className="min-w-0 gap-1 px-1 text-xs"
             >
               {filter.label}
-              <span
-                className={cn(
-                  "min-w-5 rounded-full bg-muted-foreground/15 px-1 text-center text-[10px] font-semibold tabular-nums",
-                  selectedFilter === filter.value && "bg-primary/10 text-primary",
-                )}
-              >
-                {filter.count}
+              <span className="font-normal tabular-nums text-muted-foreground">
+                ({filter.count})
               </span>
             </TabsTrigger>
           ))}
