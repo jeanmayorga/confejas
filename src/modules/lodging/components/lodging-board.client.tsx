@@ -192,6 +192,20 @@ function getDisplayName(participant: LodgingParticipantSummary) {
   return `${participant.firstNames} ${participant.lastNames}`;
 }
 
+function setParticipantDragPreview(
+  event: DragEvent<HTMLElement>,
+  participant: LodgingParticipantSummary,
+) {
+  const preview = document.createElement("div");
+  preview.textContent = getDisplayName(participant);
+  preview.className =
+    "pointer-events-none fixed top-0 left-0 z-50 max-w-72 truncate rounded-lg border bg-card px-3 py-2 font-medium text-card-foreground shadow-lg";
+  preview.setAttribute("aria-hidden", "true");
+  document.body.append(preview);
+  event.dataTransfer.setDragImage(preview, 16, 16);
+  requestAnimationFrame(() => preview.remove());
+}
+
 function getAgeLabel(age: number | null) {
   return age === null ? "Edad no registrada" : `${age} años`;
 }
@@ -334,7 +348,6 @@ function UnassignedParticipantsPanel({
   onParticipantDragStart: (
     event: DragEvent<HTMLLIElement>,
     participant: LodgingParticipantSummary,
-    availableParticipants: LodgingParticipantSummary[],
   ) => void;
   onParticipantDragEnd: () => void;
   onMoveRequest: (
@@ -394,7 +407,7 @@ function UnassignedParticipantsPanel({
           <CardDescription>
             {isDropTarget
               ? "Suelta para retirar de su dormitorio."
-              : "Personas que todavía no tienen dormitorio asignado."}
+              : "Arrastra una persona a un dormitorio. Para varias, usa la selección."}
           </CardDescription>
         </CardHeader>
 
@@ -428,7 +441,7 @@ function UnassignedParticipantsPanel({
               <span>
                 {selectedCount > 0
                   ? `${selectedCount} seleccionados`
-                  : "Seleccionar visibles para arrastrar juntos"}
+                  : "Seleccionar visibles para asignar juntos"}
               </span>
               {selectedCount > 0 ? (
                 <Button
@@ -468,7 +481,7 @@ function UnassignedParticipantsPanel({
                       }
                       title={
                         canManage
-                          ? "Arrastra a un dormitorio o abre el botón de tres puntos para asignar."
+                          ? "Arrastra a esta persona a un dormitorio o abre el botón de tres puntos para asignar."
                           : getDisplayName(participant)
                       }
                       className={cn(
@@ -477,11 +490,7 @@ function UnassignedParticipantsPanel({
                         selected && "bg-primary/5",
                       )}
                       onDragStart={(event) =>
-                        onParticipantDragStart(
-                          event,
-                          participant,
-                          filteredParticipants,
-                        )
+                        onParticipantDragStart(event, participant)
                       }
                       onDragEnd={onParticipantDragEnd}
                     >
@@ -808,26 +817,16 @@ export function LodgingBoard({
   function handleUnassignedParticipantDragStart(
     event: DragEvent<HTMLLIElement>,
     participant: LodgingParticipantSummary,
-    availableParticipants: LodgingParticipantSummary[],
   ) {
     if (dragDisabled) {
       event.preventDefault();
       return;
     }
 
-    const selected = selectedUnassignedParticipantIds.has(participant.id)
-      ? availableParticipants.filter((item) =>
-          selectedUnassignedParticipantIds.has(item.id),
-        )
-      : [participant];
-
-    if (!selectedUnassignedParticipantIds.has(participant.id)) {
-      setSelectedUnassignedParticipantIds(new Set([participant.id]));
-    }
-
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", participant.id);
-    setDraggedParticipant({ source: "unassigned", participants: selected });
+    setParticipantDragPreview(event, participant);
+    setDraggedParticipant({ source: "unassigned", participants: [participant] });
   }
 
   function handleRoomDragOver(
