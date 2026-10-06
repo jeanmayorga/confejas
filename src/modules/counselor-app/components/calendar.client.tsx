@@ -162,8 +162,8 @@ export function CounselorCalendar({ initialNow }: { initialNow: string }) {
                 key={`${item.dayId}-${item.activityIndex}`}
                 ref={isFocused ? focusRef : undefined}
                 className={cn(
-                  "absolute right-0 left-14 overflow-hidden rounded-xl border bg-card px-2.5 py-1.5 shadow-xs",
-                  isCurrent && "border-primary bg-primary/10",
+                  "absolute right-0 left-14 overflow-hidden border border-primary/20 bg-primary/5 px-2.5 py-1.5",
+                  isCurrent && "border-primary bg-primary/15",
                 )}
                 style={{ top, height }}
               >
