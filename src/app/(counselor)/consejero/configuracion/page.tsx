@@ -5,6 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { CounselorHelpButton } from "@/modules/counselor-app/components/help-button.client";
 import { CounselorSignOutButton } from "@/modules/counselor-app/components/sign-out-button.client";
 import { getCounselorAppContext } from "@/modules/counselor-app/server/queries";
 
@@ -61,7 +62,10 @@ export default async function CounselorSettingsPage() {
             </div>
           </div>
 
-          <CounselorSignOutButton />
+          <div className="flex flex-col gap-3">
+            <CounselorHelpButton />
+            <CounselorSignOutButton />
+          </div>
         </CardContent>
       </Card>
     </div>
