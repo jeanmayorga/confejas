@@ -28,11 +28,13 @@ import { deleteUserAction } from "@/modules/users/server/actions";
 type UserDangerActionsProps = {
   user: { id: string; name: string };
   isCurrentUser: boolean;
+  showLabel?: boolean;
 };
 
 export function UserDangerActions({
   user,
   isCurrentUser,
+  showLabel = false,
 }: UserDangerActionsProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -73,10 +75,16 @@ export function UserDangerActions({
               render={
                 <Button
                   variant="destructive"
-                  size="icon-md"
+                  size={showLabel ? "sm" : "icon-md"}
+                  className={showLabel ? "h-11 sm:h-8" : undefined}
                   aria-label={`Eliminar ${user.name}`}
                 >
-                  <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+                  <HugeiconsIcon
+                    icon={Delete02Icon}
+                    strokeWidth={2}
+                    data-icon={showLabel ? "inline-start" : undefined}
+                  />
+                  {showLabel ? "Eliminar" : null}
                 </Button>
               }
             />

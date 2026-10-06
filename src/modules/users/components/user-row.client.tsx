@@ -1,9 +1,12 @@
 "use client";
 
 import { type KeyboardEvent, useState } from "react";
+import MoreHorizontalIcon from "@hugeicons/core-free-icons/MoreHorizontalIcon";
+import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -84,6 +87,7 @@ export function UserRow({
   const status = formatStatus(user);
 
   function handleKeyDown(event: KeyboardEvent<HTMLTableRowElement>) {
+    if (event.target !== event.currentTarget) return;
     if (event.key !== "Enter" && event.key !== " ") return;
 
     event.preventDefault();
@@ -93,41 +97,69 @@ export function UserRow({
   return (
     <>
       <TableRow
-        className="h-9 cursor-pointer"
+        className="flex min-w-0 cursor-pointer items-start gap-2 px-3 py-3 md:table-row md:h-9 md:p-0"
         tabIndex={0}
         aria-label={`Ver usuario ${user.name}`}
         onClick={() => setOpen(true)}
         onKeyDown={handleKeyDown}
       >
-        <TableCell>
-          <div className="flex items-center gap-3">
+        <TableCell className="min-w-0 flex-1 whitespace-normal border-r-0 p-0 md:table-cell md:whitespace-nowrap md:border-r md:px-3 md:py-[3px]">
+          <div className="flex min-w-0 items-start gap-3 md:items-center">
             <Avatar size="sm" aria-hidden="true">
               {user.image ? <AvatarImage src={user.image} alt="" /> : null}
               <AvatarFallback className="font-medium">
                 {getUserInitials(user.name)}
               </AvatarFallback>
             </Avatar>
-            <span className="font-medium">{user.name}</span>
+            <div className="min-w-0 flex-1">
+              <span className="block break-words font-medium md:inline md:break-normal">
+                {user.name}
+              </span>
+              <span className="mt-1 block break-all text-xs text-muted-foreground md:hidden">
+                {user.email}
+              </span>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 md:hidden">
+                <Badge variant={canManageUsers(user.role) ? "default" : "secondary"}>
+                  {getRoleLabel(user.role)}
+                </Badge>
+                <Badge variant={status === "Bloqueado" ? "destructive" : "outline"}>
+                  {status}
+                </Badge>
+              </div>
+            </div>
           </div>
         </TableCell>
-        <TableCell>{user.email}</TableCell>
-        <TableCell>
+        <TableCell className="hidden md:table-cell">{user.email}</TableCell>
+        <TableCell className="hidden md:table-cell">
           <Badge
             variant={canManageUsers(user.role) ? "default" : "secondary"}
           >
             {getRoleLabel(user.role)}
           </Badge>
         </TableCell>
-        <TableCell>{user.companyName ?? "Sin asignar"}</TableCell>
-        <TableCell>
+        <TableCell className="hidden md:table-cell">{user.companyName ?? "Sin asignar"}</TableCell>
+        <TableCell className="hidden md:table-cell">
           <Badge variant={status === "Bloqueado" ? "destructive" : "outline"}>
             {status}
           </Badge>
         </TableCell>
-        <TableCell>{formatDate(user.createdAt)}</TableCell>
-        <TableCell>{formatDate(user.lastConnectionAt)}</TableCell>
-        <TableCell>
-          <div onClick={(event) => event.stopPropagation()}>
+        <TableCell className="hidden md:table-cell">{formatDate(user.createdAt)}</TableCell>
+        <TableCell className="hidden md:table-cell">{formatDate(user.lastConnectionAt)}</TableCell>
+        <TableCell className="border-r-0 p-0 md:px-3 md:py-[3px]">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-lg"
+            className="size-11 md:hidden"
+            aria-label={`Ver acciones de ${user.name}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              setOpen(true);
+            }}
+          >
+            <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} aria-hidden="true" />
+          </Button>
+          <div className="hidden md:block" onClick={(event) => event.stopPropagation()}>
             <UserDangerActions user={user} isCurrentUser={isCurrentUser} />
           </div>
         </TableCell>
@@ -199,7 +231,7 @@ export function UserRow({
             </section>
 
             <section
-              className="mt-6 flex items-center justify-between gap-4 border-t pt-6"
+              className="mt-6 flex flex-col items-start gap-4 border-t pt-6 sm:flex-row sm:items-center sm:justify-between"
               aria-labelledby={`user-edit-${user.id}`}
             >
               <div>
@@ -210,11 +242,20 @@ export function UserRow({
                   Actualiza sus datos de acceso y asignación.
                 </p>
               </div>
-              <UserFormDialog
-                companies={companies}
-                user={user}
-                triggerLabel="Editar"
-              />
+              <div className="flex items-center gap-2">
+                <UserFormDialog
+                  companies={companies}
+                  user={user}
+                  triggerLabel="Editar"
+                />
+                <div className="md:hidden">
+                  <UserDangerActions
+                    user={user}
+                    isCurrentUser={isCurrentUser}
+                    showLabel
+                  />
+                </div>
+              </div>
             </section>
           </div>
         </SheetContent>

@@ -217,6 +217,7 @@ export function ParticipantDirectoryFilters({
     ? `/api/participants/export?${exportQuery}`
     : "/api/participants/export";
   const exportDisabled = pending || isRefreshing || !canExport;
+  const actionClassName = "h-11 w-full rounded-xl sm:h-9 sm:w-auto sm:rounded-4xl";
 
   return (
     <form onSubmit={submitSearch}>
@@ -290,11 +291,11 @@ export function ParticipantDirectoryFilters({
             </Tabs>
           </div>
 
-          <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center xl:w-auto xl:shrink-0">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center xl:w-auto xl:shrink-0">
             <Button
               type="button"
               variant={isLive ? "default" : "outline"}
-              className="w-full sm:w-auto"
+              className={actionClassName}
               disabled={pending}
               aria-pressed={isLive}
               onClick={() => onLiveChange(!isLive)}
@@ -315,7 +316,7 @@ export function ParticipantDirectoryFilters({
             <Button
               type="button"
               variant="outline"
-              className="w-full sm:w-auto"
+              className={actionClassName}
               disabled={pending || isRefreshing}
               onClick={onRefresh}
             >
@@ -333,7 +334,7 @@ export function ParticipantDirectoryFilters({
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full sm:w-auto"
+                    className={actionClassName}
                     disabled={pending || isRefreshing}
                   />
                 }
@@ -460,7 +461,7 @@ export function ParticipantDirectoryFilters({
               tabIndex={exportDisabled ? -1 : undefined}
               className={cn(
                 buttonVariants({ variant: "outline" }),
-                "w-full sm:w-auto",
+                actionClassName,
                 exportDisabled && "pointer-events-none opacity-50",
               )}
             >
