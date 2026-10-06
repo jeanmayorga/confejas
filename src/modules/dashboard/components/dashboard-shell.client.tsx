@@ -71,7 +71,7 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
           <div className="flex items-center gap-2">
             <SidebarTrigger
               variant="ghost"
-              className="size-11 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground aria-expanded:bg-primary-foreground/10 aria-expanded:text-primary-foreground md:hidden"
+              className="size-11 rounded-xl border-primary-foreground/25 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground aria-expanded:bg-primary-foreground/20 aria-expanded:text-primary-foreground md:hidden"
               aria-label="Abrir menú"
             />
             <h1 className="text-base font-semibold tracking-tight">
