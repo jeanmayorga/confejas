@@ -9,7 +9,7 @@ import { CounselorSignOutButton } from "@/modules/counselor-app/components/sign-
 import { getCounselorAppContext } from "@/modules/counselor-app/server/queries";
 
 export const metadata: Metadata = {
-  title: "Configuración",
+  title: "Cuenta",
 };
 
 function getInitials(name: string) {
@@ -27,7 +27,7 @@ export default async function CounselorSettingsPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="font-heading text-2xl font-semibold tracking-tight">
-        Configuración
+        Cuenta
       </h1>
 
       <Card className="shadow-none">

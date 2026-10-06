@@ -32,7 +32,7 @@ const navigationItems = [
       pathname.startsWith("/consejero/calendario"),
   },
   {
-    label: "Configuración",
+    label: "Cuenta",
     href: "/consejero/configuracion",
     icon: Settings01Icon,
     isActive: (pathname: string) =>
