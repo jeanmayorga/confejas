@@ -70,8 +70,8 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
         <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-2 border-b border-primary-foreground/20 bg-primary px-4 text-primary-foreground sm:px-6 md:top-2 md:rounded-t-3xl md:border-border md:bg-background md:text-foreground lg:px-8">
           <div className="flex items-center gap-2">
             <SidebarTrigger
-              variant="outline"
-              className="text-foreground md:hidden"
+              variant="ghost"
+              className="size-11 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground aria-expanded:bg-primary-foreground/10 aria-expanded:text-primary-foreground md:hidden"
               aria-label="Abrir menú"
             />
             <h1 className="text-base font-semibold tracking-tight">
