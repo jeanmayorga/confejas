@@ -110,6 +110,7 @@ export function UserFormDialog({
           <Button
             variant={editing ? (triggerLabel ? "outline" : "ghost") : "default"}
             size={editing && !triggerLabel ? "icon-sm" : "sm"}
+            className={editing && triggerLabel ? "h-11 sm:h-8" : undefined}
             aria-label={editing ? `Editar ${user?.name}` : undefined}
           />
         }

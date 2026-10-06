@@ -46,8 +46,8 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
       />
 
       <TableFrame>
-        <Table className="min-w-[1100px]" aria-label="Usuarios autorizados">
-          <TableHeader>
+        <Table className="block md:table md:min-w-[1100px]" aria-label="Usuarios autorizados">
+          <TableHeader className="hidden md:table-header-group">
             <TableRow>
               <TableHead>Nombre</TableHead>
               <TableHead>Email</TableHead>
@@ -59,7 +59,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
               <TableHead className="w-28">Acciones</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="block md:table-row-group">
             {result.rows.map((user) => (
               <UserRow
                 key={user.id}
