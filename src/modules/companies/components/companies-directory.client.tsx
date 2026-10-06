@@ -1143,7 +1143,7 @@ function UnassignedParticipantsCard({
               >
                 <colgroup>
                   <col className="w-11" />
-                  <col className="w-24" />
+                  {!inSheet ? <col className="w-24" /> : null}
                   <col />
                   {!inSheet ? <col className="w-[76px]" /> : null}
                   {!inSheet ? <col className="w-20" /> : null}
@@ -1151,7 +1151,7 @@ function UnassignedParticipantsCard({
                 <TableHeader>
                   <TableRow>
                     <TableHead />
-                    <TableHead>Estado</TableHead>
+                    {!inSheet ? <TableHead>Estado</TableHead> : null}
                     <TableHead>Nombres</TableHead>
                     {!inSheet ? <TableHead>Edad</TableHead> : null}
                     {!inSheet ? <TableHead>Sexo</TableHead> : null}
@@ -1163,9 +1163,11 @@ function UnassignedParticipantsCard({
                       <TableCell>
                         <Skeleton className="size-4 rounded-[5px]" />
                       </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-5 w-16 rounded-full" />
-                      </TableCell>
+                      {!inSheet ? (
+                        <TableCell>
+                          <Skeleton className="h-5 w-16 rounded-full" />
+                        </TableCell>
+                      ) : null}
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Skeleton className="size-6 rounded-full" />
@@ -1207,7 +1209,7 @@ function UnassignedParticipantsCard({
                 >
                   <colgroup>
                     <col className="w-11" />
-                    <col className="w-24" />
+                    {!inSheet ? <col className="w-24" /> : null}
                     <col />
                     {!inSheet ? <col className="w-[76px]" /> : null}
                     {!inSheet ? <col className="w-20" /> : null}
@@ -1228,7 +1230,7 @@ function UnassignedParticipantsCard({
                           aria-label="Seleccionar todos los participantes cargados"
                         />
                       </TableHead>
-                      <TableHead>Estado</TableHead>
+                      {!inSheet ? <TableHead>Estado</TableHead> : null}
                       <TableHead>Nombres</TableHead>
                       {!inSheet ? <TableHead>Edad</TableHead> : null}
                       {!inSheet ? <TableHead>Sexo</TableHead> : null}
@@ -1277,18 +1279,26 @@ function UnassignedParticipantsCard({
                               aria-label={`Seleccionar a ${getParticipantName(participant)}`}
                             />
                           </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "border-transparent",
-                                participantStatusClassNames[participant.status],
-                              )}
-                            >
-                              {getParticipantStatusLabel(participant.status)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="max-w-0 overflow-hidden">
+                          {!inSheet ? (
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "border-transparent",
+                                  participantStatusClassNames[participant.status],
+                                )}
+                              >
+                                {getParticipantStatusLabel(participant.status)}
+                              </Badge>
+                            </TableCell>
+                          ) : null}
+                          <TableCell
+                            className={cn(
+                              inSheet
+                                ? "whitespace-normal"
+                                : "max-w-0 overflow-hidden",
+                            )}
+                          >
                             <div className="flex min-w-0 items-center gap-2">
                               <Avatar size="sm" aria-hidden="true">
                                 <AvatarFallback
@@ -1306,11 +1316,25 @@ function UnassignedParticipantsCard({
                                 </AvatarFallback>
                               </Avatar>
                               <span className="min-w-0">
-                                <span className="block truncate font-medium">
+                                <span
+                                  className={cn(
+                                    "block font-medium",
+                                    inSheet ? "break-words" : "truncate",
+                                  )}
+                                >
                                   {getParticipantName(participant)}
                                 </span>
                                 {inSheet ? (
-                                  <span className="block truncate text-xs text-muted-foreground">
+                                  <span className="mt-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                                    <Badge
+                                      variant="outline"
+                                      className={cn(
+                                        "border-transparent",
+                                        participantStatusClassNames[participant.status],
+                                      )}
+                                    >
+                                      {getParticipantStatusLabel(participant.status)}
+                                    </Badge>
                                     {getParticipantAge(participant.age)} ·{" "}
                                     {getParticipantSexLabel(participant.sex)}
                                   </span>
@@ -1335,7 +1359,7 @@ function UnassignedParticipantsCard({
                     })}
                     {isFetchingNextPage ? (
                       <TableRow>
-                        <TableCell colSpan={inSheet ? 3 : 5}>
+                        <TableCell colSpan={inSheet ? 2 : 5}>
                           <Skeleton className="h-3 w-28" />
                         </TableCell>
                       </TableRow>
@@ -1480,29 +1504,34 @@ function CompanyCard({
 
           {company.counselors.length > 0 ? (
             <TableFrame className="mt-3">
-              <Table className="min-w-[420px]">
-                <TableHeader>
+              <Table className="block w-full md:table md:min-w-[420px]">
+                <TableHeader className="hidden md:table-header-group">
                   <TableRow>
                     <TableHead>Consejero</TableHead>
                     <TableHead>Estaca</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody className="block md:table-row-group">
                   {company.counselors.map((counselor) => (
-                    <TableRow key={counselor.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
+                    <TableRow key={counselor.id} className="flex md:table-row">
+                      <TableCell className="min-w-0 flex-1 whitespace-normal border-r-0 px-3 py-3 md:table-cell md:whitespace-nowrap md:border-r md:py-[3px]">
+                        <div className="flex min-w-0 items-start gap-2 md:items-center">
                           <Avatar size="sm" aria-hidden="true">
                             <AvatarFallback className="bg-muted text-[9px] font-medium text-muted-foreground">
                               {getCounselorInitials(counselor.name)}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="min-w-0 break-words font-medium">
-                            {counselor.name}
-                          </span>
+                          <div className="min-w-0">
+                            <span className="block break-words font-medium">
+                              {counselor.name}
+                            </span>
+                            <span className="mt-1 block text-xs text-muted-foreground md:hidden">
+                              {counselor.stakeName ?? "Sin estaca"}
+                            </span>
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         {counselor.stakeName ?? "Sin estaca"}
                       </TableCell>
                     </TableRow>
@@ -1526,17 +1555,36 @@ function CompanyCard({
 
           {company.participants.length > 0 ? (
             <TableFrame className="mt-3">
-              <Table className="table-fixed sm:min-w-[620px]">
-                <colgroup>
-                  <col className="w-9 sm:w-11" />
-                  <col className="hidden w-12 sm:table-column" />
-                  <col className="w-20 sm:w-24" />
+              <div className="flex items-center gap-2 border-b px-3 py-2 md:hidden">
+                <Checkbox
+                  id={`${titleId}-select-all-mobile`}
+                  checked={areAllParticipantsSelected}
+                  indeterminate={
+                    selectedParticipantCount > 0 && !areAllParticipantsSelected
+                  }
+                  onCheckedChange={(checked) =>
+                    onCompanyParticipantsSelectionChange(company, checked)
+                  }
+                  aria-label={`Seleccionar todos los participantes de ${companyLabel}`}
+                />
+                <label
+                  htmlFor={`${titleId}-select-all-mobile`}
+                  className="cursor-pointer text-xs text-muted-foreground"
+                >
+                  Seleccionar todos
+                </label>
+              </div>
+              <Table className="block w-full md:table md:min-w-[620px] md:table-fixed">
+                <colgroup className="hidden md:table-column-group">
+                  <col className="md:w-11" />
+                  <col className="md:w-12" />
+                  <col className="md:w-24" />
                   <col />
-                  <col className="hidden w-[76px] sm:table-column" />
-                  <col className="hidden w-20 sm:table-column" />
-                  <col className="w-10 sm:w-11" />
+                  <col className="md:w-[76px]" />
+                  <col className="md:w-20" />
+                  <col className="md:w-11" />
                 </colgroup>
-                <TableHeader>
+                <TableHeader className="hidden md:table-header-group">
                   <TableRow>
                     <TableHead className="text-center">
                       <Checkbox
@@ -1552,19 +1600,19 @@ function CompanyCard({
                         aria-label={`Seleccionar todos los participantes de ${companyLabel}`}
                       />
                     </TableHead>
-                    <TableHead className="hidden text-center sm:table-cell">
+                    <TableHead className="text-center">
                       #
                     </TableHead>
-                    <TableHead className="px-1 sm:px-3">Estado</TableHead>
-                    <TableHead className="px-1 sm:px-3">Nombres</TableHead>
-                    <TableHead className="hidden sm:table-cell">Edad</TableHead>
-                    <TableHead className="hidden sm:table-cell">Sexo</TableHead>
-                    <TableHead className="px-1 text-center sm:px-3">
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Nombres</TableHead>
+                    <TableHead>Edad</TableHead>
+                    <TableHead>Sexo</TableHead>
+                    <TableHead className="text-center">
                       <span className="sr-only">Acciones</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody className="block md:table-row-group">
                   {company.participants.map((participant, index) =>
                     (() => {
                       const isSelected = selectedParticipantIds.has(
@@ -1582,7 +1630,7 @@ function CompanyCard({
                           aria-selected={isSelected}
                           title="Abre el botón de tres puntos para moverlo o eliminarlo de esta compañía, o arrástralo a Participantes sin compañía."
                           className={cn(
-                            "cursor-grab active:cursor-grabbing",
+                            "flex min-w-0 items-center gap-2 px-3 py-2 md:table-row md:p-0 cursor-grab active:cursor-grabbing",
                             isSelected && "bg-primary/5 hover:bg-primary/10",
                             isDragged && "opacity-50",
                           )}
@@ -1591,7 +1639,7 @@ function CompanyCard({
                           }
                           onDragEnd={onParticipantDragEnd}
                         >
-                          <TableCell className="text-center">
+                          <TableCell className="shrink-0 border-r-0 p-0 text-center md:table-cell md:border-r md:px-3 md:py-[3px]">
                             <Checkbox
                               checked={isSelected}
                               onCheckedChange={(checked) =>
@@ -1604,10 +1652,10 @@ function CompanyCard({
                               aria-label={`Seleccionar a ${getParticipantName(participant)}`}
                             />
                           </TableCell>
-                          <TableCell className="hidden text-center tabular-nums text-muted-foreground sm:table-cell">
+                          <TableCell className="hidden text-center tabular-nums text-muted-foreground md:table-cell">
                             {index + 1}
                           </TableCell>
-                          <TableCell className="px-1 sm:px-3">
+                          <TableCell className="hidden md:table-cell">
                             <Badge
                               variant="outline"
                               className={cn(
@@ -1618,12 +1666,12 @@ function CompanyCard({
                               {getParticipantStatusLabel(participant.status)}
                             </Badge>
                           </TableCell>
-                          <TableCell className="max-w-0 overflow-hidden px-1 whitespace-normal sm:px-3">
+                          <TableCell className="min-w-0 flex-1 overflow-hidden whitespace-normal border-r-0 p-0 md:table-cell md:max-w-0 md:border-r md:px-3 md:py-[3px]">
                             <div className="flex min-w-0 items-center gap-2">
                               <Avatar
                                 size="sm"
                                 aria-hidden="true"
-                                className="hidden sm:flex"
+                                className="hidden md:flex"
                               >
                                 <AvatarFallback
                                   className={cn(
@@ -1640,25 +1688,36 @@ function CompanyCard({
                                 </AvatarFallback>
                               </Avatar>
                               <div className="min-w-0">
-                                <span className="block break-words font-medium sm:truncate">
+                                <span className="block break-words font-medium md:truncate">
                                   {getParticipantName(participant)}
                                 </span>
-                                <span className="block text-xs text-muted-foreground sm:hidden">
-                                  {getParticipantAge(participant.age)} ·{" "}
-                                  {getParticipantSexLabel(participant.sex)}
-                                </span>
+                                <div className="mt-1 flex flex-wrap items-center gap-1.5 md:hidden">
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "border-transparent",
+                                      participantStatusClassNames[participant.status],
+                                    )}
+                                  >
+                                    {getParticipantStatusLabel(participant.status)}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    {getParticipantAge(participant.age)} ·{" "}
+                                    {getParticipantSexLabel(participant.sex)}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="hidden sm:table-cell">
+                          <TableCell className="hidden md:table-cell">
                             {getParticipantAge(participant.age)}
                           </TableCell>
-                          <TableCell className="hidden sm:table-cell">
+                          <TableCell className="hidden md:table-cell">
                             <Badge variant="secondary">
                               {getParticipantSexLabel(participant.sex)}
                             </Badge>
                           </TableCell>
-                          <TableCell className="px-1 text-center sm:px-3">
+                          <TableCell className="shrink-0 border-r-0 p-0 text-center md:table-cell md:px-3 md:py-[3px]">
                             <CompanyParticipantActionsMenu
                               participant={participant}
                               company={company}
@@ -1719,6 +1778,7 @@ function CompanyParticipantActionsMenu({
             type="button"
             variant="ghost"
             size="icon-sm"
+            className="size-11 md:size-8"
             disabled={dragDisabled}
             draggable={false}
             aria-label={`Acciones para ${getParticipantName(participant)}`}
@@ -1822,14 +1882,18 @@ function CapacityProgress({
         renderTrack={false}
         aria-label="Sin participantes asignados"
       >
-        <ProgressTrack className="h-6 text-xs font-bold">
-          <span className="flex h-full w-1/2 items-center bg-muted px-3 text-muted-foreground">
+        <ProgressTrack className="h-3 text-xs font-bold md:h-6">
+          <span className="hidden h-full w-1/2 items-center bg-muted px-3 text-muted-foreground md:flex">
             Hombres 0/{capacity.male}
           </span>
-          <span className="flex h-full w-1/2 items-center border-l bg-muted px-3 text-muted-foreground">
+          <span className="hidden h-full w-1/2 items-center border-l bg-muted px-3 text-muted-foreground md:flex">
             Mujeres 0/{capacity.female}
           </span>
         </ProgressTrack>
+        <div className="flex w-full flex-wrap gap-x-4 gap-y-1 text-xs md:hidden">
+          <span>Hombres 0/{capacity.male}</span>
+          <span>Mujeres 0/{capacity.female}</span>
+        </div>
       </Progress>
     );
   }
@@ -1840,7 +1904,7 @@ function CapacityProgress({
       renderTrack={false}
       aria-label={`Ocupación de ${total.toLocaleString("es-EC")} participantes: ${male.toLocaleString("es-EC")} hombres de ${capacity.male} y ${female.toLocaleString("es-EC")} mujeres de ${capacity.female}`}
     >
-      <ProgressTrack className="h-6">
+      <ProgressTrack className="h-3 md:h-6">
         <span
           aria-hidden="true"
           className="h-full shrink-0 bg-primary transition-[width]"
@@ -1851,7 +1915,7 @@ function CapacityProgress({
           className="h-full shrink-0 bg-company-female transition-[width]"
           style={{ width: `${femaleProgress}%` }}
         />
-        <div className="pointer-events-none absolute inset-0 text-xs font-bold text-primary-foreground">
+        <div className="pointer-events-none absolute inset-0 hidden text-xs font-bold text-primary-foreground md:block">
           <span className="absolute top-1/2 left-3 -translate-y-1/2 whitespace-nowrap">
             Hombres {male.toLocaleString("es-EC")}/{capacity.male}
           </span>
@@ -1863,6 +1927,16 @@ function CapacityProgress({
           </span>
         </div>
       </ProgressTrack>
+      <div className="flex w-full flex-wrap gap-x-4 gap-y-1 text-xs font-medium md:hidden">
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-primary" aria-hidden="true" />
+          Hombres {male.toLocaleString("es-EC")}/{capacity.male}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-company-female" aria-hidden="true" />
+          Mujeres {female.toLocaleString("es-EC")}/{capacity.female}
+        </span>
+      </div>
       {unsupported > 0 ? (
         <span className="text-sm text-muted-foreground">
           Otro o sin registrar {unsupported.toLocaleString("es-EC")}
