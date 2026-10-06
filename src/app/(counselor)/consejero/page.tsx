@@ -9,7 +9,7 @@ import {
 } from "@/modules/counselor-app/server/queries";
 
 export default async function CounselorHomePage() {
-  const [{ company }, summary] = await Promise.all([
+  const [{ company, user }, summary] = await Promise.all([
     getCounselorAppContext(),
     getCounselorCompanySummary(),
   ]);
@@ -17,7 +17,7 @@ export default async function CounselorHomePage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="font-heading text-2xl font-semibold tracking-tight">
-        Inicio
+        Hola, {user.name}
       </h1>
 
       <Card className="gap-0 py-0 shadow-none">
