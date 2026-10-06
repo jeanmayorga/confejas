@@ -14,6 +14,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { getParticipantInitials } from "@/modules/participants/components/participant-details.client";
 import {
@@ -57,12 +58,17 @@ function normalizeSearchValue(value: string) {
     .trim();
 }
 
+function isToArrive(status: ParticipantStatus) {
+  return status === "registered" || status === "confirmed" || status === "pending";
+}
+
 export function CounselorParticipantList({
   participants,
 }: CounselorParticipantListProps) {
   const [search, setSearch] = useState("");
+  const [selectedFilter, setSelectedFilter] = useState("all");
   const normalizedSearch = normalizeSearchValue(search);
-  const visibleParticipants = normalizedSearch
+  const matchingParticipants = normalizedSearch
     ? participants.filter((participant) =>
         normalizeSearchValue(
           [
@@ -78,6 +84,19 @@ export function CounselorParticipantList({
         ).includes(normalizedSearch),
       )
     : participants;
+  const toArriveCount = matchingParticipants.filter((participant) =>
+    isToArrive(participant.status),
+  ).length;
+  const arrivedCount = matchingParticipants.filter(
+    (participant) => participant.status === "arrived",
+  ).length;
+  const visibleParticipants = matchingParticipants.filter((participant) =>
+    selectedFilter === "arrived"
+      ? participant.status === "arrived"
+      : selectedFilter === "to-arrive"
+        ? isToArrive(participant.status)
+        : true,
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -93,6 +112,39 @@ export function CounselorParticipantList({
           aria-label="Buscar participante"
         />
       </InputGroup>
+
+      <Tabs
+        value={selectedFilter}
+        onValueChange={setSelectedFilter}
+        className="w-full"
+      >
+        <TabsList
+          aria-label="Filtrar participantes por llegada"
+          className="grid h-11 w-full grid-cols-3"
+        >
+          {[
+            { value: "all", label: "Todos", count: matchingParticipants.length },
+            { value: "to-arrive", label: "Por llegar", count: toArriveCount },
+            { value: "arrived", label: "Ya llegaron", count: arrivedCount },
+          ].map((filter) => (
+            <TabsTrigger
+              key={filter.value}
+              value={filter.value}
+              className="min-w-0 gap-1 px-1 text-xs"
+            >
+              {filter.label}
+              <span
+                className={cn(
+                  "min-w-5 rounded-full bg-muted-foreground/15 px-1 text-center text-[10px] font-semibold tabular-nums",
+                  selectedFilter === filter.value && "bg-primary/10 text-primary",
+                )}
+              >
+                {filter.count}
+              </span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       {normalizedSearch ? (
         <p role="status" className="text-xs text-muted-foreground">
@@ -165,7 +217,11 @@ export function CounselorParticipantList({
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
             {participants.length === 0
               ? "Todavía no hay participantes en tu compañía."
-              : "No encontramos participantes con esa búsqueda."}
+              : normalizedSearch
+                ? "No encontramos participantes con esa búsqueda y filtro."
+                : selectedFilter === "arrived"
+                  ? "Todavía no ha llegado ningún participante."
+                  : "No hay participantes por llegar."}
           </CardContent>
         </Card>
       )}
