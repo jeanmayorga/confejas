@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { CounselorParticipantDetails } from "@/modules/counselor-app/components/participant-details.client";
+import { ParticipantDetails } from "@/modules/participants/components/participant-details.client";
 import { getCounselorParticipantById } from "@/modules/counselor-app/server/queries";
 
 type CounselorParticipantPageProps = {
@@ -50,12 +50,14 @@ export default async function CounselorParticipantPage({
         </h1>
       </header>
 
-      <CounselorParticipantDetails
+      <ParticipantDetails
         participant={{
           ...participant,
           checkedInAt: participant.checkedInAt?.toISOString() ?? null,
           welcomeEmailSentAt: participant.welcomeEmailSentAt?.toISOString() ?? null,
         }}
+        canChangeStatus={false}
+        className="overflow-visible px-0 pb-0"
       />
     </div>
   );

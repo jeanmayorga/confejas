@@ -14,6 +14,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { getParticipantInitials } from "@/modules/participants/components/participant-details.client";
 import {
@@ -57,12 +58,17 @@ function normalizeSearchValue(value: string) {
     .trim();
 }
 
+function isToArrive(status: ParticipantStatus) {
+  return status === "registered" || status === "confirmed" || status === "pending";
+}
+
 export function CounselorParticipantList({
   participants,
 }: CounselorParticipantListProps) {
   const [search, setSearch] = useState("");
+  const [selectedFilter, setSelectedFilter] = useState("all");
   const normalizedSearch = normalizeSearchValue(search);
-  const visibleParticipants = normalizedSearch
+  const matchingParticipants = normalizedSearch
     ? participants.filter((participant) =>
         normalizeSearchValue(
           [
@@ -78,6 +84,19 @@ export function CounselorParticipantList({
         ).includes(normalizedSearch),
       )
     : participants;
+  const toArriveCount = matchingParticipants.filter((participant) =>
+    isToArrive(participant.status),
+  ).length;
+  const arrivedCount = matchingParticipants.filter(
+    (participant) => participant.status === "arrived",
+  ).length;
+  const visibleParticipants = matchingParticipants.filter((participant) =>
+    selectedFilter === "arrived"
+      ? participant.status === "arrived"
+      : selectedFilter === "to-arrive"
+        ? isToArrive(participant.status)
+        : true,
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -86,6 +105,7 @@ export function CounselorParticipantList({
           <HugeiconsIcon icon={Search01Icon} strokeWidth={2} aria-hidden />
         </InputGroupAddon>
         <InputGroupInput
+          type="search"
           value={search}
           onChange={(event) => setSearch(event.currentTarget.value)}
           placeholder="Buscar participante"
@@ -93,73 +113,106 @@ export function CounselorParticipantList({
         />
       </InputGroup>
 
+      <Tabs
+        value={selectedFilter}
+        onValueChange={setSelectedFilter}
+        className="w-full"
+      >
+        <TabsList
+          aria-label="Filtrar participantes por llegada"
+          className="grid h-11 w-full grid-cols-3"
+        >
+          {[
+            { value: "all", label: "Todos", count: matchingParticipants.length },
+            { value: "to-arrive", label: "Por llegar", count: toArriveCount },
+            { value: "arrived", label: "Ya llegaron", count: arrivedCount },
+          ].map((filter) => (
+            <TabsTrigger
+              key={filter.value}
+              value={filter.value}
+              className="min-w-0 gap-1 px-1 text-xs"
+            >
+              {filter.label}
+              <span className="font-normal tabular-nums text-muted-foreground">
+                ({filter.count})
+              </span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
+      {normalizedSearch ? (
+        <p role="status" className="text-xs text-muted-foreground">
+          {visibleParticipants.length}{" "}
+          {visibleParticipants.length === 1 ? "resultado" : "resultados"}
+        </p>
+      ) : null}
+
       {visibleParticipants.length > 0 ? (
-        <div className="flex flex-col gap-3">
+        <ul>
           {visibleParticipants.map((participant) => {
             const fullName = `${participant.firstNames} ${participant.lastNames}`;
 
             return (
-              <Card key={participant.id} className="gap-0 py-0 shadow-none">
-                <CardContent className="p-0">
-                  <Link
-                    href={`/consejero/participantes/${participant.id}`}
-                    aria-label={`Ver a ${fullName}`}
-                    className="group flex min-h-24 items-center gap-3 rounded-xl p-4 outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    <Avatar className="size-11 shrink-0" aria-hidden>
-                      <AvatarFallback className="bg-primary/10 font-semibold text-primary">
-                        {getParticipantInitials(
-                          participant.firstNames,
-                          participant.lastNames,
-                        )}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold">
-                            {fullName}
-                          </p>
-                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                            {participant.age === null
-                              ? participant.wardName
-                              : `${participant.age} años · ${participant.wardName}`}
-                          </p>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "shrink-0 text-[10px]",
-                            participantStatusClassNames[participant.status],
-                          )}
-                        >
-                          {getParticipantStatusLabel(participant.status)}
-                        </Badge>
-                      </div>
-                      <p className="mt-2 text-xs text-muted-foreground">
+              <li key={participant.id} className="border-b border-border/70">
+                <Link
+                  href={`/consejero/participantes/${participant.id}`}
+                  aria-label={`Ver a ${fullName}`}
+                  className="group flex min-h-18 items-center gap-3 py-3 outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <Avatar className="size-9 shrink-0" aria-hidden>
+                    <AvatarFallback className="bg-primary/10 font-semibold text-primary">
+                      {getParticipantInitials(
+                        participant.firstNames,
+                        participant.lastNames,
+                      )}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words text-sm font-semibold leading-5">
+                      {fullName}
+                    </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="text-xs text-muted-foreground">
                         {participant.sourceRecordId
-                          ? `# ${participant.sourceRecordId}`
-                          : "Sin número"}
-                      </p>
+                          ? `# ${participant.sourceRecordId} · `
+                          : ""}
+                        {participant.age === null
+                          ? participant.wardName
+                          : `${participant.age} años · ${participant.wardName}`}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px]",
+                          participantStatusClassNames[participant.status],
+                        )}
+                      >
+                        {getParticipantStatusLabel(participant.status)}
+                      </Badge>
                     </div>
-                    <HugeiconsIcon
-                      icon={ArrowRight01Icon}
-                      strokeWidth={2}
-                      className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
-                      aria-hidden
-                    />
-                  </Link>
-                </CardContent>
-              </Card>
+                  </div>
+                  <HugeiconsIcon
+                    icon={ArrowRight01Icon}
+                    strokeWidth={2}
+                    className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
+                </Link>
+              </li>
             );
           })}
-        </div>
+        </ul>
       ) : (
         <Card className="shadow-none">
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
             {participants.length === 0
               ? "Todavía no hay participantes en tu compañía."
-              : "No encontramos participantes con esa búsqueda."}
+              : normalizedSearch
+                ? "No encontramos participantes con esa búsqueda y filtro."
+                : selectedFilter === "arrived"
+                  ? "Todavía no ha llegado ningún participante."
+                  : "No hay participantes por llegar."}
           </CardContent>
         </Card>
       )}

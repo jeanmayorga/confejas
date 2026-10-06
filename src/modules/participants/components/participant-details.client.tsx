@@ -144,7 +144,7 @@ type ParticipantDetailsProps = {
 };
 
 const participantStatusCardClassNames = {
-  registered: "bg-[#f3f7fa]",
+  registered: "bg-primary/10",
   confirmed: "bg-participant-confirmed/10",
   arrived: "bg-participant-arrived/10",
   cancelled: "bg-participant-cancelled/10",
@@ -323,11 +323,11 @@ export function ParticipantDetails({
       </div>
 
       <Tabs defaultValue="personal" className="mt-5 gap-3">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid h-11 w-full grid-cols-3">
           <TabsTrigger value="personal" className="min-w-0 px-1 text-xs">
             <HugeiconsIcon
               icon={InformationCircleIcon}
-              className="size-3.5 shrink-0"
+              className="hidden size-3.5 shrink-0 sm:block"
               strokeWidth={2}
             />
             Datos personales
@@ -335,7 +335,7 @@ export function ParticipantDetails({
           <TabsTrigger value="conference" className="min-w-0 px-1 text-xs">
             <HugeiconsIcon
               icon={DashboardSquare01Icon}
-              className="size-3.5 shrink-0"
+              className="hidden size-3.5 shrink-0 sm:block"
               strokeWidth={2}
             />
             Conferencia
@@ -343,7 +343,7 @@ export function ParticipantDetails({
           <TabsTrigger value="health" className="min-w-0 px-1 text-xs">
             <HugeiconsIcon
               icon={MedicalFileIcon}
-              className="size-3.5 shrink-0"
+              className="hidden size-3.5 shrink-0 sm:block"
               strokeWidth={2}
             />
             Salud

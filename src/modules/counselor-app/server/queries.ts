@@ -37,6 +37,25 @@ export const getCounselorAppContext = cache(async () => {
   };
 });
 
+export async function getCounselorCompanySummary() {
+  const { company } = await getCounselorAppContext();
+
+  if (!company) {
+    return { total: 0, arrived: 0, toArrive: 0 };
+  }
+
+  const [summary] = await db
+    .select({
+      total: sql<number>`count(*)::integer`,
+      arrived: sql<number>`count(*) filter (where ${participants.status} = 'arrived')::integer`,
+      toArrive: sql<number>`count(*) filter (where ${participants.status} in ('registered', 'confirmed', 'pending'))::integer`,
+    })
+    .from(participants)
+    .where(eq(participants.companyId, company.id));
+
+  return summary ?? { total: 0, arrived: 0, toArrive: 0 };
+}
+
 export async function listCounselorParticipants() {
   const { company } = await getCounselorAppContext();
 
