@@ -144,7 +144,7 @@ type ParticipantDetailsProps = {
 };
 
 const participantStatusCardClassNames = {
-  registered: "bg-[#f3f7fa]",
+  registered: "bg-primary/10",
   confirmed: "bg-participant-confirmed/10",
   arrived: "bg-participant-arrived/10",
   cancelled: "bg-participant-cancelled/10",
