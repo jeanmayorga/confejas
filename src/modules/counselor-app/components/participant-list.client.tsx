@@ -86,6 +86,7 @@ export function CounselorParticipantList({
           <HugeiconsIcon icon={Search01Icon} strokeWidth={2} aria-hidden />
         </InputGroupAddon>
         <InputGroupInput
+          type="search"
           value={search}
           onChange={(event) => setSearch(event.currentTarget.value)}
           placeholder="Buscar participante"
@@ -93,8 +94,15 @@ export function CounselorParticipantList({
         />
       </InputGroup>
 
+      {normalizedSearch ? (
+        <p role="status" className="text-xs text-muted-foreground">
+          {visibleParticipants.length}{" "}
+          {visibleParticipants.length === 1 ? "resultado" : "resultados"}
+        </p>
+      ) : null}
+
       {visibleParticipants.length > 0 ? (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           {visibleParticipants.map((participant) => {
             const fullName = `${participant.firstNames} ${participant.lastNames}`;
 
@@ -104,9 +112,9 @@ export function CounselorParticipantList({
                   <Link
                     href={`/consejero/participantes/${participant.id}`}
                     aria-label={`Ver a ${fullName}`}
-                    className="group flex min-h-24 items-center gap-3 rounded-xl p-4 outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="group flex min-h-20 items-center gap-3 rounded-xl p-3 outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
-                    <Avatar className="size-11 shrink-0" aria-hidden>
+                    <Avatar className="size-10 shrink-0" aria-hidden>
                       <AvatarFallback className="bg-primary/10 font-semibold text-primary">
                         {getParticipantInitials(
                           participant.firstNames,
@@ -115,32 +123,30 @@ export function CounselorParticipantList({
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold">
-                            {fullName}
-                          </p>
-                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                            {participant.age === null
-                              ? participant.wardName
-                              : `${participant.age} años · ${participant.wardName}`}
-                          </p>
-                        </div>
+                      <p className="break-words text-sm font-semibold leading-5">
+                        {fullName}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {participant.age === null
+                          ? participant.wardName
+                          : `${participant.age} años · ${participant.wardName}`}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                         <Badge
                           variant="outline"
                           className={cn(
-                            "shrink-0 text-[10px]",
+                            "text-[10px]",
                             participantStatusClassNames[participant.status],
                           )}
                         >
                           {getParticipantStatusLabel(participant.status)}
                         </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {participant.sourceRecordId
+                            ? `# ${participant.sourceRecordId}`
+                            : "Sin número"}
+                        </span>
                       </div>
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        {participant.sourceRecordId
-                          ? `# ${participant.sourceRecordId}`
-                          : "Sin número"}
-                      </p>
                     </div>
                     <HugeiconsIcon
                       icon={ArrowRight01Icon}
