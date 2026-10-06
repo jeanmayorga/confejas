@@ -3,6 +3,7 @@ type StaffCredentialsEmail = {
   email: string;
   password: string;
   loginUrl: string;
+  team: "registro" | "salud";
 };
 
 function escapeHtml(value: string) {
@@ -22,16 +23,18 @@ export function getStaffCredentialsEmail({
   email,
   password,
   loginUrl,
+  team,
 }: StaffCredentialsEmail) {
   const firstName = name.trim().split(/\s+/)[0] ?? name;
   const safeName = escapeHtml(firstName);
   const safeEmail = escapeHtml(email);
   const safePassword = escapeHtml(password);
   const safeLoginUrl = escapeHtml(loginUrl);
+  const teamName = `equipo de ${team}`;
 
   return {
     subject: "Tu acceso de Staff - Conferencia JAS 2026",
-    text: `Hola ${firstName},\n\nYa está listo tu acceso al equipo de registro de la Conferencia JAS 2026.\n\nUsuario: ${email}\nContraseña temporal: ${password}\n\nIngresa aquí: ${loginUrl}\n\nConferencia JAS 2026 · Equipo de coordinación`,
+    text: `Hola ${firstName},\n\nYa está listo tu acceso al ${teamName} de la Conferencia JAS 2026.\n\nUsuario: ${email}\nContraseña temporal: ${password}\n\nIngresa aquí: ${loginUrl}\n\nConferencia JAS 2026 · Equipo de coordinación`,
     html: `<!doctype html>
       <html lang="es">
         <head>
@@ -41,18 +44,18 @@ export function getStaffCredentialsEmail({
           <title>Tu acceso de Staff</title>
         </head>
         <body style="margin:0;padding:0;background-color:#ecf3f8;font-family:Arial,Helvetica,sans-serif;color:#17202a">
-          <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">Tu acceso para el equipo de registro está listo.</div>
+          <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">Tu acceso para el ${teamName} está listo.</div>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ecf3f8" style="width:100%;border-collapse:collapse;background-color:#ecf3f8">
             <tr><td align="center" style="padding:40px 16px">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;border-collapse:separate;border:1px solid #dbe7ef;border-radius:20px;background-color:#ffffff;overflow:hidden">
                 <tr><td style="padding:30px 36px;background-color:#0b78c5;color:#ffffff">
                   <p style="margin:0 0 10px;font-size:13px;line-height:1.4;letter-spacing:0.08em;text-transform:uppercase;color:#d9efff">Conferencia JAS 2026</p>
                   <h1 style="margin:0;font-size:28px;line-height:1.2;font-weight:700;color:#ffffff">Tu acceso está listo</h1>
-                  <p style="margin:12px 0 0;font-size:15px;line-height:1.5;color:#eaf6ff">Bienvenido al equipo de registro.</p>
+                  <p style="margin:12px 0 0;font-size:15px;line-height:1.5;color:#eaf6ff">Acceso al ${teamName}.</p>
                 </td></tr>
                 <tr><td style="padding:34px 36px 30px">
                   <p style="margin:0 0 14px;font-size:17px;line-height:1.5;color:#17202a">Hola ${safeName},</p>
-                  <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#475569">Con estos datos podrás ingresar a la plataforma y apoyar el registro de los participantes.</p>
+                  <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#475569">Con estos datos podrás ingresar a la app y apoyar al ${teamName}.</p>
                   <p style="margin:0 0 12px;font-size:13px;line-height:1.4;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#64748b">Datos para ingresar</p>
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border:1px solid #e2e8f0;border-radius:14px;background-color:#ffffff">
                     <tr><td style="padding:15px 16px 5px;font-size:12px;line-height:1.4;color:#64748b">Correo electrónico</td></tr>
