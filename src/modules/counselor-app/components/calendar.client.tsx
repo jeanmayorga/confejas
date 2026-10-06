@@ -78,52 +78,22 @@ export function CounselorCalendar({ initialNow }: { initialNow: string }) {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          Calendario
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Actividades del 9 y 10 de octubre
-        </p>
-      </header>
-
-      <section
-        aria-label="Actividad actual o siguiente"
-        className="rounded-2xl border border-primary/20 bg-primary/5 p-4"
-      >
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-            {status.kind === "finished"
-              ? "Conferencia finalizada"
-              : status.kind === "current"
-                ? "En curso ahora"
-                : "Siguiente actividad"}
+      <header className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="font-heading text-2xl font-semibold tracking-tight">
+            Calendario
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Actividades del 9 y 10 de octubre
           </p>
-          <time
-            dateTime={now.toISOString()}
-            className="shrink-0 rounded-full bg-background px-2.5 py-1 font-mono text-xs font-semibold text-primary"
-          >
-            Ahora {clockFormatter.format(now)}
-          </time>
         </div>
-        {status.kind === "finished" ? (
-          <p className="mt-2 text-sm text-muted-foreground">
-            Puedes consultar las actividades de ambos días.
-          </p>
-        ) : (
-          <>
-            <p className="mt-2 text-base font-semibold leading-snug">
-              {status.item.activity.title}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {status.item.dayTitle} · {status.item.activity.time}
-              {"place" in status.item.activity
-                ? ` · ${status.item.activity.place}`
-                : ""}
-            </p>
-          </>
-        )}
-      </section>
+        <time
+          dateTime={now.toISOString()}
+          className="shrink-0 rounded-full bg-primary/5 px-2.5 py-1 font-mono text-xs font-semibold text-primary"
+        >
+          Ahora {clockFormatter.format(now)}
+        </time>
+      </header>
 
       <div className="sticky top-0 z-30 -mx-5 bg-background/95 px-5 py-3 backdrop-blur">
         <div
@@ -192,8 +162,8 @@ export function CounselorCalendar({ initialNow }: { initialNow: string }) {
                 key={`${item.dayId}-${item.activityIndex}`}
                 ref={isFocused ? focusRef : undefined}
                 className={cn(
-                  "absolute right-0 left-14 overflow-hidden rounded-xl border border-l-4 border-l-primary/50 bg-card px-2.5 py-1.5 shadow-xs",
-                  isCurrent && "border-primary border-l-primary bg-primary/10",
+                  "absolute right-0 left-14 overflow-hidden rounded-xl border bg-card px-2.5 py-1.5 shadow-xs",
+                  isCurrent && "border-primary bg-primary/10",
                 )}
                 style={{ top, height }}
               >
