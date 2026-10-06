@@ -154,64 +154,60 @@ export function CounselorParticipantList({
       ) : null}
 
       {visibleParticipants.length > 0 ? (
-        <div className="flex flex-col gap-2">
+        <ul>
           {visibleParticipants.map((participant) => {
             const fullName = `${participant.firstNames} ${participant.lastNames}`;
 
             return (
-              <Card key={participant.id} className="gap-0 py-0 shadow-none">
-                <CardContent className="p-0">
-                  <Link
-                    href={`/consejero/participantes/${participant.id}`}
-                    aria-label={`Ver a ${fullName}`}
-                    className="group flex min-h-20 items-center gap-3 rounded-xl p-3 outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    <Avatar className="size-10 shrink-0" aria-hidden>
-                      <AvatarFallback className="bg-primary/10 font-semibold text-primary">
-                        {getParticipantInitials(
-                          participant.firstNames,
-                          participant.lastNames,
-                        )}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <p className="break-words text-sm font-semibold leading-5">
-                        {fullName}
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
+              <li key={participant.id} className="border-b border-border/70">
+                <Link
+                  href={`/consejero/participantes/${participant.id}`}
+                  aria-label={`Ver a ${fullName}`}
+                  className="group flex min-h-18 items-center gap-3 py-3 outline-none transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <Avatar className="size-9 shrink-0" aria-hidden>
+                    <AvatarFallback className="bg-primary/10 font-semibold text-primary">
+                      {getParticipantInitials(
+                        participant.firstNames,
+                        participant.lastNames,
+                      )}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words text-sm font-semibold leading-5">
+                      {fullName}
+                    </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="text-xs text-muted-foreground">
+                        {participant.sourceRecordId
+                          ? `# ${participant.sourceRecordId} · `
+                          : ""}
                         {participant.age === null
                           ? participant.wardName
                           : `${participant.age} años · ${participant.wardName}`}
-                      </p>
-                      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-[10px]",
-                            participantStatusClassNames[participant.status],
-                          )}
-                        >
-                          {getParticipantStatusLabel(participant.status)}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {participant.sourceRecordId
-                            ? `# ${participant.sourceRecordId}`
-                            : "Sin número"}
-                        </span>
-                      </div>
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px]",
+                          participantStatusClassNames[participant.status],
+                        )}
+                      >
+                        {getParticipantStatusLabel(participant.status)}
+                      </Badge>
                     </div>
-                    <HugeiconsIcon
-                      icon={ArrowRight01Icon}
-                      strokeWidth={2}
-                      className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
-                      aria-hidden
-                    />
-                  </Link>
-                </CardContent>
-              </Card>
+                  </div>
+                  <HugeiconsIcon
+                    icon={ArrowRight01Icon}
+                    strokeWidth={2}
+                    className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
+                </Link>
+              </li>
             );
           })}
-        </div>
+        </ul>
       ) : (
         <Card className="shadow-none">
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
