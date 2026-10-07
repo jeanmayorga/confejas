@@ -1,0 +1,132 @@
+diff --git a/internal/cli/sync.go b/internal/cli/sync.go
+index 72929bb..a6765e2 100644
+--- a/internal/cli/sync.go
++++ b/internal/cli/sync.go
+@@ -16,6 +16,8 @@ import (
+ 
+ var (
+ 	syncFollow        bool
++	syncLiveOnly      bool
++	syncChat          string
+ 	syncDownloadMedia bool
+ )
+ 
+@@ -31,6 +33,8 @@ Use --follow to run continuously and capture messages in real-time.`,
+ 
+ func init() {
+ 	rootCmd.AddCommand(syncCmd)
++	syncCmd.Flags().BoolVar(&syncLiveOnly, "live-only", false, "Skip old history and name backfill; receive live and queued messages only")
++	syncCmd.Flags().StringVar(&syncChat, "chat", "", "Persist live messages only from this exact JID")
+ 	syncCmd.Flags().BoolVar(&syncFollow, "follow", false, "Run continuously, syncing messages in real-time")
+ 	syncCmd.Flags().BoolVar(&syncDownloadMedia, "download-media", false, "Automatically download media files")
+ }
+@@ -69,6 +73,9 @@ func runSync(cmd *cobra.Command, args []string) error {
+ 		cancel()
+ 	}()
+ 
++	client.LiveOnly = syncLiveOnly
++	client.SyncChat = syncChat
++
+ 	// Connect
+ 	if err := client.Connect(); err != nil {
+ 		return fmt.Errorf("connection failed: %w", err)
+diff --git a/internal/whatsapp/client.go b/internal/whatsapp/client.go
+index 332ae14..8dbc657 100644
+--- a/internal/whatsapp/client.go
++++ b/internal/whatsapp/client.go
+@@ -21,6 +21,8 @@ import (
+ 
+ // Client wraps a WhatsApp client with store integration.
+ type Client struct {
++	SyncChat     string
++	LiveOnly     bool
+ 	WA           *whatsmeow.Client
+ 	Store        *store.DB
+ 	Logger       *slog.Logger
+diff --git a/internal/whatsapp/live_sync_test.go b/internal/whatsapp/live_sync_test.go
+new file mode 100644
+index 0000000..a691798
+--- /dev/null
++++ b/internal/whatsapp/live_sync_test.go
+@@ -0,0 +1,26 @@
++package whatsapp
++
++import (
++	"go.mau.fi/whatsmeow"
++	"go.mau.fi/whatsmeow/types"
++	"go.mau.fi/whatsmeow/types/events"
++	"testing"
++)
++
++func TestLiveOnlySkipsHistoryAndNameBackfill(t *testing.T) {
++	c := &Client{LiveOnly: true}
++	c.handleHistorySync(&events.HistorySync{})
++	c.backfillChatNames() // No database/network is needed in live-only mode.
++}
++func TestLiveMessagesFromOtherGroupsAreDiscarded(t *testing.T) {
++	c := &Client{SyncChat: "allowed@g.us"}
++	m := &events.Message{}
++	m.Info.Chat = types.JID{User: "other", Server: "g.us"}
++	c.handleMessage(m) // A non-allowed message must return before touching storage.
++}
++func TestPDFMimeType(t *testing.T) {
++	media, mime := classify("invitation.pdf")
++	if media != whatsmeow.MediaDocument || mime != "application/pdf" {
++		t.Fatalf("unexpected classification: %s %s", media, mime)
++	}
++}
+diff --git a/internal/whatsapp/messaging.go b/internal/whatsapp/messaging.go
+index 22fb827..e962059 100644
+--- a/internal/whatsapp/messaging.go
++++ b/internal/whatsapp/messaging.go
+@@ -135,6 +135,7 @@ func (c *Client) SendMedia(recipient, path, caption, replyToMessageID string) (*
+ 	case whatsmeow.MediaDocument:
+ 		m.DocumentMessage = &waE2E.DocumentMessage{
+ 			Title:         protoString(base),
++			FileName:      protoString(base),
+ 			Caption:       protoString(caption),
+ 			Mimetype:      protoString(mime),
+ 			URL:           &up.URL,
+@@ -515,6 +516,8 @@ func classify(path string) (whatsmeow.MediaType, string) {
+ 		return whatsmeow.MediaVideo, "video/avi"
+ 	case ".mov":
+ 		return whatsmeow.MediaVideo, "video/quicktime"
++	case ".pdf":
++		return whatsmeow.MediaDocument, "application/pdf"
+ 	case ".ogg":
+ 		return whatsmeow.MediaAudio, "audio/ogg; codecs=opus"
+ 	default:
+diff --git a/internal/whatsapp/sync.go b/internal/whatsapp/sync.go
+index 7508475..0b1b069 100644
+--- a/internal/whatsapp/sync.go
++++ b/internal/whatsapp/sync.go
+@@ -13,6 +13,9 @@ import (
+ // handleMessage processes real-time incoming messages and persists them.
+ func (c *Client) handleMessage(msg *events.Message) {
+ 	chatJID := msg.Info.Chat.String()
++	if c.SyncChat != "" && chatJID != c.SyncChat {
++		return
++	}
+ 	sender := msg.Info.Sender.User
+ 	content := extractTextContent(msg.Message)
+ 	mediaType, filename, url, mediaKey, fileSHA256, fileEncSHA256, fileLength := extractMediaInfo(msg.Message)
+@@ -56,6 +59,9 @@ func (c *Client) handleMessage(msg *events.Message) {
+ 
+ // handleHistorySync persists conversations and messages received during a history sync.
+ func (c *Client) handleHistorySync(hs *events.HistorySync) HistorySyncResult {
++	if c.LiveOnly {
++		return HistorySyncResult{}
++	}
+ 	if hs == nil || hs.Data == nil || hs.Data.Conversations == nil {
+ 		return HistorySyncResult{}
+ 	}
+@@ -189,6 +195,9 @@ func (c *Client) handleHistorySync(hs *events.HistorySync) HistorySyncResult {
+ 
+ // backfillChatNames finds chats without a proper name and updates them.
+ func (c *Client) backfillChatNames() {
++	if c.LiveOnly {
++		return
++	}
+ 	if c.Store == nil || c.Store.Messages == nil {
+ 		return
+ 	}

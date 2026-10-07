@@ -29,7 +29,13 @@ Prerequisites: Bun, authenticated Codex CLI, linked WhatsApp CLI, installed proj
 dependencies, and `.env.local` with `DATABASE_URL` and `RESEND_API_KEY`.
 The WhatsApp CLI must set both document `FileName` and `application/pdf` MIME type.
 The locally installed CLI was repaired to do that; generic upstream builds may
-otherwise display the attachment as “Untitled”.
+otherwise display the attachment as “Untitled”. It also needs `sync --live-only
+--chat <jid>` to bypass slow historical/name synchronization and persist only the
+selected group. `whatsapp-cli.patch` contains these changes and their Go tests
+against eddmann/whatsapp-cli revision `730db43a9328410244f465ddd0a2a409d56fd64e`.
+Apply the patch in that CLI source checkout, run `go test -tags sqlite_fts5
+./internal/whatsapp`, then `go build -tags sqlite_fts5 -o whatsapp ./cmd/whatsapp`
+and install the binary at `~/.local/bin/whatsapp`.
 
 ```sh
 bun run registro:check
@@ -62,7 +68,7 @@ Codex stores its own session history locally through its usual CLI behavior.
 
 ## Design and bounds
 
-`whatsapp sync --follow` receives messages; the service reads only this group's new
+`whatsapp sync --follow --live-only --chat <fixed-group-id>` receives messages; the service reads only this group's new
 rows from the local CLI database. All WhatsApp network actions use the CLI.
 The receiver is temporarily stopped for outgoing messages, avoiding two competing
 connections on the same linked device. It restarts after each send.

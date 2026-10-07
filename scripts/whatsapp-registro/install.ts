@@ -37,6 +37,14 @@ const files = [
 ];
 // Stop before updating the private runtime snapshot, never alter the project checkout.
 await run(["launchctl", "bootout", `${domain}/${label}`]);
+for (let attempt = 0; attempt < 20; attempt++) {
+  const check = Bun.spawn(["launchctl", "print", `${domain}/${label}`], {
+    stdout: "ignore",
+    stderr: "ignore",
+  });
+  if ((await check.exited) !== 0) break;
+  await Bun.sleep(500);
+}
 for (const f of files) {
   await mkdir(join(app, f, ".."), { recursive: true });
   await copyFile(join(root, f), join(app, f));

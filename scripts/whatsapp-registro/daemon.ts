@@ -28,10 +28,13 @@ const codex = process.env.REGISTRO_CODEX_BIN ?? "codex";
 await mkdir(stateDir, { recursive: true, mode: 0o700 });
 await chmod(stateDir, 0o700);
 async function command(args: string[]) {
-  const child = Bun.spawn([cli, ...args, "--store", store, "--no-auto-sync"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+  const child = Bun.spawn(
+    [cli, ...args, "--store", store, "--no-auto-sync", "--format", "json"],
+    {
+      stdout: "pipe",
+      stderr: "pipe",
+    },
+  );
   const timer = setTimeout(() => child.kill(), 45_000);
   try {
     const [stdout, stderr, code] = await Promise.all([
@@ -117,7 +120,17 @@ async function stopSync() {
 function startSync() {
   if (stopping || (sync && sync.exitCode === null)) return;
   sync = Bun.spawn(
-    [cli, "sync", "--follow", "--store", store, "--no-auto-sync"],
+    [
+      cli,
+      "sync",
+      "--follow",
+      "--live-only",
+      "--chat",
+      GROUP_JID,
+      "--store",
+      store,
+      "--no-auto-sync",
+    ],
     { stdout: "ignore", stderr: "inherit" },
   );
 }
