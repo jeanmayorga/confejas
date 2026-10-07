@@ -31,9 +31,14 @@ const files = [
   "src/modules/participants/server/welcome-email.ts",
   "public/welcome-footer-pdf.jpg",
   "public/welcome-header-pdf.jpg",
-  ...["core.ts", "planner.ts", "actions.ts", "state.ts", "daemon.ts"].map(
-    (f) => "scripts/whatsapp-registro/" + f,
-  ),
+  ...[
+    "core.ts",
+    "agent.ts",
+    "task-tool.ts",
+    "actions.ts",
+    "state.ts",
+    "daemon.ts",
+  ].map((f) => "scripts/whatsapp-registro/" + f),
 ];
 // Stop before updating the private runtime snapshot, never alter the project checkout.
 await run(["launchctl", "bootout", `${domain}/${label}`]);
@@ -53,6 +58,9 @@ for (const f of ["node_modules", ".env.local"]) {
   await rm(join(app, f), { force: true });
   await symlink(join(root, f), join(app, f));
 }
+await rm(join(app, "project"), { force: true });
+await symlink(root, join(app, "project"));
+await rm(join(app, "scripts/whatsapp-registro/planner.ts"), { force: true });
 const escape = (s: string) =>
   s
     .replaceAll("&", "&amp;")

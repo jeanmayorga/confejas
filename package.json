@@ -18,7 +18,7 @@
     "registro:install": "bun run scripts/whatsapp-registro/install.ts",
     "registro:status": "bun run scripts/whatsapp-registro/install.ts --status",
     "registro:stop": "bun run scripts/whatsapp-registro/install.ts --stop",
-    "registro:test": "bun test scripts/whatsapp-registro/core.test.ts"
+    "registro:test": "bun test scripts/whatsapp-registro"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

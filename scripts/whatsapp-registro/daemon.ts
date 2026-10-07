@@ -9,10 +9,10 @@ import {
   GROUP_NAME,
   HELP,
   requestText,
+  splitReply,
   type Incoming,
 } from "./core";
-import { planRequest } from "./planner";
-import { executePlan } from "./actions";
+import { runAgent } from "./agent";
 import { State } from "./state";
 const root = resolve(import.meta.dir, "../..");
 process.chdir(root);
@@ -68,13 +68,14 @@ if (process.argv.includes("--check")) {
 }
 if (process.argv.includes("--self-test")) {
   const directory = join(stateDir, "self-test", String(Date.now()));
-  const plan = await planRequest("ayuda", directory, codex);
-  if (plan.action !== "help") throw Error("Unexpected self-test plan");
-  const result = await command([
-    "send",
-    GROUP_JID,
-    "Asistente de registro activado solo en este grupo.\n\n" + HELP,
-  ]);
+  const reply = await runAgent(
+    "Explica brevemente cómo pedir ayuda. No ejecutes operaciones ni envíos.",
+    directory,
+    codex,
+    root,
+    "self-test",
+  );
+  const result = await command(["send", GROUP_JID, reply.text]);
   if (!result.message_id || result.chat_jid !== GROUP_JID)
     throw Error("Self-test send failed");
   console.log(JSON.stringify({ codex: "passed", whatsapp: result }));
@@ -189,22 +190,22 @@ try {
           state.status(message.id, "rate_limited");
           continue;
         }
-        const plan = await planRequest(request, directory, codex);
-        state.audit(message.id, "plan", JSON.stringify(plan));
-        const reply = await executePlan(
-          plan,
-          message.id,
+        const reply = await runAgent(
+          request,
           directory,
-          (stage, detail) => state.audit(message.id, stage, detail),
+          codex,
+          root,
+          message.id,
         );
         state.audit(message.id, "reply_attempted");
-        await send(reply.text, reply.file);
+        for (const part of splitReply(reply.text)) await send(part);
+        for (const file of reply.files) await send(file.caption, file.path);
         state.status(message.id, "complete");
         console.log(
           JSON.stringify({
             event: "complete",
             id: message.id,
-            action: plan.action,
+            action: "codex_session",
           }),
         );
       } catch (error) {
