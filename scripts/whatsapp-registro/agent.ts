@@ -65,6 +65,8 @@ Evita duplicados: identificador de solicitud ${requestId}; usa idempotencyKey po
   const args = [
     codex,
     "exec",
+    "--model",
+    "gpt-6-sol",
     "--ignore-user-config",
     "--skip-git-repo-check",
     "--sandbox",

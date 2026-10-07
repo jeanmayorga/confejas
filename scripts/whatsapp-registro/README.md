@@ -2,7 +2,7 @@
 
 Each new message starting with **Codex** in `120363409312951970@g.us`
 (Subcomité Registro 🧑‍💻) starts a real `codex exec` session. Codex receives the full
-request, uses shell/network tools to work with Confejas, and produces the final
+request, uses **gpt-6-sol** with **medium** reasoning and shell/network tools to work with Confejas, and produces the final
 response sent back to that same group. This is **not** a JSON intent classifier.
 Requests can contain multiple people, operations and natural-language questions.
 
