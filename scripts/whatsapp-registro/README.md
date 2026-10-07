@@ -12,10 +12,16 @@ Requests can contain multiple people, operations and natural-language questions.
 - `codex envía las invitaciones de estas personas a sus correos: ...`
 - `CODEX dame el PDF de María José Cruz Morán`
 
-Prefix matching is case-insensitive. Every request is an independent session, so
-include the needed names/details again. The complete incoming text is passed to
-Codex without a preselected operation or one-person limit (maximum 12,000 chars).
-Photos, voice notes and quoted-message bodies are not yet passed through.
+Prefix matching is case-insensitive. Every request is an independent session with
+structured context: sender name, verified phone when available (never inferred
+from a LID), the current quoted message, and up to 40 recent messages from this
+same group within the previous 24 hours. Confirmed bot responses join that history.
+History entries are limited to 1,500 characters each; the new request and direct
+quote allow 12,000 characters. Historical instructions are context only, never new
+authorization to execute or repeat operations. Ambiguous references require clarification.
+Quoted text/captions are captured from new incoming events, even when the original
+is outside the recent window; old quotes not previously captured may be unavailable.
+Images, audio and PDF contents are not decoded by this context mechanism.
 
 The account is Jean Paul (**5512**). Only this exact group ID triggers work or
 receives the session response. Other groups, private chats and messages predating
@@ -46,7 +52,8 @@ participant matching, email idempotency keys and durable operation receipts. Its
 results are evidence for Codex's own final response, not a canned replacement.
 
 Every response quotes its originating message using WhatsApp CLI `--reply-to`,
-including each text chunk, PDF and failure notice. Receipts record that original
+including each text chunk, PDF and failure notice. Text replies also use a native
+WhatsApp mention of the original author; PDF captions retain their specified format. Receipts record that original
 message ID. The service forwards the actual final text from Codex, splitting long responses
 without truncation. If Codex creates `attachments.json`, only PDFs whose resolved
 paths stay inside that job directory and whose headers are valid are accepted.
@@ -65,7 +72,8 @@ dependencies and `.env.local` with `DATABASE_URL` and `RESEND_API_KEY`.
 
 The installed WhatsApp CLI includes `whatsapp-cli.patch` against upstream revision
 `730db43a9328410244f465ddd0a2a409d56fd64e`. The patch sets PDF filename/MIME metadata
-and adds live-only, group-scoped sync. Historical name backfill otherwise delays
+and adds live-only, group-scoped sync, quoted-message storage and the
+`--mention-reply-sender` sending flag. Historical name backfill otherwise delays
 new messages by minutes. To reproduce it in that CLI source checkout:
 
 ```sh

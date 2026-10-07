@@ -13,6 +13,7 @@ import {
   type Incoming,
 } from "./core";
 import { runAgent } from "./agent";
+import { agentInput } from "./context";
 import { State } from "./state";
 const root = resolve(import.meta.dir, "../..");
 process.chdir(root);
@@ -150,10 +151,30 @@ async function send(text: string, replyTo: string, file?: string) {
             "--caption",
             text,
           ]
-        : ["send", GROUP_JID, "--reply-to", replyTo, text.slice(0, 14000)],
+        : [
+            "send",
+            GROUP_JID,
+            "--reply-to",
+            replyTo,
+            "--mention-reply-sender",
+            text.slice(0, 14000),
+          ],
     );
     if (!result.message_id || result.chat_jid !== GROUP_JID)
       throw Error("WhatsApp did not acknowledge the group send");
+    state.db
+      .query("INSERT OR IGNORE INTO conversation VALUES (?,?,?,?,?,?,?,?,?)")
+      .run(
+        result.message_id,
+        GROUP_JID,
+        `${auth.device.user}@s.whatsapp.net`,
+        "Codex (asistente)",
+        text,
+        new Date().toISOString(),
+        1,
+        file ? "document" : "",
+        replyTo,
+      );
     state.audit(
       replyTo,
       "whatsapp_sent",
@@ -183,7 +204,7 @@ try {
     startSync();
     const rows = messages
       .query(
-        "SELECT id,chat_jid,sender,content,timestamp,is_from_me FROM messages WHERE chat_jid=? AND julianday(timestamp)>=julianday(?) ORDER BY timestamp,id",
+        "SELECT id,chat_jid,sender,sender_name,content,timestamp,is_from_me,media_type FROM messages WHERE chat_jid=? AND julianday(timestamp)>=julianday(?) ORDER BY timestamp,id",
       )
       .all(GROUP_JID, new Date(since).toISOString()) as Incoming[];
     for (const message of rows) {
@@ -204,7 +225,7 @@ try {
           continue;
         }
         const reply = await runAgent(
-          request,
+          agentInput(messages, state, message, request),
           directory,
           codex,
           root,

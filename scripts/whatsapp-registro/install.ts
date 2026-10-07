@@ -33,6 +33,7 @@ const files = [
   "public/welcome-header-pdf.jpg",
   ...[
     "core.ts",
+    "context.ts",
     "agent.ts",
     "task-tool.ts",
     "actions.ts",
