@@ -68,7 +68,7 @@ Evita duplicados: identificador de solicitud ${requestId}; usa idempotencyKey po
     codex,
     "exec",
     "--model",
-    "gpt-6-astra",
+    "gpt-6-sol",
     "--ignore-user-config",
     "--skip-git-repo-check",
     "--sandbox",
