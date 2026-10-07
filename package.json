@@ -13,7 +13,12 @@
     "db:studio": "drizzle-kit studio",
     "participants:import": "bun run scripts/import-participants.ts",
     "auth:generate": "bunx --bun auth@latest generate --config ./better-auth.config.ts --output ./src/modules/auth/server/schema.ts -y",
-    "auth:create-admin": "bunx --bun auth@latest create-admin --config ./better-auth.config.ts"
+    "auth:create-admin": "bunx --bun auth@latest create-admin --config ./better-auth.config.ts",
+    "registro:check": "bun run scripts/whatsapp-registro/daemon.ts --check",
+    "registro:install": "bun run scripts/whatsapp-registro/install.ts",
+    "registro:status": "bun run scripts/whatsapp-registro/install.ts --status",
+    "registro:stop": "bun run scripts/whatsapp-registro/install.ts --stop",
+    "registro:test": "bun test scripts/whatsapp-registro/core.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
