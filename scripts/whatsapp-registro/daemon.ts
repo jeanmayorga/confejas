@@ -135,17 +135,30 @@ function startSync() {
     { stdout: "ignore", stderr: "inherit" },
   );
 }
-async function send(text: string, file?: string) {
+async function send(text: string, replyTo: string, file?: string) {
   await stopSync(); // A second connection would evict the receiver from the same linked device.
   try {
     const result = await command(
       file
-        ? ["send", GROUP_JID, "--file", file, "--caption", text]
-        : ["send", GROUP_JID, text.slice(0, 14000)],
+        ? [
+            "send",
+            GROUP_JID,
+            "--reply-to",
+            replyTo,
+            "--file",
+            file,
+            "--caption",
+            text,
+          ]
+        : ["send", GROUP_JID, "--reply-to", replyTo, text.slice(0, 14000)],
     );
     if (!result.message_id || result.chat_jid !== GROUP_JID)
       throw Error("WhatsApp did not acknowledge the group send");
-    state.audit("outbound", "whatsapp_sent", JSON.stringify(result));
+    state.audit(
+      replyTo,
+      "whatsapp_sent",
+      JSON.stringify({ ...result, reply_to: replyTo }),
+    );
   } finally {
     startSync();
   }
@@ -198,8 +211,9 @@ try {
           message.id,
         );
         state.audit(message.id, "reply_attempted");
-        for (const part of splitReply(reply.text)) await send(part);
-        for (const file of reply.files) await send(file.caption, file.path);
+        for (const part of splitReply(reply.text)) await send(part, message.id);
+        for (const file of reply.files)
+          await send(file.caption, message.id, file.path);
         state.status(message.id, "complete");
         console.log(
           JSON.stringify({
@@ -229,6 +243,7 @@ try {
             await send(
               "No pude completar la solicitud. Un administrador debe revisar el estado antes de repetir un envío.\n" +
                 HELP,
+              message.id,
             );
           } catch (e) {
             console.error(String(e));

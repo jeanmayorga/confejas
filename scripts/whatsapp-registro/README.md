@@ -45,7 +45,9 @@ times or execute its own code for other requests. The helper uses exact unique
 participant matching, email idempotency keys and durable operation receipts. Its
 results are evidence for Codex's own final response, not a canned replacement.
 
-The service forwards the actual final text from Codex, splitting long responses
+Every response quotes its originating message using WhatsApp CLI `--reply-to`,
+including each text chunk, PDF and failure notice. Receipts record that original
+message ID. The service forwards the actual final text from Codex, splitting long responses
 without truncation. If Codex creates `attachments.json`, only PDFs whose resolved
 paths stay inside that job directory and whose headers are valid are accepted.
 Captions follow `Hola, te comparto el PDF del codigo de {nombre}`. Requests to email
