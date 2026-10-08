@@ -148,7 +148,7 @@ export function CompanySidebarActions({
           render={
             <SidebarMenuAction
               showOnHover
-              className="rounded-sidebar-item!"
+              className="right-2 rounded-sidebar-item! hover:bg-transparent"
               aria-label={`Acciones de ${label}`}
             />
           }

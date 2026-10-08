@@ -871,7 +871,7 @@ export function CompaniesDirectory({
                     aria-current={
                       company.id === activeCompany?.id ? "page" : undefined
                     }
-                    className="h-9 rounded-sidebar-item! px-3 data-active:font-normal"
+                    className="h-9 rounded-sidebar-item! px-3 group-hover/menu-item:bg-sidebar-accent group-focus-within/menu-item:bg-sidebar-accent group-has-[[aria-expanded=true]]/menu-item:bg-sidebar-accent data-active:font-normal"
                     onClick={() => selectCompany(company.id)}
                   >
                     <HugeiconsIcon
@@ -883,7 +883,7 @@ export function CompaniesDirectory({
                       {getCompanyDisplayName(company.name, index + 1)}
                     </span>
                     <span
-                      className="pointer-events-none absolute top-2 right-1 flex size-5 items-center justify-center text-xs tabular-nums text-muted-foreground group-hover/menu-item:opacity-0 group-focus-within/menu-item:opacity-0 max-md:hidden"
+                      className="pointer-events-none absolute top-2 right-2 flex size-5 items-center justify-center text-xs tabular-nums text-muted-foreground group-hover/menu-item:opacity-0 group-focus-within/menu-item:opacity-0 group-has-[[aria-expanded=true]]/menu-item:opacity-0 max-md:hidden"
                       aria-label={`${company.participantCount} participantes`}
                     >
                       {company.participantCount}
