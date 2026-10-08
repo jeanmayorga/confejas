@@ -38,7 +38,7 @@ const ParticipantForm = dynamic(
 function ParticipantSheetLoading() {
   return (
     <div
-      className="flex flex-1 flex-col gap-4 px-6 pb-6"
+      className="flex min-h-0 flex-1 flex-col gap-4 px-4 pb-6 sm:px-6"
       aria-label="Cargando participante"
       aria-busy="true"
     >
@@ -125,13 +125,13 @@ export function ParticipantDetailSheet({
       <SheetContent
         side="right"
         className={cn(
-          "data-[side=right]:w-full",
+          "min-h-0 overflow-hidden data-[side=right]:w-[calc(100%-2rem)]",
           mode === "edit"
             ? "data-[side=right]:sm:max-w-2xl"
             : "data-[side=right]:sm:max-w-lg",
         )}
       >
-        <SheetHeader className="justify-center py-4 pr-16">
+        <SheetHeader className="shrink-0 justify-center px-4 py-4 pr-16 sm:pl-6">
           <SheetTitle>
             {mode === "edit" ? "Editar Participante" : "Participante"}
           </SheetTitle>
@@ -156,7 +156,7 @@ export function ParticipantDetailSheet({
             </EmptyContent>
           </Empty>
         ) : mode === "edit" && edit.data ? (
-          <div className="flex-1 overflow-y-auto px-6 pb-6">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6 sm:px-6">
             <ParticipantForm
               participant={edit.data.participant}
               companies={edit.data.companies}

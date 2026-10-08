@@ -738,7 +738,7 @@ export function ParticipantsTable({
         <SheetContent
           side="right"
           className={cn(
-            "data-[side=right]:w-full",
+            "min-h-0 overflow-hidden data-[side=right]:w-[calc(100%-2rem)]",
             sheetMode === "edit"
               ? "data-[side=right]:sm:max-w-2xl"
               : "data-[side=right]:sm:max-w-lg",
@@ -746,7 +746,7 @@ export function ParticipantsTable({
         >
           {sheetMode === "view" ? (
             <>
-              <SheetHeader className="justify-center pr-16 py-4">
+              <SheetHeader className="shrink-0 justify-center px-4 pr-16 py-4 sm:pl-6">
                 <SheetTitle>Participante</SheetTitle>
               </SheetHeader>
               {selectedParticipant ? (
@@ -784,13 +784,13 @@ export function ParticipantsTable({
             </>
           ) : (
             <>
-              <SheetHeader className="pr-16">
+              <SheetHeader className="shrink-0 px-4 pr-16 sm:pl-6">
                 <SheetTitle className="text-xl">Editar Participante</SheetTitle>
               </SheetHeader>
 
               {isLoadingEdit ? (
                 <div
-                  className="flex flex-1 flex-col gap-4 px-6 pb-6"
+                  className="flex min-h-0 flex-1 flex-col gap-4 px-4 pb-6 sm:px-6"
                   aria-label="Cargando participante"
                   aria-busy="true"
                 >
@@ -817,7 +817,7 @@ export function ParticipantsTable({
                   </EmptyContent>
                 </Empty>
               ) : editData ? (
-                <div className="flex-1 overflow-y-auto px-6 pb-6">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6 sm:px-6">
                   <ParticipantForm
                     participant={editData.participant}
                     companies={editData.companies}
@@ -848,7 +848,7 @@ export function ParticipantsTable({
       >
         <SheetContent
           side="right"
-          className="data-[side=right]:w-full data-[side=right]:sm:max-w-sm"
+          className="data-[side=right]:w-[calc(100%-2rem)] data-[side=right]:sm:max-w-sm"
         >
           {isLoadingCompany ? (
             <div
