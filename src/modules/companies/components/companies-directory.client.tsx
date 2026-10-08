@@ -836,7 +836,18 @@ export function CompaniesDirectory({
   }
 
   function handleCompanyDragLeave(event: DragEvent<HTMLDivElement>) {
-    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      return;
+    }
+
+    // Some browsers omit relatedTarget when moving between child elements.
+    const bounds = event.currentTarget.getBoundingClientRect();
+    if (
+      event.clientX < bounds.left ||
+      event.clientX >= bounds.right ||
+      event.clientY < bounds.top ||
+      event.clientY >= bounds.bottom
+    ) {
       setCompanyDropTargetId(null);
     }
   }
@@ -1663,10 +1674,7 @@ function CompanyCard({
 
   return (
     <Card
-      className={cn(
-        "gap-6 overflow-visible rounded-none bg-transparent p-0 shadow-none ring-0 transition-[background-color,box-shadow]",
-        isDropTarget && "bg-primary/5 ring-2 ring-primary ring-offset-2",
-      )}
+      className="gap-6 overflow-visible rounded-none bg-transparent p-0 shadow-none ring-0"
       aria-labelledby={titleId}
       onDragEnter={(event) => onDragOver(event, company)}
       onDragOver={(event) => onDragOver(event, company)}
@@ -1776,24 +1784,40 @@ function CompanyCard({
         </section>
 
         <section aria-labelledby={`${titleId}-participants`}>
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex min-h-8 items-center justify-between gap-3">
             <h3
               id={`${titleId}-participants`}
               className="shrink-0 text-sm font-semibold"
             >
               Participantes
             </h3>
-            <div className="flex min-w-0 items-center justify-end gap-1">
-              <CompanyParticipantSortMenu
-                value={participantSort}
-                onChange={setParticipantSort}
-              />
-              <CompanyParticipantFilters
-                participants={company.participants}
-                value={participantFilters}
-                onChange={setParticipantFilters}
-              />
-            </div>
+            {isDropTarget ? (
+              <Badge
+                variant="outline"
+                className="pointer-events-none gap-2 border-primary/30 bg-card px-3 py-1.5"
+                role="status"
+                aria-label={`Suelta para asignar a ${companyLabel}`}
+              >
+                <HugeiconsIcon
+                  icon={UserCheck01Icon}
+                  strokeWidth={1.5}
+                  aria-hidden="true"
+                />
+                Suelta para asignar
+              </Badge>
+            ) : (
+              <div className="flex min-w-0 items-center justify-end gap-1">
+                <CompanyParticipantSortMenu
+                  value={participantSort}
+                  onChange={setParticipantSort}
+                />
+                <CompanyParticipantFilters
+                  participants={company.participants}
+                  value={participantFilters}
+                  onChange={setParticipantFilters}
+                />
+              </div>
+            )}
           </div>
           {isFilteringParticipants ? (
             <p className="mt-1 text-sm text-muted-foreground" role="status">
@@ -1803,7 +1827,12 @@ function CompanyCard({
           ) : null}
 
           {matchingParticipants.length > 0 ? (
-            <TableFrame className="mt-3">
+            <TableFrame
+              className={cn(
+                "mt-3 transition-[border-color,box-shadow] duration-150",
+                isDropTarget && "border-primary/40 ring-2 ring-primary/10",
+              )}
+            >
               <Table className="block w-full md:table md:min-w-[620px] md:table-fixed">
                 <colgroup className="hidden md:table-column-group">
                   <col className="md:w-11" />
@@ -2006,7 +2035,12 @@ function CompanyCard({
               </Table>
             </TableFrame>
           ) : (
-            <Empty className="min-h-40 p-6">
+            <Empty
+              className={cn(
+                "min-h-40 p-6",
+                isDropTarget && "mt-3 border border-dashed border-primary/40",
+              )}
+            >
               <EmptyHeader>
                 <EmptyTitle>
                   {isFilteringParticipants
