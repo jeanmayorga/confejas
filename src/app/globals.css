@@ -82,7 +82,7 @@
   --chart-4: oklch(0.553 0.195 38.402);
   --chart-5: oklch(0.47 0.157 37.304);
   --radius: 0.875rem;
-  --sidebar: #fafafa;
+  --sidebar: #fcfbfc;
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: #046db0;
   --sidebar-primary-foreground: #ffffff;
@@ -93,7 +93,7 @@
   --sidebar-rail: #171717;
   --sidebar-rail-foreground: #f5f5f5;
   --sidebar-rail-accent: #303030;
-  --background: #ffffff;
+  --background: #fdfcfc;
   --foreground: oklch(0.145 0 0);
   --participant-arrived: oklch(0.52 0.15 151);
   --participant-pending: oklch(0.62 0.15 75);

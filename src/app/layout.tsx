@@ -51,7 +51,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         geistMono.variable,
       )}
     >
-      <body className="flex min-h-full flex-col bg-sidebar">
+      <body className="flex min-h-full flex-col bg-background">
         <NuqsAdapter>
           <QueryProvider>
             <TooltipProvider>{children}</TooltipProvider>
