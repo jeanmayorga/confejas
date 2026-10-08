@@ -8,17 +8,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  TableCell,
-  TableRow,
-} from "@/components/ui/table";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { TableCell, TableRow } from "@/components/ui/table";
 import { canManageUsers, getRoleLabel } from "@/modules/auth/roles";
+import { SendUserCredentialsButton } from "@/modules/users/components/send-user-credentials-button.client";
 import { UserDangerActions } from "@/modules/users/components/user-danger-actions.client";
 import { UserFormDialog } from "@/modules/users/components/user-form-dialog.client";
 
@@ -78,11 +76,7 @@ function formatStatus(user: UserRowData) {
   return "Bloqueado";
 }
 
-export function UserRow({
-  user,
-  companies,
-  isCurrentUser,
-}: UserRowProps) {
+export function UserRow({ user, companies, isCurrentUser }: UserRowProps) {
   const [open, setOpen] = useState(false);
   const status = formatStatus(user);
 
@@ -119,32 +113,49 @@ export function UserRow({
                 {user.email}
               </span>
               <div className="mt-2 flex flex-wrap items-center gap-1.5 md:hidden">
-                <Badge variant={canManageUsers(user.role) ? "default" : "secondary"}>
+                <Badge
+                  variant={canManageUsers(user.role) ? "default" : "secondary"}
+                >
                   {getRoleLabel(user.role)}
                 </Badge>
-                <Badge variant={status === "Bloqueado" ? "destructive" : "outline"}>
+                <Badge
+                  variant={status === "Bloqueado" ? "destructive" : "outline"}
+                >
                   {status}
                 </Badge>
+              </div>
+              <div
+                className="mt-3 md:hidden"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <SendUserCredentialsButton
+                  user={user}
+                  disabled={status === "Bloqueado"}
+                />
               </div>
             </div>
           </div>
         </TableCell>
         <TableCell className="hidden md:table-cell">{user.email}</TableCell>
         <TableCell className="hidden md:table-cell">
-          <Badge
-            variant={canManageUsers(user.role) ? "default" : "secondary"}
-          >
+          <Badge variant={canManageUsers(user.role) ? "default" : "secondary"}>
             {getRoleLabel(user.role)}
           </Badge>
         </TableCell>
-        <TableCell className="hidden md:table-cell">{user.companyName ?? "Sin asignar"}</TableCell>
+        <TableCell className="hidden md:table-cell">
+          {user.companyName ?? "Sin asignar"}
+        </TableCell>
         <TableCell className="hidden md:table-cell">
           <Badge variant={status === "Bloqueado" ? "destructive" : "outline"}>
             {status}
           </Badge>
         </TableCell>
-        <TableCell className="hidden md:table-cell">{formatDate(user.createdAt)}</TableCell>
-        <TableCell className="hidden md:table-cell">{formatDate(user.lastConnectionAt)}</TableCell>
+        <TableCell className="hidden md:table-cell">
+          {formatDate(user.createdAt)}
+        </TableCell>
+        <TableCell className="hidden md:table-cell">
+          {formatDate(user.lastConnectionAt)}
+        </TableCell>
         <TableCell className="border-r-0 p-0 md:px-3 md:py-[3px]">
           <Button
             type="button"
@@ -157,20 +168,28 @@ export function UserRow({
               setOpen(true);
             }}
           >
-            <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} aria-hidden="true" />
+            <HugeiconsIcon
+              icon={MoreHorizontalIcon}
+              strokeWidth={2}
+              aria-hidden="true"
+            />
           </Button>
-          <div className="hidden md:block" onClick={(event) => event.stopPropagation()}>
+          <div
+            className="hidden items-center gap-2 md:flex"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <SendUserCredentialsButton
+              user={user}
+              disabled={status === "Bloqueado"}
+            />
             <UserDangerActions user={user} isCurrentUser={isCurrentUser} />
           </div>
         </TableCell>
       </TableRow>
 
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent
-          side="right"
-          className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl"
-        >
-          <SheetHeader className="border-b pr-16">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+          <DialogHeader className="shrink-0 border-b p-6 pr-16">
             <div className="flex items-center gap-3">
               <Avatar size="lg" aria-hidden="true">
                 {user.image ? <AvatarImage src={user.image} alt="" /> : null}
@@ -179,16 +198,21 @@ export function UserRow({
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
-                <SheetTitle className="text-xl">{user.name}</SheetTitle>
-                <SheetDescription className="mt-1">
+                <DialogTitle className="break-words text-xl">
+                  {user.name}
+                </DialogTitle>
+                <DialogDescription className="mt-1 break-all">
                   {user.email}
-                </SheetDescription>
+                </DialogDescription>
               </div>
             </div>
-          </SheetHeader>
+          </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-6 py-5">
-            <section className="flex flex-col gap-3" aria-labelledby={`user-info-${user.id}`}>
+          <div className="min-h-0 overflow-y-auto px-6 py-5">
+            <section
+              className="flex flex-col gap-3"
+              aria-labelledby={`user-info-${user.id}`}
+            >
               <h2 id={`user-info-${user.id}`} className="font-medium">
                 Información del usuario
               </h2>
@@ -199,7 +223,9 @@ export function UserRow({
                 </div>
                 <div className="flex flex-col gap-1">
                   <dt className="text-muted-foreground">Compañía</dt>
-                  <dd className="font-medium">{user.companyName ?? "Sin asignar"}</dd>
+                  <dd className="font-medium">
+                    {user.companyName ?? "Sin asignar"}
+                  </dd>
                 </div>
                 <div className="flex flex-col gap-1">
                   <dt className="text-muted-foreground">Estado</dt>
@@ -207,7 +233,9 @@ export function UserRow({
                 </div>
                 <div className="flex flex-col gap-1">
                   <dt className="text-muted-foreground">Correo verificado</dt>
-                  <dd className="font-medium">{user.emailVerified ? "Sí" : "No"}</dd>
+                  <dd className="font-medium">
+                    {user.emailVerified ? "Sí" : "No"}
+                  </dd>
                 </div>
                 <div className="flex flex-col gap-1">
                   <dt className="text-muted-foreground">Creado</dt>
@@ -215,19 +243,42 @@ export function UserRow({
                 </div>
                 <div className="flex flex-col gap-1">
                   <dt className="text-muted-foreground">Última conexión</dt>
-                  <dd className="font-medium">{formatDate(user.lastConnectionAt)}</dd>
+                  <dd className="font-medium">
+                    {formatDate(user.lastConnectionAt)}
+                  </dd>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <dt className="text-muted-foreground">Última actualización</dt>
+                  <dt className="text-muted-foreground">
+                    Última actualización
+                  </dt>
                   <dd className="font-medium">{formatDate(user.updatedAt)}</dd>
                 </div>
                 {user.banReason ? (
                   <div className="flex flex-col gap-1">
-                    <dt className="text-muted-foreground">Motivo del bloqueo</dt>
+                    <dt className="text-muted-foreground">
+                      Motivo del bloqueo
+                    </dt>
                     <dd className="font-medium">{user.banReason}</dd>
                   </div>
                 ) : null}
               </dl>
+            </section>
+
+            <section
+              className="mt-6 flex flex-col gap-3 border-t pt-6"
+              aria-labelledby={`user-access-${user.id}`}
+            >
+              <h2 id={`user-access-${user.id}`} className="font-medium">
+                Credenciales de acceso
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Envía por correo su usuario, una nueva contraseña y el enlace de
+                acceso.
+              </p>
+              <SendUserCredentialsButton
+                user={user}
+                disabled={status === "Bloqueado"}
+              />
             </section>
 
             <section
@@ -258,8 +309,8 @@ export function UserRow({
               </div>
             </section>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

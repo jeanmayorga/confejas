@@ -1,5 +1,8 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
+import { getResendClient, RESEND_FROM_EMAIL } from "@/lib/resend";
+import { getUserCredentialsEmail } from "./credentials-email";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -12,8 +15,7 @@ import { companies } from "@/modules/companies/server/schema";
 import { db } from "@/server/db";
 
 export type UserActionResult =
-  | { success: true; message: string }
-  | { success: false; message: string };
+  { success: true; message: string } | { success: false; message: string };
 
 function getRequiredText(
   formData: FormData,
@@ -35,7 +37,12 @@ function getRequiredText(
 }
 
 function getEmail(formData: FormData) {
-  const email = getRequiredText(formData, "email", "El correo", 254).toLowerCase();
+  const email = getRequiredText(
+    formData,
+    "email",
+    "El correo",
+    254,
+  ).toLowerCase();
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new Error("Ingresa un correo electrónico válido.");
@@ -140,10 +147,7 @@ export async function createUserAction(
     });
 
     if (companyId) {
-      await db
-        .update(users)
-        .set({ companyId })
-        .where(eq(users.email, email));
+      await db.update(users).set({ companyId }).where(eq(users.email, email));
     }
 
     revalidatePath("/dashboard/users");
@@ -201,10 +205,7 @@ export async function updateUserAction(
       });
     }
 
-    await db
-      .update(users)
-      .set({ companyId })
-      .where(eq(users.id, userId));
+    await db.update(users).set({ companyId }).where(eq(users.id, userId));
 
     revalidatePath("/dashboard/users");
     return { success: true, message: "Usuario actualizado correctamente." };
@@ -221,7 +222,10 @@ export async function setUserBlockedAction(
     const session = await requireAdmin();
 
     if (session.user.id === userId) {
-      return { success: false, message: "No puedes bloquear tu propia cuenta." };
+      return {
+        success: false,
+        message: "No puedes bloquear tu propia cuenta.",
+      };
     }
 
     const requestHeaders = await headers();
@@ -254,7 +258,10 @@ export async function deleteUserAction(
     const session = await requireAdmin();
 
     if (session.user.id === userId) {
-      return { success: false, message: "No puedes eliminar tu propia cuenta." };
+      return {
+        success: false,
+        message: "No puedes eliminar tu propia cuenta.",
+      };
     }
 
     await auth.api.removeUser({
@@ -266,5 +273,70 @@ export async function deleteUserAction(
     return { success: true, message: "Usuario eliminado correctamente." };
   } catch (error) {
     return { success: false, message: getSafeError(error) };
+  }
+}
+
+export async function sendUserCredentialsAction(
+  userId: string,
+): Promise<UserActionResult> {
+  let passwordChanged = false;
+  try {
+    await requireAdmin();
+    const [target] = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        banned: users.banned,
+        banExpires: users.banExpires,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    if (!target) return { success: false, message: "El usuario ya no existe." };
+    if (
+      target.banned &&
+      (!target.banExpires || target.banExpires > new Date())
+    ) {
+      return {
+        success: false,
+        message: "Desbloquea al usuario antes de enviar credenciales.",
+      };
+    }
+
+    // Validate email configuration before replacing the existing password.
+    const resend = getResendClient();
+    const baseUrl = process.env.BETTER_AUTH_URL;
+    if (!baseUrl)
+      return {
+        success: false,
+        message: "No está configurada la dirección de acceso de Confejas.",
+      };
+    const password = randomBytes(18).toString("base64url");
+    const content = getUserCredentialsEmail({
+      ...target,
+      password,
+      loginUrl: new URL("/login", baseUrl).toString(),
+    });
+    await auth.api.setUserPassword({
+      body: { userId: target.id, newPassword: password },
+      headers: await headers(),
+    });
+    passwordChanged = true;
+    const { error } = await resend.emails.send({
+      from: RESEND_FROM_EMAIL,
+      to: target.email,
+      ...content,
+    });
+    if (error) throw new Error("Email delivery failed");
+    revalidatePath("/dashboard/users");
+    return { success: true, message: "Credenciales enviadas correctamente." };
+  } catch {
+    return {
+      success: false,
+      message: passwordChanged
+        ? "La contraseña se actualizó, pero no se pudo enviar el correo. Vuelve a enviar las credenciales para generar y enviar una nueva."
+        : "No se pudieron enviar las credenciales. La contraseña no se cambió. Revisa la configuración de correo e inténtalo nuevamente.",
+    };
   }
 }
