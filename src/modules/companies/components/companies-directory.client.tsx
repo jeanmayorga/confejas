@@ -39,7 +39,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -79,7 +78,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { CompanyUnassignedSidebar } from "./company-unassigned-sidebar.client";
-import { CompanySidebarActions } from "./company-sidebar-actions.client";
+import { CompanyActionsMenu } from "./company-actions-menu.client";
 import { CounselorAvatarImage } from "@/modules/counselors/components/counselor-avatar-image";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -112,7 +111,6 @@ import { getCompanyMoveUnavailableReason } from "@/modules/companies/company-mov
 import { sortParticipantsByName } from "@/modules/companies/participant-order";
 import { CompanyCapacityDialog } from "@/modules/companies/components/company-capacity-dialog.client";
 import { CreateCompanyButton } from "@/modules/companies/components/create-company-button.client";
-import { DeleteCompanyButton } from "@/modules/companies/components/delete-company-button.client";
 import { CompanyDistributionDialog } from "@/modules/companies/components/company-distribution-dialog.client";
 import {
   FEMALE_PARTICIPANT_SEX,
@@ -940,7 +938,7 @@ export function CompaniesDirectory({
                         : company.participantCount}
                     </span>
                   </SidebarMenuButton>
-                  <CompanySidebarActions
+                  <CompanyActionsMenu
                     company={company}
                     label={getCompanyDisplayName(company.name, position)}
                     canDelete={canDelete}
@@ -1003,6 +1001,7 @@ export function CompaniesDirectory({
             position={activeResult.position}
             visibleParticipants={activeResult.participants}
             hasParticipantSearch={hasParticipantSearch}
+            onCompanyUpdated={() => selectCompany(activeCompany.id)}
             canDelete={canDelete}
             capacity={capacity}
             draggedParticipantIds={draggedParticipantIds}
@@ -1458,6 +1457,7 @@ function CompanyCard({
   company,
   visibleParticipants,
   hasParticipantSearch,
+  onCompanyUpdated,
   companies,
   position,
   canDelete,
@@ -1476,6 +1476,7 @@ function CompanyCard({
   company: CompanyDirectoryItem;
   visibleParticipants: CompanyParticipant[];
   hasParticipantSearch: boolean;
+  onCompanyUpdated: () => void;
   companies: CompanyDirectoryItem[];
   position: number;
   canDelete: boolean;
@@ -1507,6 +1508,17 @@ function CompanyCard({
   const [openActionsParticipantId, setOpenActionsParticipantId] = useState<
     string | null
   >(null);
+  const [companySearch, setCompanySearch] = useState("");
+  const searchTerms = normalizeParticipantName(companySearch)
+    .split(/\s+/)
+    .filter(Boolean);
+  const matchingParticipants = searchTerms.length
+    ? visibleParticipants.filter((participant) => {
+        const name = normalizeParticipantName(getParticipantName(participant));
+        return searchTerms.every((term) => name.includes(term));
+      })
+    : visibleParticipants;
+  const isFilteringParticipants = hasParticipantSearch || searchTerms.length > 0;
   const titleId = `company-${company.id}-title`;
   const companyLabel = getCompanyDisplayName(company.name, position);
 
@@ -1521,9 +1533,12 @@ function CompanyCard({
       onDragLeave={onDragLeave}
       onDrop={(event) => onDrop(event, company)}
     >
-      <CardHeader className="px-0">
-        <CardTitle>
-          <h1 id={titleId} className="text-2xl font-semibold">
+      <CardHeader className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 px-0">
+        <CardTitle className="min-w-0 flex-1 basis-40">
+          <h1
+            id={titleId}
+            className="break-words text-2xl font-medium tracking-tight"
+          >
             {companyLabel}
           </h1>
           {isDropTarget ? (
@@ -1532,11 +1547,46 @@ function CompanyCard({
             </span>
           ) : null}
         </CardTitle>
-        <CardAction className="row-span-1 self-center">
-          {canDelete ? (
-            <DeleteCompanyButton company={company} label={companyLabel} />
-          ) : null}
-        </CardAction>
+        <div className="flex w-full items-center gap-3 sm:w-auto sm:shrink-0">
+          <InputGroup className="min-w-0 flex-1 sm:w-60 sm:flex-none">
+            <InputGroupInput
+              type="search"
+              placeholder="Buscar"
+              aria-label={`Buscar participantes en ${companyLabel}`}
+              value={companySearch}
+              onChange={(event) => setCompanySearch(event.target.value)}
+              className="[&::-webkit-search-cancel-button]:hidden"
+            />
+            <InputGroupAddon>
+              <HugeiconsIcon
+                icon={Search01Icon}
+                strokeWidth={1.5}
+                aria-hidden="true"
+              />
+            </InputGroupAddon>
+            {companySearch ? (
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  aria-label="Limpiar búsqueda en esta compañía"
+                  onClick={() => setCompanySearch("")}
+                >
+                  <HugeiconsIcon
+                    icon={Cancel01Icon}
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  />
+                </InputGroupButton>
+              </InputGroupAddon>
+            ) : null}
+          </InputGroup>
+          <CompanyActionsMenu
+            company={company}
+            label={companyLabel}
+            canDelete={canDelete}
+            onUpdated={onCompanyUpdated}
+            appearance="header"
+          />
+        </div>
       </CardHeader>
 
       <CardContent className="flex flex-col gap-6 px-0">
@@ -1596,14 +1646,14 @@ function CompanyCard({
           <h3 id={`${titleId}-participants`} className="text-sm font-semibold">
             Participantes
           </h3>
-          {hasParticipantSearch ? (
-            <p className="mt-1 text-sm text-muted-foreground">
-              Mostrando {visibleParticipants.length} de {company.participantCount}{" "}
+          {isFilteringParticipants ? (
+            <p className="mt-1 text-sm text-muted-foreground" role="status">
+              Mostrando {matchingParticipants.length} de {company.participantCount}{" "}
               participantes.
             </p>
           ) : null}
 
-          {visibleParticipants.length > 0 ? (
+          {matchingParticipants.length > 0 ? (
             <TableFrame className="mt-3">
               <Table className="block w-full md:table md:min-w-[620px] md:table-fixed">
                 <colgroup className="hidden md:table-column-group">
@@ -1631,7 +1681,7 @@ function CompanyCard({
                   </TableRow>
                 </TableHeader>
                 <TableBody className="block md:table-row-group">
-                  {visibleParticipants.map((participant, index) =>
+                  {matchingParticipants.map((participant, index) =>
                     (() => {
                       const isDragged = draggedParticipantIds.has(
                         participant.id,
@@ -1778,11 +1828,24 @@ function CompanyCard({
           ) : (
             <Empty className="min-h-40 p-6">
               <EmptyHeader>
-                <EmptyTitle>Sin participantes</EmptyTitle>
+                <EmptyTitle>
+                  {isFilteringParticipants
+                    ? "No encontramos participantes"
+                    : "Sin participantes"}
+                </EmptyTitle>
                 <p className="text-sm text-muted-foreground">
-                  No hay participantes asignados a esta compañía.
+                  {isFilteringParticipants
+                    ? "Prueba con otro nombre o apellido en esta compañía."
+                    : "No hay participantes asignados a esta compañía."}
                 </p>
               </EmptyHeader>
+              {companySearch ? (
+                <EmptyContent>
+                  <Button variant="outline" onClick={() => setCompanySearch("")}>
+                    Limpiar búsqueda
+                  </Button>
+                </EmptyContent>
+              ) : null}
             </Empty>
           )}
         </section>

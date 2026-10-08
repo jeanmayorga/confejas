@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useId, useState, useTransition } from "react";
+import ArrowDown01Icon from "@hugeicons/core-free-icons/ArrowDown01Icon";
 import MoreHorizontalIcon from "@hugeicons/core-free-icons/MoreHorizontalIcon";
 import PencilEdit02Icon from "@hugeicons/core-free-icons/PencilEdit02Icon";
 import Delete02Icon from "@hugeicons/core-free-icons/Delete02Icon";
@@ -128,16 +129,18 @@ function EditCompanyDialog({
   );
 }
 
-export function CompanySidebarActions({
+export function CompanyActionsMenu({
   company,
   label,
   canDelete,
   onUpdated,
+  appearance = "sidebar",
 }: {
   company: CompanyListItem;
   label: string;
   canDelete: boolean;
   onUpdated: () => void;
+  appearance?: "sidebar" | "header";
 }) {
   const [action, setAction] = useState<"edit" | "delete" | null>(null);
 
@@ -146,22 +149,42 @@ export function CompanySidebarActions({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <SidebarMenuAction
-              showOnHover
-              className="right-2 rounded-sidebar-item! hover:bg-transparent"
-              aria-label={`Acciones de ${label}`}
-            />
+            appearance === "sidebar" ? (
+              <SidebarMenuAction
+                showOnHover
+                className="right-2 rounded-sidebar-item! hover:bg-transparent"
+                aria-label={`Acciones de ${label}`}
+              />
+            ) : (
+              <Button
+                type="button"
+                variant="neutral"
+                aria-label={`Opciones de ${label}`}
+              />
+            )
           }
         >
-          <HugeiconsIcon
-            icon={MoreHorizontalIcon}
-            strokeWidth={1.5}
-            aria-hidden="true"
-          />
+          {appearance === "sidebar" ? (
+            <HugeiconsIcon
+              icon={MoreHorizontalIcon}
+              strokeWidth={1.5}
+              aria-hidden="true"
+            />
+          ) : (
+            <>
+              Acciones
+              <HugeiconsIcon
+                icon={ArrowDown01Icon}
+                strokeWidth={1.5}
+                data-icon="inline-end"
+                aria-hidden="true"
+              />
+            </>
+          )}
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          side="right"
-          align="start"
+          side={appearance === "sidebar" ? "right" : "bottom"}
+          align={appearance === "sidebar" ? "start" : "end"}
           className="w-48 rounded-xl"
         >
           <DropdownMenuGroup>

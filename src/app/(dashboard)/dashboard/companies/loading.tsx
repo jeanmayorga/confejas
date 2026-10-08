@@ -5,9 +5,12 @@ import { DashboardPageSidebar } from "@/modules/dashboard/components/dashboard-p
 function CompanyCardSkeleton() {
   return (
     <Card className="rounded-none bg-transparent p-0 shadow-none ring-0">
-      <CardHeader className="px-0">
-        <Skeleton className="h-5 w-28" />
-        <Skeleton className="h-6 w-20" />
+      <CardHeader className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 px-0">
+        <Skeleton className="h-8 w-40" />
+        <div className="flex w-full items-center gap-3 sm:w-auto">
+          <Skeleton className="h-9 min-w-0 flex-1 rounded-full sm:w-60 sm:flex-none" />
+          <Skeleton className="h-9 w-24 rounded-full" />
+        </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-5 px-0">
         <Card size="sm" className="border shadow-none ring-0">
