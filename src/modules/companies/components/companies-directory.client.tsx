@@ -1774,8 +1774,8 @@ function CompanyCard({
                   <col className="md:w-12" />
                   <col className="md:w-24" />
                   <col />
-                  <col className="md:w-[76px]" />
-                  <col className="md:w-20" />
+                  <col className="md:w-40" />
+                  <col className="md:w-28" />
                   <col className="md:w-11" />
                 </colgroup>
                 <TableHeader className="hidden md:table-header-group">
@@ -1930,11 +1930,11 @@ function CompanyCard({
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="hidden md:table-cell">
+                          <TableCell className="hidden whitespace-normal md:table-cell">
                             {getParticipantAge(participant.age)}
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
-                            <Badge variant="secondary">
+                            <Badge variant="secondary" className="max-w-full whitespace-normal break-words">
                               {getParticipantSexLabel(participant.sex)}
                             </Badge>
                           </TableCell>
