@@ -15,7 +15,7 @@ function CompanyCardSkeleton() {
           <Skeleton className="h-4 w-20" />
           <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-3">
             {Array.from({ length: 2 }, (_, index) => (
-              <Card key={index} size="sm" className="shadow-none">
+              <Card key={index} size="sm" className="border shadow-none ring-0">
                 <CardHeader className="flex flex-row items-center gap-4">
                   <Skeleton className="size-16 shrink-0 rounded-full" />
                   <div className="flex min-w-0 flex-1 flex-col gap-2">

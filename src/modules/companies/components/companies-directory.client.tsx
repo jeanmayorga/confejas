@@ -1494,7 +1494,7 @@ function CompanyCard({
             <ul className="mt-3 grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-3">
               {company.counselors.map((counselor) => (
                 <li key={counselor.id} className="min-w-0">
-                  <Card size="sm" className="h-full shadow-none">
+                  <Card size="sm" className="h-full border shadow-none ring-0">
                     <CardHeader className="flex flex-row items-center gap-4">
                       <Avatar
                         className="size-16 overflow-hidden"
