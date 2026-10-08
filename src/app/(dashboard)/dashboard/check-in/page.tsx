@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import ArrowRight02Icon from "@hugeicons/core-free-icons/ArrowRight02Icon";
 import KeyboardIcon from "@hugeicons/core-free-icons/KeyboardIcon";
+import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import QrCodeScanIcon from "@hugeicons/core-free-icons/QrCodeScanIcon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
 
 const welcomeOptions = [
   {
-    title: "Escanear por código QR",
+    title: "Escanear QR",
     description: "Abre la cámara y lee el QR único del participante.",
     href: "/dashboard/check-in/scan",
     icon: QrCodeScanIcon,
@@ -32,6 +33,12 @@ const welcomeOptions = [
       "Ingresa el código único cuando no sea posible escanear el QR.",
     href: "/dashboard/check-in/code",
     icon: KeyboardIcon,
+  },
+  {
+    title: "Buscar nombre",
+    description: "Busca por nombres o apellidos y selecciona al participante.",
+    href: "/dashboard/check-in/name",
+    icon: Search01Icon,
   },
 ] as const;
 
@@ -51,7 +58,7 @@ export default async function CheckInPage() {
         </p>
       </div>
 
-      <div className="grid gap-5 md:grid-cols-2">
+      <div className="grid gap-5 md:grid-cols-3">
         {welcomeOptions.map((option) => (
           <Link
             key={option.href}

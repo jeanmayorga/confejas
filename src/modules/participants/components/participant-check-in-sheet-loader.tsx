@@ -3,7 +3,10 @@ import { getParticipantForCheckIn } from "@/modules/participants/server/queries"
 
 type ParticipantCheckInSheetLoaderProps = {
   participantId?: string;
-  returnPath: "/dashboard/check-in/scan" | "/dashboard/check-in/code";
+  returnPath:
+    | "/dashboard/check-in/scan"
+    | "/dashboard/check-in/code"
+    | "/dashboard/check-in/name";
   saved?: boolean;
 };
 
@@ -36,6 +39,8 @@ export async function ParticipantCheckInSheetLoader({
         shirtSize: participant.shirtSize,
         companyName: participant.companyName,
         roomName: participant.roomName,
+        arrived: Boolean(participant.checkedInAt),
+        counselors: participant.counselors,
       }}
       returnPath={returnPath}
       saved={saved}
