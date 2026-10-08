@@ -23,7 +23,9 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import {
+  isParticipantStatus,
   PARTICIPANT_STATUS_OPTIONS,
   type ParticipantStatus,
 } from "@/modules/participants/status";
@@ -51,6 +53,23 @@ const sexOptions = [
   { value: "female", label: "Mujeres" },
   { value: "other", label: "Otro o sin registrar" },
 ];
+
+const statusDotClassNames = {
+  registered: "bg-participant-registered",
+  confirmed: "bg-participant-confirmed",
+  arrived: "bg-participant-arrived",
+  cancelled: "bg-participant-cancelled",
+  pending: "bg-participant-pending",
+} satisfies Record<ParticipantStatus, string>;
+
+function StatusDot({ status }: { status: ParticipantStatus }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn("size-2 shrink-0 rounded-full", statusDotClassNames[status])}
+    />
+  );
+}
 
 export function CompanyParticipantFilters({
   titleId,
@@ -118,6 +137,9 @@ export function CompanyParticipantFilters({
             />
             {activeFilters.length ? (
               <>
+                {value.status !== "all" ? (
+                  <StatusDot status={value.status} />
+                ) : null}
                 <span className="truncate">{activeFilterSummary}</span>
                 <Badge variant="secondary">{activeFilters.length}</Badge>
               </>
@@ -135,12 +157,17 @@ export function CompanyParticipantFilters({
                       aria-hidden="true"
                     />
                     {filter.label}
-                    <span className="ml-auto max-w-28 truncate text-xs text-muted-foreground">
-                      {value[filter.key] === "all"
-                        ? "Todos"
-                        : (filter.options.find(
-                            (option) => option.value === value[filter.key],
-                          )?.label ?? `${value[filter.key]} años`)}
+                    <span className="ml-auto flex min-w-0 max-w-28 items-center gap-1.5 text-xs text-muted-foreground">
+                      {filter.key === "status" && value.status !== "all" ? (
+                        <StatusDot status={value.status} />
+                      ) : null}
+                      <span className="truncate">
+                        {value[filter.key] === "all"
+                          ? "Todos"
+                          : (filter.options.find(
+                              (option) => option.value === value[filter.key],
+                            )?.label ?? `${value[filter.key]} años`)}
+                      </span>
                     </span>
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="max-h-72 w-56 overflow-y-auto rounded-xl">
@@ -162,6 +189,10 @@ export function CompanyParticipantFilters({
                           value={option.value}
                           className="rounded-lg font-normal"
                         >
+                          {filter.key === "status" &&
+                          isParticipantStatus(option.value) ? (
+                            <StatusDot status={option.value} />
+                          ) : null}
                           {option.label}
                         </DropdownMenuRadioItem>
                       ))}
