@@ -48,6 +48,30 @@ const companyEightImage = {
   height: 2561,
 };
 
+const companyNineImage = {
+  src: "/counselors/company-09.png",
+  width: 2047,
+  height: 2561,
+};
+
+const companyTenImage = {
+  src: "/counselors/company-10.png",
+  width: 2047,
+  height: 2561,
+};
+
+const companyElevenImage = {
+  src: "/counselors/company-11.png",
+  width: 2047,
+  height: 2561,
+};
+
+const companyTwelveImage = {
+  src: "/counselors/company-12.png",
+  width: 2047,
+  height: 2561,
+};
+
 // Map portraits using individual poster labels or the user's identification.
 // Keep the original images and frame the portraits in their avatars.
 const portraits: Record<
@@ -101,6 +125,30 @@ const portraits: Record<
   },
   "b534fb39-499d-4a40-886a-d63f07273c41": {
     image: companyEightImage, x: 1360, y: 840, size: 310,
+  },
+  "f6b5f0b7-1e90-42c0-8b42-ce15b1101bf3": {
+    image: companyNineImage, x: 645, y: 875, size: 390,
+  },
+  "e011b0c0-4ef3-4051-be09-b7fdbb95de89": {
+    image: companyNineImage, x: 1000, y: 975, size: 420,
+  },
+  "0a7037c8-666c-402b-9971-af28721e3f6a": {
+    image: companyTenImage, x: 630, y: 775, size: 460,
+  },
+  "5c9143b4-7f60-4a1f-b7cf-3d4429911b51": {
+    image: companyTenImage, x: 985, y: 940, size: 490,
+  },
+  "848b22fc-b824-41ca-a0cc-895d564105f6": {
+    image: companyElevenImage, x: 635, y: 745, size: 450,
+  },
+  "b989dfeb-8dc5-4671-a3f5-bc5fe8b18b71": {
+    image: companyElevenImage, x: 950, y: 990, size: 430,
+  },
+  "4f5f16cb-6b69-4557-a3dc-c8170419b481": {
+    image: companyTwelveImage, x: 595, y: 850, size: 410,
+  },
+  "0620dc55-f5a8-4804-9734-7b7c29a25776": {
+    image: companyTwelveImage, x: 940, y: 780, size: 450,
   },
 };
 
