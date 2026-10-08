@@ -853,7 +853,7 @@ export function CompaniesDirectory({
   }
 
   return (
-    <div className="grid min-h-svh min-w-0 items-start xl:grid-cols-[minmax(0,1fr)_20rem]">
+    <div className="grid min-h-svh min-w-0 items-start xl:grid-cols-[minmax(0,1fr)_22.5rem]">
       <DashboardPageSidebar path="/dashboard/companies">
         <div className="px-2 pt-0.5 pb-3">
           <SidebarMenu>
