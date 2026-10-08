@@ -72,9 +72,11 @@ import {
 } from "@/components/ui/input-group";
 import {
   SidebarContent,
+  SidebarFooter,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { CompanyUnassignedSidebar } from "./company-unassigned-sidebar.client";
@@ -416,6 +418,10 @@ export function CompaniesDirectory({
         companies,
       ),
     [capacity, companies, pendingCompanyMoves],
+  );
+  const totalCompanyParticipants = displayedCompanies.reduce(
+    (total, company) => total + company.participantCount,
+    0,
   );
   const companySearchResults = useMemo(() => {
     const terms = normalizedParticipantSearch.split(/\s+/).filter(Boolean);
@@ -912,6 +918,15 @@ export function CompaniesDirectory({
             </p>
           ) : null}
         </SidebarContent>
+        <SidebarSeparator className="mx-0" />
+        <SidebarFooter className="shrink-0 px-5 py-3">
+          <dl className="flex items-center justify-between gap-3 text-sm">
+            <dt className="text-muted-foreground">Total participantes</dt>
+            <dd className="font-medium tabular-nums">
+              {totalCompanyParticipants.toLocaleString("es-EC")}
+            </dd>
+          </dl>
+        </SidebarFooter>
       </DashboardPageSidebar>
       <div className="min-w-0 p-4 pb-24 sm:p-6 xl:p-8">
         {displayedCompanies.length === 0 ? (
