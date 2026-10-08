@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DashboardPageSidebar } from "@/modules/dashboard/components/dashboard-page-sidebar.client";
 
 function CompanyCardSkeleton() {
   return (
@@ -25,24 +26,24 @@ function CompanyCardSkeleton() {
 
 function UnassignedParticipantsSkeleton() {
   return (
-    <Card className="gap-0 py-3">
-      <CardHeader className="border-b !pb-2">
-        <Skeleton className="h-5 w-52" />
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3 border-b py-3">
+    <div
+      className="flex min-h-0 flex-1 flex-col overflow-hidden"
+      aria-label="Cargando participantes sin compañía"
+      aria-busy="true"
+    >
+      <div className="flex flex-col gap-3 border-b px-3 pb-3">
         <Skeleton className="h-9 w-48" />
         <Skeleton className="h-9 w-full" />
-      </CardContent>
-      <CardContent className="flex flex-col gap-3 p-3">
+      </div>
+      <div className="flex flex-col gap-3 p-3">
         {Array.from({ length: 8 }, (_, index) => (
           <div key={index} className="flex items-center gap-3">
-            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="size-6 rounded-full" />
             <Skeleton className="h-5 flex-1" />
-            <Skeleton className="h-5 w-12" />
           </div>
         ))}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -65,12 +66,12 @@ export default function Loading() {
         </div>
       </header>
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="flex min-w-0 flex-col gap-5">
-          <CompanyCardSkeleton />
-          <CompanyCardSkeleton />
-        </div>
+      <DashboardPageSidebar path="/dashboard/companies">
         <UnassignedParticipantsSkeleton />
+      </DashboardPageSidebar>
+      <div className="flex min-w-0 flex-col gap-5">
+        <CompanyCardSkeleton />
+        <CompanyCardSkeleton />
       </div>
     </div>
   );

@@ -21,7 +21,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { MobileUnassignedSheet } from "@/components/mobile-unassigned-sheet.client";
+import { DashboardPageSidebar } from "@/modules/dashboard/components/dashboard-page-sidebar.client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,7 +39,6 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -341,7 +340,6 @@ export function CompaniesDirectory({
   const [moving, setMoving] = useState(false);
   const [requestedChange, setRequestedChange] =
     useState<RequestedCompanyAssignmentChange | null>(null);
-  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const [refreshing, startTransition] = useTransition();
   const dragDisabled = moving || refreshing;
   const draggedParticipantIds = useMemo(
@@ -730,12 +728,14 @@ export function CompaniesDirectory({
     moveDraggedParticipants(
       {
         source: "company",
-        participants: [{
-          participantId: participant.id,
-          companyId: sourceCompanyId,
-          name: getParticipantName(participant),
-          participant,
-        }],
+        participants: [
+          {
+            participantId: participant.id,
+            companyId: sourceCompanyId,
+            name: getParticipantName(participant),
+            participant,
+          },
+        ],
       },
       targetCompany,
     );
@@ -801,53 +801,45 @@ export function CompaniesDirectory({
     moveDraggedParticipants(dragged, company);
   }
 
-  function renderUnassignedCard(inSheet: boolean) {
-    return (
-      <UnassignedParticipantsCard
-        titleId={
-          inSheet
-            ? "unassigned-participants-mobile-title"
-            : "unassigned-participants-title"
-        }
-        inSheet={inSheet}
-        capacity={capacity}
-        draggedParticipant={draggedParticipant}
-        draggedParticipantIds={draggedParticipantIds}
-        isDropTarget={isUnassignedDropTarget}
-        dragDisabled={dragDisabled}
-        selectedParticipantIds={selectedUnassignedParticipantIds}
-        onDragOver={handleUnassignedDragOver}
-        onDragLeave={handleUnassignedDragLeave}
-        onDrop={handleUnassignedDrop}
-        onParticipantDragStart={handleUnassignedParticipantDragStart}
-        onParticipantDragEnd={clearDragState}
-        onParticipantSelectionChange={handleUnassignedParticipantSelectionChange}
-        onParticipantsSelectionChange={handleUnassignedParticipantsSelectionChange}
-      />
-    );
-  }
-
-  if (displayedCompanies.length === 0) {
-    return (
-      <Empty className="min-h-80">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <HugeiconsIcon icon={Building03Icon} strokeWidth={2} />
-          </EmptyMedia>
-          <EmptyTitle>Aún no hay compañías</EmptyTitle>
-          <p className="text-sm text-muted-foreground">
-            Crea la primera compañía para empezar a asignar participantes.
-          </p>
-        </EmptyHeader>
-        <EmptyContent>
-          <CreateCompanyButton />
-        </EmptyContent>
-      </Empty>
-    );
-  }
-
   return (
-    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+    <div className="flex min-w-0 flex-col gap-5">
+      <DashboardPageSidebar path="/dashboard/companies">
+        <UnassignedParticipantsPanel
+          capacity={capacity}
+          draggedParticipant={draggedParticipant}
+          draggedParticipantIds={draggedParticipantIds}
+          isDropTarget={isUnassignedDropTarget}
+          dragDisabled={dragDisabled}
+          selectedParticipantIds={selectedUnassignedParticipantIds}
+          onDragOver={handleUnassignedDragOver}
+          onDragLeave={handleUnassignedDragLeave}
+          onDrop={handleUnassignedDrop}
+          onParticipantDragStart={handleUnassignedParticipantDragStart}
+          onParticipantDragEnd={clearDragState}
+          onParticipantSelectionChange={
+            handleUnassignedParticipantSelectionChange
+          }
+          onParticipantsSelectionChange={
+            handleUnassignedParticipantsSelectionChange
+          }
+        />
+      </DashboardPageSidebar>
+      {displayedCompanies.length === 0 ? (
+        <Empty className="min-h-80">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <HugeiconsIcon icon={Building03Icon} strokeWidth={2} />
+            </EmptyMedia>
+            <EmptyTitle>Aún no hay compañías</EmptyTitle>
+            <p className="text-sm text-muted-foreground">
+              Crea la primera compañía para empezar a asignar participantes.
+            </p>
+          </EmptyHeader>
+          <EmptyContent>
+            <CreateCompanyButton />
+          </EmptyContent>
+        </Empty>
+      ) : null}
       <div className="flex min-w-0 flex-col gap-5">
         {displayedCompanies.map((company, index) => (
           <CompanyCard
@@ -891,16 +883,6 @@ export function CompaniesDirectory({
           />
         ))}
       </div>
-      <div className="hidden xl:block xl:self-stretch">{renderUnassignedCard(false)}</div>
-      <MobileUnassignedSheet
-        title="Sin compañía"
-        description="Busca y filtra participantes sin compañía."
-        icon={<HugeiconsIcon icon={Building03Icon} strokeWidth={2} data-icon="inline-start" />}
-        open={mobilePanelOpen}
-        onOpenChange={setMobilePanelOpen}
-      >
-        {renderUnassignedCard(true)}
-      </MobileUnassignedSheet>
       <AlertDialog
         open={requestedChange !== null}
         onOpenChange={(open) => {
@@ -935,7 +917,9 @@ export function CompaniesDirectory({
                   ? "destructive"
                   : "default"
               }
-              disabled={dragDisabled || Boolean(requestedChangeUnavailableReason)}
+              disabled={
+                dragDisabled || Boolean(requestedChangeUnavailableReason)
+              }
               onClick={confirmRequestedChange}
             >
               {requestedChange?.targetCompanyId === null
@@ -949,9 +933,7 @@ export function CompaniesDirectory({
   );
 }
 
-function UnassignedParticipantsCard({
-  titleId,
-  inSheet,
+function UnassignedParticipantsPanel({
   capacity,
   draggedParticipant,
   draggedParticipantIds,
@@ -966,8 +948,6 @@ function UnassignedParticipantsCard({
   onParticipantSelectionChange,
   onParticipantsSelectionChange,
 }: {
-  titleId: string;
-  inSheet: boolean;
   capacity: DistributionCapacity;
   draggedParticipant: DraggedCompanyParticipants | null;
   draggedParticipantIds: ReadonlySet<string>;
@@ -1068,156 +1048,85 @@ function UnassignedParticipantsCard({
 
   return (
     <aside
-      className={cn(
-        "self-start xl:sticky xl:top-24",
-        inSheet && "flex min-h-0 flex-1 flex-col self-stretch",
-      )}
-      aria-labelledby={titleId}
+      className="flex min-h-0 flex-1 flex-col text-sm"
+      aria-label="Participantes sin compañía"
     >
-      <Card
+      <div
         className={cn(
-          "max-h-[calc(100dvh-7rem)] gap-0 py-3 transition-[background-color,box-shadow]",
-          inSheet && "min-h-0 flex-1 max-h-none",
-          draggedCompanyParticipants && "bg-primary/5 ring-1 ring-primary/40",
-          isDropTarget && "bg-primary/5 ring-2 ring-primary ring-offset-2",
+          "flex min-h-0 flex-1 flex-col transition-colors",
+          draggedCompanyParticipants && "bg-primary/5",
+          isDropTarget && "ring-2 ring-inset ring-primary",
         )}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
       >
-        <CardHeader className="shrink-0 border-b !pb-2">
-          <CardTitle id={titleId} className="text-lg">
-            Participantes sin compañía
-          </CardTitle>
-          {draggedCompanyParticipants ? (
-            <p
-              className={cn(
-                "text-sm font-medium",
-                isDropTarget ? "text-primary" : "text-muted-foreground",
-              )}
-              aria-live="polite"
-            >
-              {isDropTarget
-                ? draggedCompanyParticipants.participants.length === 1
-                  ? `Suelta para quitar a ${draggedCompanyParticipants.participants[0]?.name} de su compañía.`
-                  : `Suelta para quitar a los ${draggedCompanyParticipants.participants.length} participantes de sus compañías.`
-                : draggedCompanyParticipants.participants.length === 1
-                  ? "Arrastra aquí para quitarlo de su compañía."
-                  : `Arrastra aquí para quitar a los ${draggedCompanyParticipants.participants.length} participantes de sus compañías.`}
-            </p>
-          ) : null}
-        </CardHeader>
-
-        <CardContent className="shrink-0 border-b py-3">
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap gap-2">
-              <CompanyDistributionDialog
-                capacity={capacity}
-                onDistributed={() =>
-                  queryClient.invalidateQueries({
-                    queryKey: ["company-unassigned-participants"],
-                  })
-                }
-              />
-              <CompanyCapacityDialog capacity={capacity} />
-            </div>
-            <InputGroup>
-              <InputGroupAddon>
-                <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
-              </InputGroupAddon>
-              <InputGroupInput
-                type="search"
-                placeholder="Buscar participante"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                aria-label="Buscar participantes sin compañía"
-              />
-            </InputGroup>
-            <UnassignedStatusFilter value={status} onChange={setStatus} />
+        {draggedCompanyParticipants ? (
+          <p className="px-3 pb-2 text-xs text-primary" aria-live="polite">
+            {isDropTarget
+              ? "Suelta para quitar de la compañía."
+              : "Arrastra aquí para quitar de la compañía."}
+          </p>
+        ) : null}
+        <div className="flex shrink-0 flex-col gap-2 border-b px-3 pb-3">
+          <div className="flex flex-wrap gap-2">
+            <CompanyDistributionDialog
+              capacity={capacity}
+              onDistributed={() =>
+                queryClient.invalidateQueries({
+                  queryKey: ["company-unassigned-participants"],
+                })
+              }
+            />
+            <CompanyCapacityDialog capacity={capacity} />
           </div>
-        </CardContent>
+          <InputGroup>
+            <InputGroupAddon>
+              <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
+            </InputGroupAddon>
+            <InputGroupInput
+              type="search"
+              placeholder="Buscar participante"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              aria-label="Buscar participantes sin compañía"
+            />
+          </InputGroup>
+          <UnassignedStatusFilter value={status} onChange={setStatus} />
+        </div>
 
-        {unassignedParticipantsQuery.isPending ? (
-          <CardContent className="min-h-0 flex-1 p-0">
-            <TableFrame className="rounded-none border-0">
-              <Table
-                className={cn(
-                  "table-fixed",
-                  inSheet ? "w-full" : "min-w-[440px]",
-                )}
-              >
-                <colgroup>
-                  <col className="w-11" />
-                  {!inSheet ? <col className="w-24" /> : null}
-                  <col />
-                  {!inSheet ? <col className="w-[76px]" /> : null}
-                  {!inSheet ? <col className="w-20" /> : null}
-                </colgroup>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead />
-                    {!inSheet ? <TableHead>Estado</TableHead> : null}
-                    <TableHead>Nombres</TableHead>
-                    {!inSheet ? <TableHead>Edad</TableHead> : null}
-                    {!inSheet ? <TableHead>Sexo</TableHead> : null}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {Array.from({ length: 8 }, (_, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <Skeleton className="size-4 rounded-[5px]" />
-                      </TableCell>
-                      {!inSheet ? (
-                        <TableCell>
-                          <Skeleton className="h-5 w-16 rounded-full" />
-                        </TableCell>
-                      ) : null}
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Skeleton className="size-6 rounded-full" />
-                          <Skeleton className="h-3 w-32" />
-                        </div>
-                      </TableCell>
-                      {!inSheet ? (
-                        <>
-                          <TableCell>
-                            <Skeleton className="h-3 w-12" />
-                          </TableCell>
-                          <TableCell>
-                            <Skeleton className="h-5 w-14 rounded-full" />
-                          </TableCell>
-                        </>
-                      ) : null}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableFrame>
-          </CardContent>
-        ) : unassignedParticipantsQuery.isError ? (
-          <CardContent className="flex min-h-40 flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground">
-            No pudimos cargar los participantes sin compañía.
-          </CardContent>
-        ) : participants.length > 0 ? (
-          <CardContent className="flex min-h-0 flex-1 flex-col p-0">
+        <div
+          ref={listViewportRef}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y"
+        >
+          {unassignedParticipantsQuery.isPending ? (
             <div
-              ref={listViewportRef}
-              className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y"
+              className="flex flex-col gap-5 p-3"
+              aria-label="Cargando participantes"
+              aria-busy="true"
             >
+              {Array.from({ length: 8 }, (_, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Skeleton className="size-4 rounded-sm" />
+                  <Skeleton className="size-6 rounded-full" />
+                  <Skeleton className="h-3 flex-1" />
+                </div>
+              ))}
+            </div>
+          ) : unassignedParticipantsQuery.isError ? (
+            <p
+              role="alert"
+              className="px-4 py-8 text-center text-muted-foreground"
+            >
+              No pudimos cargar los participantes sin compañía.
+            </p>
+          ) : participants.length > 0 ? (
+            <>
               <TableFrame className="rounded-none border-0">
-                <Table
-                  className={cn(
-                    "table-fixed",
-                    inSheet ? "w-full" : "min-w-[480px]",
-                  )}
-                >
+                <Table className="w-full table-fixed">
                   <colgroup>
-                    <col className="w-11" />
-                    {!inSheet ? <col className="w-24" /> : null}
+                    <col className="w-10" />
                     <col />
-                    {!inSheet ? <col className="w-[76px]" /> : null}
-                    {!inSheet ? <col className="w-20" /> : null}
                   </colgroup>
                   <TableHeader>
                     <TableRow>
@@ -1235,10 +1144,11 @@ function UnassignedParticipantsCard({
                           aria-label="Seleccionar todos los participantes cargados"
                         />
                       </TableHead>
-                      {!inSheet ? <TableHead>Estado</TableHead> : null}
-                      <TableHead>Nombres</TableHead>
-                      {!inSheet ? <TableHead>Edad</TableHead> : null}
-                      {!inSheet ? <TableHead>Sexo</TableHead> : null}
+                      <TableHead>
+                        {selectedParticipantCount > 0
+                          ? `${selectedParticipantCount} seleccionados`
+                          : "Participantes"}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1284,27 +1194,8 @@ function UnassignedParticipantsCard({
                               aria-label={`Seleccionar a ${getParticipantName(participant)}`}
                             />
                           </TableCell>
-                          {!inSheet ? (
-                            <TableCell>
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  "border-transparent",
-                                  participantStatusClassNames[participant.status],
-                                )}
-                              >
-                                {getParticipantStatusLabel(participant.status)}
-                              </Badge>
-                            </TableCell>
-                          ) : null}
-                          <TableCell
-                            className={cn(
-                              inSheet
-                                ? "whitespace-normal"
-                                : "max-w-0 overflow-hidden",
-                            )}
-                          >
-                            <div className="flex min-w-0 items-center gap-2">
+                          <TableCell className="whitespace-normal py-3">
+                            <div className="flex min-w-0 items-start gap-2">
                               <Avatar size="sm" aria-hidden="true">
                                 <AvatarFallback
                                   className={cn(
@@ -1321,50 +1212,35 @@ function UnassignedParticipantsCard({
                                 </AvatarFallback>
                               </Avatar>
                               <span className="min-w-0">
-                                <span
-                                  className={cn(
-                                    "block font-medium",
-                                    inSheet ? "break-words" : "truncate",
-                                  )}
-                                >
+                                <span className="block break-words font-medium">
                                   {getParticipantName(participant)}
                                 </span>
-                                {inSheet ? (
-                                  <span className="mt-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-                                    <Badge
-                                      variant="outline"
-                                      className={cn(
-                                        "border-transparent",
-                                        participantStatusClassNames[participant.status],
-                                      )}
-                                    >
-                                      {getParticipantStatusLabel(participant.status)}
-                                    </Badge>
-                                    {getParticipantAge(participant.age)} ·{" "}
-                                    {getParticipantSexLabel(participant.sex)}
-                                  </span>
-                                ) : null}
+                                <span className="mt-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "border-transparent",
+                                      participantStatusClassNames[
+                                        participant.status
+                                      ],
+                                    )}
+                                  >
+                                    {getParticipantStatusLabel(
+                                      participant.status,
+                                    )}
+                                  </Badge>
+                                  {getParticipantAge(participant.age)} ·{" "}
+                                  {getParticipantSexLabel(participant.sex)}
+                                </span>
                               </span>
                             </div>
                           </TableCell>
-                          {!inSheet ? (
-                            <>
-                              <TableCell>
-                                {getParticipantAge(participant.age)}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="secondary">
-                                  {getParticipantSexLabel(participant.sex)}
-                                </Badge>
-                              </TableCell>
-                            </>
-                          ) : null}
                         </TableRow>
                       );
                     })}
                     {isFetchingNextPage ? (
                       <TableRow>
-                        <TableCell colSpan={inSheet ? 2 : 5}>
+                        <TableCell colSpan={2}>
                           <Skeleton className="h-3 w-28" />
                         </TableCell>
                       </TableRow>
@@ -1375,18 +1251,21 @@ function UnassignedParticipantsCard({
               {hasNextPage ? (
                 <div ref={loadMoreRef} className="h-px" aria-hidden="true" />
               ) : null}
-            </div>
-          </CardContent>
-        ) : (
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            {deferredSearch || status !== "all"
-              ? "No encontramos participantes sin compañía."
-              : "No hay participantes sin compañía."}
-          </CardContent>
-        )}
+            </>
+          ) : (
+            <p
+              className="px-4 py-8 text-center text-muted-foreground"
+              role="status"
+            >
+              {deferredSearch || status !== "all"
+                ? "No encontramos participantes sin compañía."
+                : "No hay participantes sin compañía."}
+            </p>
+          )}
+        </div>
 
-        <CardFooter className="justify-between border-t !pt-3">
-          <span className="font-medium">
+        <div className="flex shrink-0 items-center justify-between border-t p-3">
+          <span className="text-muted-foreground">
             {deferredSearch || status !== "all"
               ? "Resultados"
               : "Total de participantes"}
@@ -1396,8 +1275,8 @@ function UnassignedParticipantsCard({
               ? "…"
               : total.toLocaleString("es-EC")}
           </Badge>
-        </CardFooter>
-      </Card>
+        </div>
+      </div>
     </aside>
   );
 }
@@ -1445,7 +1324,10 @@ function CompanyCard({
     company: CompanyDirectoryItem,
     checked: boolean,
   ) => void;
-  onParticipantMoveRequest: (participantId: string, targetCompanyId: string) => void;
+  onParticipantMoveRequest: (
+    participantId: string,
+    targetCompanyId: string,
+  ) => void;
   onParticipantRemoveRequest: (participantId: string) => void;
   onDragOver: (
     event: DragEvent<HTMLDivElement>,
@@ -1610,9 +1492,7 @@ function CompanyCard({
                         aria-label={`Seleccionar todos los participantes de ${companyLabel}`}
                       />
                     </TableHead>
-                    <TableHead className="text-center">
-                      #
-                    </TableHead>
+                    <TableHead className="text-center">#</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Nombres</TableHead>
                     <TableHead>Edad</TableHead>
@@ -1706,10 +1586,14 @@ function CompanyCard({
                                     variant="outline"
                                     className={cn(
                                       "border-transparent",
-                                      participantStatusClassNames[participant.status],
+                                      participantStatusClassNames[
+                                        participant.status
+                                      ],
                                     )}
                                   >
-                                    {getParticipantStatusLabel(participant.status)}
+                                    {getParticipantStatusLabel(
+                                      participant.status,
+                                    )}
                                   </Badge>
                                   <span className="text-xs text-muted-foreground">
                                     {getParticipantAge(participant.age)} ·{" "}
@@ -1943,7 +1827,10 @@ function CapacityProgress({
           Hombres {male.toLocaleString("es-EC")}/{capacity.male}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-company-female" aria-hidden="true" />
+          <span
+            className="size-2 rounded-full bg-company-female"
+            aria-hidden="true"
+          />
           Mujeres {female.toLocaleString("es-EC")}/{capacity.female}
         </span>
       </div>
