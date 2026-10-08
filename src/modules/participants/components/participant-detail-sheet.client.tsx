@@ -50,21 +50,23 @@ function ParticipantSheetLoading() {
 
 export function ParticipantDetailSheet({
   participantId,
+  initialMode = "view",
   onClose,
   onDataChanged,
   onCompanyOpen,
 }: {
   participantId: string | null;
+  initialMode?: "view" | "edit";
   onClose: () => void;
   onDataChanged: () => void;
   onCompanyOpen?: (companyId: string) => void;
 }) {
-  const [mode, setMode] = useState<"view" | "edit">("view");
+  const [mode, setMode] = useState(initialMode);
   const queryClient = useQueryClient();
   const detailKey = ["participant-detail", participantId];
   const detail = useQuery({
     queryKey: detailKey,
-    enabled: participantId !== null,
+    enabled: participantId !== null && mode === "view",
     queryFn: async () => {
       const result = await getParticipantDetailAction(participantId!);
       if (!result.success) throw new Error(result.message);

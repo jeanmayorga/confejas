@@ -360,7 +360,10 @@ export function CompaniesDirectory({
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
   const [activeCompanyId, setActiveCompanyId] = useState("");
-  const [detailParticipantId, setDetailParticipantId] = useState<string | null>(null);
+  const [participantSheet, setParticipantSheet] = useState<{
+    id: string;
+    mode: "view" | "edit";
+  } | null>(null);
   const [participantSearch, setParticipantSearch] = useState("");
   const normalizedParticipantSearch = normalizeParticipantName(participantSearch);
   const hasParticipantSearch = normalizedParticipantSearch.length > 0;
@@ -1013,7 +1016,8 @@ export function CompaniesDirectory({
             isDropTarget={companyDropTargetId === activeCompany.id}
             onParticipantDragStart={handleParticipantDragStart}
             onParticipantDragEnd={clearDragState}
-            onParticipantOpen={setDetailParticipantId}
+            onParticipantOpen={(id) => setParticipantSheet({ id, mode: "view" })}
+            onParticipantEdit={(id) => setParticipantSheet({ id, mode: "edit" })}
             companies={displayedCompanies}
             onParticipantMoveRequest={(participantId, targetCompanyId) => {
               if (!dragDisabled) {
@@ -1053,7 +1057,7 @@ export function CompaniesDirectory({
           onDrop={handleUnassignedDrop}
           onParticipantDragStart={handleUnassignedParticipantDragStart}
           onParticipantDragEnd={clearDragState}
-          onParticipantOpen={setDetailParticipantId}
+          onParticipantOpen={(id) => setParticipantSheet({ id, mode: "view" })}
           onParticipantSelectionChange={
             handleUnassignedParticipantSelectionChange
           }
@@ -1063,9 +1067,10 @@ export function CompaniesDirectory({
         />
       </CompanyUnassignedSidebar>
       <ParticipantDetailSheet
-        key={detailParticipantId ?? "closed"}
-        participantId={detailParticipantId}
-        onClose={() => setDetailParticipantId(null)}
+        key={participantSheet ? `${participantSheet.id}-${participantSheet.mode}` : "closed"}
+        participantId={participantSheet?.id ?? null}
+        initialMode={participantSheet?.mode}
+        onClose={() => setParticipantSheet(null)}
         onDataChanged={() => {
           void queryClient.invalidateQueries({
             queryKey: ["company-unassigned-participants"],
@@ -1073,7 +1078,7 @@ export function CompaniesDirectory({
           router.refresh();
         }}
         onCompanyOpen={(companyId) => {
-          setDetailParticipantId(null);
+          setParticipantSheet(null);
           selectCompany(companyId);
         }}
       />
@@ -1571,6 +1576,7 @@ function CompanyCard({
   onParticipantDragStart,
   onParticipantDragEnd,
   onParticipantOpen,
+  onParticipantEdit,
   onParticipantMoveRequest,
   onParticipantRemoveRequest,
   onDragOver,
@@ -1595,6 +1601,7 @@ function CompanyCard({
   ) => void;
   onParticipantDragEnd: () => void;
   onParticipantOpen: (participantId: string) => void;
+  onParticipantEdit: (participantId: string) => void;
   onParticipantMoveRequest: (
     participantId: string,
     targetCompanyId: string,
@@ -1986,6 +1993,7 @@ function CompanyCard({
                               companies={companies}
                               capacity={capacity}
                               dragDisabled={dragDisabled}
+                              onEditRequest={onParticipantEdit}
                               onMoveRequest={onParticipantMoveRequest}
                               onRemoveRequest={onParticipantRemoveRequest}
                             />
@@ -2042,6 +2050,7 @@ function CompanyParticipantActionsMenu({
   companies,
   capacity,
   dragDisabled,
+  onEditRequest,
   onMoveRequest,
   onRemoveRequest,
 }: {
@@ -2052,6 +2061,7 @@ function CompanyParticipantActionsMenu({
   companies: CompanyDirectoryItem[];
   capacity: DistributionCapacity;
   dragDisabled: boolean;
+  onEditRequest: (participantId: string) => void;
   onMoveRequest: (participantId: string, targetCompanyId: string) => void;
   onRemoveRequest: (participantId: string) => void;
 }) {
@@ -2084,6 +2094,14 @@ function CompanyParticipantActionsMenu({
       {open ? (
         <DropdownMenuContent align="end">
           <DropdownMenuGroup>
+            <DropdownMenuItem
+              onClick={() => {
+                onOpenChange(false);
+                onEditRequest(participant.id);
+              }}
+            >
+              Editar participante
+            </DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger disabled={dragDisabled}>
                 Mover a otra compañía
