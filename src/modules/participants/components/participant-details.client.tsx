@@ -123,7 +123,9 @@ function DetailItem({
   return (
     <div className={cn("min-w-0", className)}>
       <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-      <dd className="mt-1 break-words text-sm text-foreground">{value}</dd>
+      <dd className="mt-1 text-sm text-foreground [overflow-wrap:anywhere]">
+        {value}
+      </dd>
     </div>
   );
 }
@@ -201,10 +203,15 @@ export function ParticipantDetails({
   }
 
   return (
-    <div className={cn("overflow-y-auto px-6 pb-6", className)}>
+    <div
+      className={cn(
+        "@container/participant min-h-0 overflow-y-auto overscroll-contain px-4 pb-6 sm:px-6",
+        className,
+      )}
+    >
       <div
         className={cn(
-          "mt-6 rounded-2xl p-5",
+          "mt-2 rounded-2xl p-4 sm:mt-6 sm:p-5",
           participantStatusCardClassNames[participant.status],
         )}
       >
@@ -282,7 +289,7 @@ export function ParticipantDetails({
         <Badge variant="secondary" className="mt-4 w-fit bg-white">
           # {participant.sourceRecordId ?? "—"}
         </Badge>
-        <h2 className="mt-2 font-heading text-xl font-medium text-foreground">
+        <h2 className="mt-2 break-words font-heading text-xl font-medium text-foreground">
           {participantName}
         </h2>
         <p className="mt-0.5 text-sm text-muted-foreground">
@@ -354,7 +361,7 @@ export function ParticipantDetails({
           <div className="space-y-6 pb-5">
             <section>
               <h3 className="text-sm font-semibold">Conferencia</h3>
-              <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-5">
+              <dl className="mt-4 grid grid-cols-1 gap-x-4 gap-y-5 @sm/participant:grid-cols-2">
                 <DetailItem
                   label="Llegada"
                   value={
@@ -400,7 +407,7 @@ export function ParticipantDetails({
         <TabsContent value="personal" className="rounded-2xl bg-muted p-4">
           <section className="pb-5">
             <h3 className="text-sm font-semibold">Datos personales</h3>
-            <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-5">
+            <dl className="mt-4 grid grid-cols-1 gap-x-4 gap-y-5 @sm/participant:grid-cols-2">
               <DetailItem
                 label="Nombres"
                 value={present(participant.firstNames)}
@@ -429,9 +436,11 @@ export function ParticipantDetails({
               <DetailItem
                 label="Correo electrónico"
                 value={present(participant.email)}
+                className="col-span-full"
               />
               <DetailItem
                 label="Invitación por correo"
+                className="col-span-full"
                 value={
                   participant.welcomeEmailSentAt
                     ? `Enviada el ${checkInDateFormatter.format(new Date(participant.welcomeEmailSentAt))} a ${participant.welcomeEmailSentTo ?? participant.email ?? "—"}`
@@ -457,7 +466,7 @@ export function ParticipantDetails({
         <TabsContent value="health" className="rounded-2xl bg-muted p-4">
           <section className="pb-5">
             <h3 className="text-sm font-semibold">Salud</h3>
-            <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-5">
+            <dl className="mt-4 grid grid-cols-1 gap-x-4 gap-y-5 @sm/participant:grid-cols-2">
               <DetailItem
                 label="Tipo de sangre"
                 value={present(participant.bloodType)}
