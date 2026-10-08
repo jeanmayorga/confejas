@@ -69,13 +69,11 @@ import {
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarContent,
-  SidebarFooter,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { ClearCompanyParticipantsButton } from "./clear-company-participants-button.client";
 import { CompanyUnassignedSidebar } from "./company-unassigned-sidebar.client";
 import { CompanySidebarActions } from "./company-sidebar-actions.client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -398,10 +396,6 @@ export function CompaniesDirectory({
     setSelectionCompanyId(activeCompany?.id);
     setSelectedParticipantIds(new Set());
   }
-  const assignedParticipantCount = displayedCompanies.reduce(
-    (total, company) => total + company.participantCount,
-    0,
-  );
 
   function selectCompany(companyId: string) {
     setActiveCompanyId(companyId);
@@ -905,15 +899,6 @@ export function CompaniesDirectory({
             </p>
           ) : null}
         </SidebarContent>
-        <SidebarFooter className="border-t p-3">
-          <ClearCompanyParticipantsButton
-            participantCount={assignedParticipantCount}
-          />
-          <p className="text-xs text-muted-foreground">
-            {displayedCompanies.length} compañías · {assignedParticipantCount}{" "}
-            participantes
-          </p>
-        </SidebarFooter>
       </DashboardPageSidebar>
       <div className="min-w-0 p-4 pb-24 sm:p-6 xl:p-8">
         {displayedCompanies.length === 0 ? (
