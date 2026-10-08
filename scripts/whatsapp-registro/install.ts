@@ -34,6 +34,7 @@ const files = [
   ...[
     "core.ts",
     "context.ts",
+    "direct.ts",
     "agent.ts",
     "task-tool.ts",
     "actions.ts",

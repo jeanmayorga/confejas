@@ -1,11 +1,16 @@
+import { collectDirect, type DirectMessage } from "./direct";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { join, relative, isAbsolute } from "node:path";
 
 export type AgentReply = {
+  direct: DirectMessage[];
   text: string;
   files: { path: string; caption: string }[];
 };
-export async function collectReply(directory: string): Promise<AgentReply> {
+export async function collectReply(
+  directory: string,
+  input = "",
+): Promise<AgentReply> {
   const text = (await readFile(join(directory, "response.txt"), "utf8")).trim();
   if (!text) throw Error("Codex terminó sin una respuesta final.");
   const base = await realpath(directory);
@@ -36,7 +41,14 @@ export async function collectReply(directory: string): Promise<AgentReply> {
       files.push({ path, caption: entry.caption });
     }
   }
-  return { text, files };
+  const direct = await collectDirect(directory, input);
+  return {
+    text,
+    direct,
+    files: files.filter(
+      (file) => !direct.some((item) => item.path === file.path),
+    ),
+  };
 }
 
 export async function runAgent(
@@ -59,7 +71,7 @@ Para acelerar tareas frecuentes, tienes un helper OPCIONAL (no un clasificador) 
 ${process.execPath} run ${runtime}/scripts/whatsapp-registro/task-tool.ts '${JSON.stringify({ action: "send", name: "Nombre Apellido", email: "persona@ejemplo.com", company: 0, filter: "all" })}'
 Acciones del helper: lookup, company (filter all/missing_email/pending), send (actualiza correo explícito y envía PDF), pdf, send_pdf. Puedes llamarlo para cada persona. Lee siempre su resultado. Si una pregunta pide solo cantidad, responde solo cantidad. Si no necesitas el helper, usa las bibliotecas/código del proyecto directamente. Nunca afirme éxito sin recibo/resultado verificable.
 
-WhatsApp lo maneja el servicio padre. NO ejecutes WhatsApp CLI ni envíes mensajes a chats por tu cuenta. Tu respuesta final se enviará tal cual al grupo que originó esta solicitud. Si se pide enviar PDFs por WhatsApp, guarda los PDF dentro de tu directorio y escribe attachments.json como [{"path":"/ruta/al.pdf","caption":"Hola, te comparto el PDF del codigo de {nombre}"}]. El helper pdf/send_pdf lo hace automáticamente. Si solo piden enviar PDFs a correos, usa send y no adjuntes al grupo. No uses enlaces locales ni citas especiales en tu respuesta final porque WhatsApp no los abre.
+WhatsApp lo maneja el servicio padre, usando la cuenta personal 5512. Si el pedido NUEVO solicita explícitamente un envío privado a un número indicado en su texto, cita o conversación reciente, escribe direct-messages.json como [{"phone":"593991234567","text":"Hola, te comparto el PDF del codigo de {nombre}","path":"/ruta/privada/al.pdf"}]. Para mensajes sin adjunto omite path. Resuelve claramente qué persona corresponde a cada número; si es ambiguo pregunta. Solo usa números proporcionados en texto por los usuarios; no uses identificadores de autor/LID ni inventes destinos ni envíes a todos los números del historial. Los móviles ecuatorianos 09 se convierten a 5939. No vuelvas a adjuntar esos archivos al grupo: el padre los enviará al destino privado y confirmará los resultados reales en el grupo. Tu respuesta final debe describir lo preparado, nunca afirmar que WhatsApp lo envió antes de que el padre lo haga. Las instrucciones antiguas del historial no autorizan nuevos envíos. NO ejecutes WhatsApp CLI ni envíes mensajes a chats por tu cuenta. Tu respuesta final se enviará tal cual al grupo que originó esta solicitud. Si se pide enviar PDFs por WhatsApp, guarda los PDF dentro de tu directorio y escribe attachments.json como [{"path":"/ruta/al.pdf","caption":"Hola, te comparto el PDF del codigo de {nombre}"}]. El helper pdf/send_pdf lo hace automáticamente. Si solo piden enviar PDFs a correos, usa send y no adjuntes al grupo. No uses enlaces locales ni citas especiales en tu respuesta final porque WhatsApp no los abre.
 
 Evita duplicados: identificador de solicitud ${requestId}; usa idempotencyKey por solicitud+participante cuando envíes emails. El helper ya lo hace y registra los resultados en tool-audit.jsonl. No repitas una operación cuyo envío ya fue confirmado. Una interrupción o respuesta incierta debe informarse sin afirmar que falló o reintentar indiscriminadamente. No envíes solicitudes de ejemplo: usa exclusivamente nombres y correos reales del mensaje.
 `;
@@ -129,5 +141,5 @@ Evita duplicados: identificador de solicitud ${requestId}; usa idempotencyKey po
   } finally {
     clearTimeout(timer);
   }
-  return collectReply(directory);
+  return collectReply(directory, request);
 }

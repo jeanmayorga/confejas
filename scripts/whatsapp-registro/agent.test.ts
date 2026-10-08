@@ -9,7 +9,7 @@ test("forwards the real free-form Codex response, without classifier schema", as
   try {
     const text = "Envié las tres invitaciones.\nEmely, Melany y Matias.";
     await writeFile(join(dir, "response.txt"), text);
-    expect(await collectReply(dir)).toEqual({ text, files: [] });
+    expect(await collectReply(dir)).toEqual({ text, files: [], direct: [] });
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

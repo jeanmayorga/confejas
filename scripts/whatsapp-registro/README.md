@@ -23,8 +23,9 @@ Quoted text/captions are captured from new incoming events, even when the origin
 is outside the recent window; old quotes not previously captured may be unavailable.
 Images, audio and PDF contents are not decoded by this context mechanism.
 
-The account is Jean Paul (**5512**). Only this exact group ID triggers work or
-receives the session response. Other groups, private chats and messages predating
+The account is Jean Paul (**5512**). Only this exact group ID triggers work and receives the session summary.
+Explicit private-send requests can deliver text or PDFs from account 5512 to
+phone numbers supplied in the request, quote or recent conversation. Other groups, private chats and messages predating
 activation are ignored. Group members, including the account owner, can request
 Confejas operations. The group name is not used for routing.
 
@@ -132,3 +133,21 @@ For a non-sending execution test, invoke `runAgent` with a request to count two
 companies, explicitly prohibiting mutations/emails/PDFs, and inspect
 `command_execution` events and the final answer. Never inject synthetic messages
 into WhatsApp's database or replay completed email requests to test the bot.
+
+## Private WhatsApp deliveries
+
+For an explicit new private-send request, Codex writes `direct-messages.json` as
+`[{"phone":"593991234567","text":"Hola","path":"/job/invitation.pdf"}]`.
+Omit `path` for text-only messages. The bridge validates numbers against supplied
+message text (not author metadata), normalizes Ecuadorian 09 mobile numbers,
+rejects group JIDs and duplicate entries, and confines PDFs to the job directory.
+The same private PDFs are removed from group attachments. History provides
+recipient context; it does not authorize replaying historical requests.
+
+The receiver pauses for each send to avoid evicting its own linked device.
+Private sends never quote a group message into the recipient's chat. Durable
+attempt/receipt records are stored before/after each send. The group gets a
+bridge-generated summary based on actual WhatsApp acknowledgements, not a model
+claim of delivery. Uncertain attempts are not automatically retried. Acceptance
+does not imply that the recipient read the message. Past completed requests are
+not replayed when this feature is enabled.

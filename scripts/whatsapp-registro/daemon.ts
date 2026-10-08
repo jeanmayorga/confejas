@@ -184,6 +184,34 @@ async function send(text: string, replyTo: string, file?: string) {
     startSync();
   }
 }
+async function sendDirect(
+  item: import("./direct").DirectMessage,
+  requestId: string,
+  index: number,
+) {
+  const jid = `${item.phone}@s.whatsapp.net`;
+  state.audit(
+    requestId,
+    "private_send_attempted",
+    JSON.stringify({ index, jid, file: !!item.path }),
+  );
+  await stopSync();
+  try {
+    const args = item.path
+      ? ["send", jid, "--file", item.path, "--caption", item.text]
+      : ["send", jid, item.text];
+    const result = await command(args);
+    if (!result.message_id || result.chat_jid !== jid)
+      throw Error("WhatsApp no confirmó el envío privado");
+    state.audit(
+      requestId,
+      "private_sent",
+      JSON.stringify({ index, ...result }),
+    );
+  } finally {
+    startSync();
+  }
+}
 for (const signal of ["SIGTERM", "SIGINT"] as const)
   process.on(signal, () => {
     stopping = true;
@@ -231,11 +259,30 @@ try {
           root,
           message.id,
         );
+        let privateUncertain = false;
+        if (reply.direct.length) {
+          const outcomes: string[] = [];
+          for (const [index, item] of reply.direct.entries()) {
+            try {
+              await sendDirect(item, message.id, index);
+              outcomes.push(
+                `WhatsApp confirmó el envío ${item.path ? "del PDF" : "del mensaje"} a +${item.phone}.`,
+              );
+            } catch (error) {
+              privateUncertain = true;
+              state.audit(message.id, "private_send_uncertain", String(error));
+              outcomes.push(
+                `No pude confirmar el envío a +${item.phone}; no lo repetiré automáticamente.`,
+              );
+            }
+          }
+          reply.text = outcomes.join("\n");
+        }
         state.audit(message.id, "reply_attempted");
         for (const part of splitReply(reply.text)) await send(part, message.id);
         for (const file of reply.files)
           await send(file.caption, message.id, file.path);
-        state.status(message.id, "complete");
+        state.status(message.id, privateUncertain ? "needs_review" : "complete");
         console.log(
           JSON.stringify({
             event: "complete",
