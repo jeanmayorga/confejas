@@ -8,7 +8,7 @@ export type DashboardSidebarPanel = {
 const panels: Record<string, DashboardSidebarPanel> = {
   "/dashboard/companies": {
     title: "Compañías",
-    width: "19rem",
+    width: "21rem",
     flushContent: true,
   },
 };

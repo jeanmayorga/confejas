@@ -364,9 +364,9 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
             data-dashboard-sidebar="panel"
             className="flex min-w-0 flex-1 flex-col rounded-l-sidebar-panel bg-sidebar text-sidebar-foreground group-data-[collapsible=icon]:hidden"
           >
-            <SidebarHeader className="h-12 shrink-0 flex-row items-center gap-1 px-3 py-2">
+            <SidebarHeader className="h-11 shrink-0 flex-row items-center gap-1 px-4 py-1.5">
               {panel ? (
-                <span className="mr-auto truncate text-sm font-semibold">
+                <span className="mr-auto truncate text-base font-medium">
                   {panel.title}
                 </span>
               ) : (
@@ -402,7 +402,7 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
               <Button
                 variant="ghost"
                 size="icon-sm"
-                className="rounded-sidebar-item!"
+                className="rounded-sidebar-item! text-muted-foreground aria-expanded:bg-transparent"
                 aria-label={
                   isMobile ? "Cerrar menú lateral" : "Contraer menú lateral"
                 }

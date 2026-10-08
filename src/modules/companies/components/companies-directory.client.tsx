@@ -843,12 +843,19 @@ export function CompaniesDirectory({
   return (
     <div className="grid min-h-svh min-w-0 items-start xl:grid-cols-[minmax(0,1fr)_20rem]">
       <DashboardPageSidebar path="/dashboard/companies">
-        <div className="px-3 pb-4">
-          <CreateCompanyButton className="w-full" onCreated={selectCompany} />
+        <div className="px-2 pt-0.5 pb-3">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <CreateCompanyButton
+                appearance="sidebar"
+                onCreated={selectCompany}
+              />
+            </SidebarMenuItem>
+          </SidebarMenu>
         </div>
         <SidebarContent className="gap-0 px-2 pb-3">
           <nav aria-label="Compañías">
-            <SidebarMenu className="gap-1">
+            <SidebarMenu className="gap-0">
               {displayedCompanies.map((company, index) => (
                 <SidebarMenuItem key={company.id}>
                   <SidebarMenuButton
@@ -856,7 +863,7 @@ export function CompaniesDirectory({
                     aria-current={
                       company.id === activeCompany?.id ? "page" : undefined
                     }
-                    className="h-10 rounded-sidebar-item! px-3"
+                    className="h-9 rounded-sidebar-item! px-3 data-active:font-normal"
                     onClick={() => selectCompany(company.id)}
                   >
                     <HugeiconsIcon
