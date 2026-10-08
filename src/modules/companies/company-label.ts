@@ -1,4 +1,4 @@
-const companyNumberPattern = /(\d+)\s*$/u;
+const companyNumberPattern = /^compa[ñn][ií]a\s*#?\s*(\d+)$/iu;
 const companyNameCollator = new Intl.Collator("es", {
   numeric: true,
   sensitivity: "base",
@@ -43,17 +43,32 @@ export function formatCompanyName(number: number) {
 }
 
 export function getCompanyDisplayName(name: string, fallbackNumber: number) {
-  return formatCompanyName(getCompanyNumber(name) ?? fallbackNumber);
+  const number = getCompanyNumber(name);
+  return number === null
+    ? name.trim() || formatCompanyName(fallbackNumber)
+    : formatCompanyName(number);
+}
+
+export function normalizeCompanyName(value: unknown) {
+  if (typeof value !== "string") return null;
+  const name = value.trim().replace(/\s+/gu, " ");
+  if (!name || name.length > 120) return null;
+  const number = getCompanyNumber(name);
+  return number === null ? name : formatCompanyName(number);
+}
+
+export function getCompanyNameKey(value: unknown) {
+  return (
+    normalizeCompanyName(value)?.normalize("NFC").toLocaleLowerCase("es") ??
+    null
+  );
 }
 
 export function getNextCompanyNumber(companyNames: readonly string[]) {
   let highestNumber = companyNames.length;
 
   for (const companyName of companyNames) {
-    highestNumber = Math.max(
-      highestNumber,
-      getCompanyNumber(companyName) ?? 0,
-    );
+    highestNumber = Math.max(highestNumber, getCompanyNumber(companyName) ?? 0);
   }
 
   return highestNumber + 1;

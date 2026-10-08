@@ -35,6 +35,8 @@ import {
 import {
   formatCompanyName,
   getNextCompanyNumber,
+  normalizeCompanyName,
+  getCompanyNameKey,
 } from "../company-label";
 import {
   getCompanyDetail,
@@ -1283,6 +1285,64 @@ export async function createCompanyAction(): Promise<
     revalidateCompanyPaths();
     return { success: true, message: `${name} creada correctamente.`, companyId: company.id };
   } catch (error) {
+    return { success: false, message: getSafeError(error) };
+  }
+}
+
+export async function renameCompanyAction(input: {
+  companyId: string;
+  name: string;
+}): Promise<CompanyActionResult> {
+  try {
+    const session = await requireSession();
+    if (!canManageParticipants(session.user.role)) {
+      return {
+        success: false,
+        message: "No tienes permiso para editar compañías.",
+      };
+    }
+
+    const name = normalizeCompanyName(input?.name);
+    if (!input || !isCompanyId(input.companyId) || !name) {
+      return {
+        success: false,
+        message: "Ingresa un nombre de entre 1 y 120 caracteres para una compañía válida.",
+      };
+    }
+
+    const existingCompanies = await db
+      .select({ id: companies.id, name: companies.name })
+      .from(companies);
+    const nameKey = getCompanyNameKey(name);
+    if (
+      existingCompanies.some(
+        (company) =>
+          company.id !== input.companyId &&
+          getCompanyNameKey(company.name) === nameKey,
+      )
+    ) {
+      return { success: false, message: "Ya existe una compañía con ese nombre." };
+    }
+
+    const [updated] = await db
+      .update(companies)
+      .set({ name })
+      .where(eq(companies.id, input.companyId))
+      .returning({ id: companies.id });
+    if (!updated) return { success: false, message: "La compañía ya no existe." };
+
+    revalidateCompanyPaths();
+    return { success: true, message: "Nombre de la compañía actualizado." };
+  } catch (error) {
+    const cause = error instanceof Error ? error.cause : error;
+    if (
+      typeof cause === "object" &&
+      cause &&
+      "code" in cause &&
+      cause.code === "23505"
+    ) {
+      return { success: false, message: "Ya existe una compañía con ese nombre." };
+    }
     return { success: false, message: getSafeError(error) };
   }
 }

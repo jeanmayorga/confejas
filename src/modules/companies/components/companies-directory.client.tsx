@@ -77,6 +77,7 @@ import {
 } from "@/components/ui/sidebar";
 import { ClearCompanyParticipantsButton } from "./clear-company-participants-button.client";
 import { CompanyUnassignedSidebar } from "./company-unassigned-sidebar.client";
+import { CompanySidebarActions } from "./company-sidebar-actions.client";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -878,16 +879,22 @@ export function CompaniesDirectory({
                       strokeWidth={1.5}
                       aria-hidden="true"
                     />
-                    <span>
+                    <span className="min-w-0 flex-1 truncate">
                       {getCompanyDisplayName(company.name, index + 1)}
                     </span>
                     <span
-                      className="ml-auto text-xs tabular-nums text-muted-foreground"
+                      className="ml-auto text-xs tabular-nums text-muted-foreground group-hover/menu-item:opacity-0 group-focus-within/menu-item:opacity-0 max-md:hidden"
                       aria-label={`${company.participantCount} participantes`}
                     >
                       {company.participantCount}
                     </span>
                   </SidebarMenuButton>
+                  <CompanySidebarActions
+                    company={company}
+                    label={getCompanyDisplayName(company.name, index + 1)}
+                    canDelete={canDelete}
+                    onUpdated={() => selectCompany(company.id)}
+                  />
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
