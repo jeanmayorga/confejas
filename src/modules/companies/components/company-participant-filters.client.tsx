@@ -37,11 +37,12 @@ export type CompanyParticipantFilterValues = {
   age: string;
 };
 
-export const DEFAULT_COMPANY_PARTICIPANT_FILTERS: CompanyParticipantFilterValues = {
-  status: "all",
-  sex: "all",
-  age: "all",
-};
+export const DEFAULT_COMPANY_PARTICIPANT_FILTERS: CompanyParticipantFilterValues =
+  {
+    status: "all",
+    sex: "all",
+    age: "all",
+  };
 
 const statusOptions = [
   { value: "all", label: "Todos los estados" },
@@ -66,18 +67,19 @@ function StatusDot({ status }: { status: ParticipantStatus }) {
   return (
     <span
       aria-hidden="true"
-      className={cn("size-2 shrink-0 rounded-full", statusDotClassNames[status])}
+      className={cn(
+        "size-2 shrink-0 rounded-full",
+        statusDotClassNames[status],
+      )}
     />
   );
 }
 
 export function CompanyParticipantFilters({
-  titleId,
   participants,
   value,
   onChange,
 }: {
-  titleId: string;
   participants: CompanyParticipant[];
   value: CompanyParticipantFilterValues;
   onChange: (value: CompanyParticipantFilterValues) => void;
@@ -110,117 +112,110 @@ export function CompanyParticipantFilters({
     .join(" · ");
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3">
-        <h3 id={titleId} className="shrink-0 text-sm font-semibold">
-          Participantes
-        </h3>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                type="button"
-                variant={activeFilters.length ? "secondary" : "ghost"}
-                size={activeFilters.length ? "sm" : "icon-sm"}
-                className="min-w-0 shrink"
-                aria-label="Filtrar participantes de esta compañía"
-                aria-description={activeFilterSummary || undefined}
-                title={activeFilterSummary || "Filtrar participantes"}
-              />
-            }
-          >
-            <HugeiconsIcon
-              icon={FilterHorizontalIcon}
-              strokeWidth={1.5}
-              data-icon="inline-start"
-              aria-hidden="true"
-            />
-            {activeFilters.length ? (
-              <>
-                {value.status !== "all" ? (
-                  <StatusDot status={value.status} />
-                ) : null}
-                <span className="truncate">{activeFilterSummary}</span>
-                <Badge variant="secondary">{activeFilters.length}</Badge>
-              </>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant={activeFilters.length ? "secondary" : "ghost"}
+            size={activeFilters.length ? "sm" : "icon-sm"}
+            className="min-w-0 shrink"
+            aria-label="Filtrar participantes de esta compañía"
+            aria-description={activeFilterSummary || undefined}
+            title={activeFilterSummary || "Filtrar participantes"}
+          />
+        }
+      >
+        <HugeiconsIcon
+          icon={FilterHorizontalIcon}
+          strokeWidth={1.5}
+          data-icon="inline-start"
+          aria-hidden="true"
+        />
+        {activeFilters.length ? (
+          <>
+            {value.status !== "all" ? (
+              <StatusDot status={value.status} />
             ) : null}
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-64 rounded-xl">
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>Filtrar participantes</DropdownMenuLabel>
-              {filters.map((filter) => (
-                <DropdownMenuSub key={filter.key}>
-                  <DropdownMenuSubTrigger className="rounded-lg font-normal">
-                    <HugeiconsIcon
-                      icon={filter.icon}
-                      strokeWidth={1.5}
-                      aria-hidden="true"
-                    />
-                    {filter.label}
-                    <span className="ml-auto flex min-w-0 max-w-28 items-center gap-1.5 text-xs text-muted-foreground">
-                      {filter.key === "status" && value.status !== "all" ? (
-                        <StatusDot status={value.status} />
-                      ) : null}
-                      <span className="truncate">
-                        {value[filter.key] === "all"
-                          ? "Todos"
-                          : (filter.options.find(
-                              (option) => option.value === value[filter.key],
-                            )?.label ?? `${value[filter.key]} años`)}
-                      </span>
-                    </span>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="max-h-72 w-56 overflow-y-auto rounded-xl">
-                    <DropdownMenuRadioGroup
-                      value={value[filter.key]}
-                      aria-label={filter.label}
-                      onValueChange={(next) => {
-                        if (
-                          typeof next === "string" &&
-                          filter.options.some((option) => option.value === next)
-                        ) {
-                          onChange({ ...value, [filter.key]: next });
-                        }
-                      }}
+            <span className="truncate">{activeFilterSummary}</span>
+            <Badge variant="secondary">{activeFilters.length}</Badge>
+          </>
+        ) : null}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-64 rounded-xl">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Filtrar participantes</DropdownMenuLabel>
+          {filters.map((filter) => (
+            <DropdownMenuSub key={filter.key}>
+              <DropdownMenuSubTrigger className="rounded-lg font-normal">
+                <HugeiconsIcon
+                  icon={filter.icon}
+                  strokeWidth={1.5}
+                  aria-hidden="true"
+                />
+                {filter.label}
+                <span className="ml-auto flex min-w-0 max-w-28 items-center gap-1.5 text-xs text-muted-foreground">
+                  {filter.key === "status" && value.status !== "all" ? (
+                    <StatusDot status={value.status} />
+                  ) : null}
+                  <span className="truncate">
+                    {value[filter.key] === "all"
+                      ? "Todos"
+                      : (filter.options.find(
+                          (option) => option.value === value[filter.key],
+                        )?.label ?? `${value[filter.key]} años`)}
+                  </span>
+                </span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="max-h-72 w-56 overflow-y-auto rounded-xl">
+                <DropdownMenuRadioGroup
+                  value={value[filter.key]}
+                  aria-label={filter.label}
+                  onValueChange={(next) => {
+                    if (
+                      typeof next === "string" &&
+                      filter.options.some((option) => option.value === next)
+                    ) {
+                      onChange({ ...value, [filter.key]: next });
+                    }
+                  }}
+                >
+                  {filter.options.map((option) => (
+                    <DropdownMenuRadioItem
+                      key={option.value}
+                      value={option.value}
+                      className="rounded-lg font-normal"
                     >
-                      {filter.options.map((option) => (
-                        <DropdownMenuRadioItem
-                          key={option.value}
-                          value={option.value}
-                          className="rounded-lg font-normal"
-                        >
-                          {filter.key === "status" &&
-                          isParticipantStatus(option.value) ? (
-                            <StatusDot status={option.value} />
-                          ) : null}
-                          {option.label}
-                        </DropdownMenuRadioItem>
-                      ))}
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-              ))}
+                      {filter.key === "status" &&
+                      isParticipantStatus(option.value) ? (
+                        <StatusDot status={option.value} />
+                      ) : null}
+                      {option.label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          ))}
+        </DropdownMenuGroup>
+        {activeFilters.length ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem
+                onClick={() => onChange(DEFAULT_COMPANY_PARTICIPANT_FILTERS)}
+              >
+                <HugeiconsIcon
+                  icon={Cancel01Icon}
+                  strokeWidth={1.5}
+                  aria-hidden="true"
+                />
+                Limpiar filtros
+              </DropdownMenuItem>
             </DropdownMenuGroup>
-            {activeFilters.length ? (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    onClick={() => onChange(DEFAULT_COMPANY_PARTICIPANT_FILTERS)}
-                  >
-                    <HugeiconsIcon
-                      icon={Cancel01Icon}
-                      strokeWidth={1.5}
-                      aria-hidden="true"
-                    />
-                    Limpiar filtros
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </>
-            ) : null}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
+          </>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -84,6 +84,7 @@ import {
   DEFAULT_COMPANY_PARTICIPANT_FILTERS,
   type CompanyParticipantFilterValues,
 } from "./company-participant-filters.client";
+import { CompanyParticipantSortMenu } from "./company-participant-sort.client";
 import { CounselorAvatarImage } from "@/modules/counselors/components/counselor-avatar-image";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -113,7 +114,12 @@ import {
 } from "@/modules/participants/status";
 import { getCompanyDisplayName } from "@/modules/companies/company-label";
 import { getCompanyMoveUnavailableReason } from "@/modules/companies/company-move-options";
-import { sortParticipantsByName } from "@/modules/companies/participant-order";
+import {
+  DEFAULT_COMPANY_PARTICIPANT_SORT,
+  sortCompanyParticipants,
+  sortParticipantsByName,
+  type CompanyParticipantSort,
+} from "@/modules/companies/participant-order";
 import { CompanyCapacityDialog } from "@/modules/companies/components/company-capacity-dialog.client";
 import { CreateCompanyButton } from "@/modules/companies/components/create-company-button.client";
 import { CompanyDistributionDialog } from "@/modules/companies/components/company-distribution-dialog.client";
@@ -1489,6 +1495,8 @@ function CompanyCard({
   const [companySearch, setCompanySearch] = useState("");
   const [participantFilters, setParticipantFilters] =
     useState<CompanyParticipantFilterValues>(DEFAULT_COMPANY_PARTICIPANT_FILTERS);
+  const [participantSort, setParticipantSort] =
+    useState<CompanyParticipantSort>(DEFAULT_COMPANY_PARTICIPANT_SORT);
   const hasParticipantFilters = Object.values(participantFilters).some(
     (value) => value !== "all",
   );
@@ -1514,6 +1522,12 @@ function CompanyCard({
         );
       })
     : visibleParticipants;
+  const sortedParticipants = sortCompanyParticipants(
+    matchingParticipants,
+    participantSort,
+  );
+  const sortDirection =
+    participantSort.direction === "asc" ? "ascending" : "descending";
   const isFilteringParticipants =
     hasParticipantSearch || searchTerms.length > 0 || hasParticipantFilters;
   const titleId = `company-${company.id}-title`;
@@ -1640,12 +1654,25 @@ function CompanyCard({
         <Separator />
 
         <section aria-labelledby={`${titleId}-participants`}>
-          <CompanyParticipantFilters
-            titleId={`${titleId}-participants`}
-            participants={company.participants}
-            value={participantFilters}
-            onChange={setParticipantFilters}
-          />
+          <div className="flex items-center justify-between gap-3">
+            <h3
+              id={`${titleId}-participants`}
+              className="shrink-0 text-sm font-semibold"
+            >
+              Participantes
+            </h3>
+            <div className="flex min-w-0 items-center justify-end gap-1">
+              <CompanyParticipantSortMenu
+                value={participantSort}
+                onChange={setParticipantSort}
+              />
+              <CompanyParticipantFilters
+                participants={company.participants}
+                value={participantFilters}
+                onChange={setParticipantFilters}
+              />
+            </div>
+          </div>
           {isFilteringParticipants ? (
             <p className="mt-1 text-sm text-muted-foreground" role="status">
               Mostrando {matchingParticipants.length} de {company.participantCount}{" "}
@@ -1671,17 +1698,41 @@ function CompanyCard({
                       <span className="sr-only">Arrastrar</span>
                     </TableHead>
                     <TableHead className="text-center">#</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Participantes</TableHead>
-                    <TableHead>Edad</TableHead>
-                    <TableHead>Sexo</TableHead>
+                    <TableHead
+                      aria-sort={
+                        participantSort.field === "status" ? sortDirection : undefined
+                      }
+                    >
+                      Estado
+                    </TableHead>
+                    <TableHead
+                      aria-sort={
+                        participantSort.field === "name" ? sortDirection : undefined
+                      }
+                    >
+                      Participantes
+                    </TableHead>
+                    <TableHead
+                      aria-sort={
+                        participantSort.field === "age" ? sortDirection : undefined
+                      }
+                    >
+                      Edad
+                    </TableHead>
+                    <TableHead
+                      aria-sort={
+                        participantSort.field === "sex" ? sortDirection : undefined
+                      }
+                    >
+                      Sexo
+                    </TableHead>
                     <TableHead className="text-center">
                       <span className="sr-only">Acciones</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="block md:table-row-group">
-                  {matchingParticipants.map((participant, index) =>
+                  {sortedParticipants.map((participant, index) =>
                     (() => {
                       const isDragged = draggedParticipantIds.has(
                         participant.id,
