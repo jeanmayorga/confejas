@@ -148,6 +148,13 @@
       "when": 1791243594540,
       "tag": "0020_sudden_vindicator",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791503606048,
+      "tag": "0021_tense_glorian",
+      "breakpoints": true
     }
   ]
 }

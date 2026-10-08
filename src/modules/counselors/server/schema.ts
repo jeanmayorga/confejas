@@ -1,5 +1,6 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
+  check,
   index,
   integer,
   pgTable,
@@ -10,6 +11,8 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { stakes, wards } from "@/modules/church-units/server/schema";
+import { lodgingCounselorRooms } from "@/modules/lodging/server/schema";
+
 import { companies } from "@/modules/companies/server/schema";
 
 export const counselors = pgTable(
@@ -19,6 +22,10 @@ export const counselors = pgTable(
     governmentId: varchar({ length: 32 }),
     firstNames: varchar({ length: 160 }),
     lastNames: varchar({ length: 160 }),
+    sex: varchar({ length: 16 }).$type<"female" | "male">(),
+    lodgingRoomId: integer().references(() => lodgingCounselorRooms.id, {
+      onDelete: "set null",
+    }),
     name: varchar({ length: 160 }).notNull(),
     whatsapp: varchar({ length: 32 }),
     email: varchar({ length: 254 }),
@@ -41,6 +48,8 @@ export const counselors = pgTable(
       .notNull(),
   },
   (table) => [
+    check("counselors_sex_check", sql`${table.sex} in ('female', 'male')`),
+    index("counselors_lodging_room_id_idx").on(table.lodgingRoomId),
     uniqueIndex("counselors_government_id_uidx").on(table.governmentId),
     index("counselors_company_id_idx").on(table.companyId),
     index("counselors_name_idx").on(table.name, table.id),

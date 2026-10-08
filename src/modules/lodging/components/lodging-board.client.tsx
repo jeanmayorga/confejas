@@ -7,6 +7,7 @@ import {
   useState,
   useTransition,
 } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Add01Icon from "@hugeicons/core-free-icons/Add01Icon";
 import BedBunkIcon from "@hugeicons/core-free-icons/BedBunkIcon";
@@ -598,6 +599,11 @@ export function LodgingBoard({
       className="grid min-h-(--dashboard-content-height) min-w-0 shrink-0 items-start xl:grid-cols-[minmax(0,1fr)_22.5rem]"
     >
       <DashboardPageSidebar path="/dashboard/lodging">
+        <div className="px-3 pb-3">
+          <Button variant="outline" className="w-full" render={<Link href="/dashboard/lodging/counselors" />}>
+            Habitaciones de consejeros
+          </Button>
+        </div>
         {canManage ? (
           <div className="px-2 pt-0.5 pb-3">
             <LodgingAutoAssignDialog
