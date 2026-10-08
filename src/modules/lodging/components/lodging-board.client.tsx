@@ -620,6 +620,7 @@ export function LodgingBoard({
   const router = useRouter();
   const [activeRoom, setActiveRoom] = useState<ActiveRoom | null>(null);
   const [search, setSearch] = useState("");
+  const [participantSearch, setParticipantSearch] = useState("");
   const [selectedParticipantId, setSelectedParticipantId] = useState<
     string | null
   >(null);
@@ -679,6 +680,34 @@ export function LodgingBoard({
       ),
     [displayedOverview.buildings],
   );
+  const normalizedParticipantSearch = normalizeSearch(participantSearch);
+  const participantSearchResults = useMemo(() => {
+    const participantSearchTerms = normalizedParticipantSearch.split(/\s+/).filter(Boolean);
+    if (participantSearchTerms.length === 0) return [];
+
+    const participantsWithLocation = [
+      ...displayedOverview.buildings.flatMap((building) =>
+        building.rooms.flatMap((room) =>
+          room.occupants.map((participant) => ({
+            participant,
+            location: room.name,
+          })),
+        ),
+      ),
+      ...displayedOverview.unassignedParticipants.map((participant) => ({
+        participant,
+        location: "Sin alojamiento",
+      })),
+    ];
+
+    return participantsWithLocation.filter(({ participant, location }) => {
+      const searchableText = normalizeSearch(
+        `${getDisplayName(participant)} ${participant.preferredName ?? ""} ${participant.wardName} ${participant.stakeName} ${location}`,
+      );
+
+      return participantSearchTerms.every((term) => searchableText.includes(term));
+    });
+  }, [displayedOverview, normalizedParticipantSearch]);
   const requestedTarget = displayedRooms.find(
     (room) => room.name === requestedChange?.targetRoomName,
   );
@@ -1029,6 +1058,63 @@ export function LodgingBoard({
 
   return (
     <>
+      <Card className="gap-0 py-0">
+        <CardContent className="p-4 sm:p-5">
+          <InputGroup>
+            <InputGroupAddon>
+              <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
+            </InputGroupAddon>
+            <InputGroupInput
+              type="search"
+              placeholder="Buscar participante en todos los alojamientos"
+              aria-label="Buscar participante en todos los alojamientos"
+              value={participantSearch}
+              onChange={(event) => setParticipantSearch(event.target.value)}
+            />
+          </InputGroup>
+          {normalizedParticipantSearch ? (
+            <div className="mt-4">
+              <p className="mb-2 text-sm text-muted-foreground" aria-live="polite">
+                {participantSearchResults.length.toLocaleString("es-EC")}{" "}
+                {participantSearchResults.length === 1
+                  ? "participante encontrado"
+                  : "participantes encontrados"}
+              </p>
+              {participantSearchResults.length > 0 ? (
+                <ul className="max-h-80 divide-y overflow-y-auto rounded-lg border">
+                  {participantSearchResults.map(({ participant, location }) => (
+                    <li
+                      key={participant.id}
+                      className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium">{getDisplayName(participant)}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {location} · {participant.wardName} · {getAgeLabel(participant.age)}
+                        </p>
+                      </div>
+                      {canManage ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openParticipantEdit(participant)}
+                        >
+                          Editar perfil
+                        </Button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No se encontraron participantes. Prueba con otro nombre o barrio.
+                </p>
+              )}
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="flex min-w-0 flex-col gap-5">
           {displayedOverview.buildings.map((building) => {
