@@ -18,7 +18,13 @@ const companyFourImage = {
   height: 2561,
 };
 
-// Use the names printed on the supplied posters to map each portrait to its ID.
+const companyFiveImage = {
+  src: "/counselors/company-05.png",
+  width: 2047,
+  height: 2561,
+};
+
+// Map portraits using individual poster labels or the user's identification.
 // Keep the original images and frame the portraits in their avatars.
 const portraits: Record<
   string,
@@ -41,6 +47,12 @@ const portraits: Record<
   },
   "ddd93adf-9cbe-4673-8240-62914bc23ae8": {
     image: companyFourImage, x: 1205, y: 920, size: 600,
+  },
+  "7ac49bc5-dbc5-48a2-b9d1-fda0704c2c6e": {
+    image: companyFiveImage, x: 1075, y: 1010, size: 440,
+  },
+  "f93c83ff-29f6-4743-bb2f-d5d504f2a590": {
+    image: companyFiveImage, x: 535, y: 1080, size: 430,
   },
 };
 
