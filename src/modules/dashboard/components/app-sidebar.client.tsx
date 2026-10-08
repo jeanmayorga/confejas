@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -9,7 +9,8 @@ import Building06Icon from "@hugeicons/core-free-icons/Building06Icon";
 import Logout01Icon from "@hugeicons/core-free-icons/Logout01Icon";
 import ChurchIcon from "@hugeicons/core-free-icons/ChurchIcon";
 import QrCodeScanIcon from "@hugeicons/core-free-icons/QrCodeScanIcon";
-import UnfoldMoreIcon from "@hugeicons/core-free-icons/UnfoldMoreIcon";
+import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
+import SidebarLeft01Icon from "@hugeicons/core-free-icons/SidebarLeft01Icon";
 import UserGroupIcon from "@hugeicons/core-free-icons/UserGroupIcon";
 import UserGroup02Icon from "@hugeicons/core-free-icons/UserGroup02Icon";
 import UserMultiple02Icon from "@hugeicons/core-free-icons/UserMultiple02Icon";
@@ -17,6 +18,12 @@ import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +43,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
@@ -70,12 +78,10 @@ function getInitials(name: string) {
 
 function AccountMenu({
   user,
-  compact,
   isSigningOut,
   onSignOut,
 }: {
   user: DashboardUser;
-  compact: boolean;
   isSigningOut: boolean;
   onSignOut: () => void;
 }) {
@@ -89,36 +95,17 @@ function AccountMenu({
           <DropdownMenuTrigger
             render={
               <SidebarMenuButton
-                size="lg"
-                className={
-                  compact
-                    ? "size-10 justify-center p-0 text-sidebar-rail-foreground hover:bg-sidebar-rail-accent hover:text-sidebar-rail-foreground"
-                    : "h-14 gap-3 border border-sidebar-border bg-background px-2"
-                }
+                className="size-9 justify-center rounded-sidebar-item! p-0 group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-0!"
                 aria-label={`Cuenta de ${user.name}`}
               />
             }
           >
-            <Avatar>
-              {user.image ? <AvatarImage src={user.image} alt={user.name} /> : null}
+            <Avatar size="sm">
+              {user.image ? (
+                <AvatarImage src={user.image} alt={user.name} />
+              ) : null}
               <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
             </Avatar>
-            {compact ? null : (
-              <>
-                <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {roleLabel}
-                  </span>
-                </div>
-                <HugeiconsIcon
-                  icon={UnfoldMoreIcon}
-                  strokeWidth={2}
-                  aria-hidden="true"
-                  className="ml-auto"
-                />
-              </>
-            )}
           </DropdownMenuTrigger>
           <DropdownMenuContent
             side={isMobile ? "top" : "right"}
@@ -166,8 +153,11 @@ function AccountMenu({
 export function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { setOpenMobile } = useSidebar();
+  const { setOpenMobile, toggleSidebar, isMobile } = useSidebar();
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const searchButtonRef = useRef<HTMLButtonElement>(null);
   const homeHref = canViewParticipantDirectory(user.role)
     ? "/dashboard/participants"
     : "/dashboard";
@@ -231,14 +221,31 @@ export function AppSidebar({ user }: AppSidebarProps) {
       : []),
   ];
   const navigationSections = [
-    { label: "Acciones", icon: QrCodeScanIcon, items: actionNavigation },
-    { label: "Gestión", icon: UserMultiple02Icon, items: managementNavigation },
-    { label: "Configuración", icon: ChurchIcon, items: configurationNavigation },
+    { label: "Acciones", items: actionNavigation },
+    { label: "Gestión", items: managementNavigation },
+    { label: "Configuración", items: configurationNavigation },
   ].filter((section) => section.items.length > 0);
-  const routeSection = navigationSections.find((section) =>
-    section.items.some((item) => pathname.startsWith(item.href)),
-  );
+  const normalizedQuery = query
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+  const visibleSections = navigationSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) =>
+        item.title
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .includes(normalizedQuery),
+      ),
+    }))
+    .filter((section) => section.items.length > 0);
+
   function handleNavigation() {
+    setSearchOpen(false);
+    setQuery("");
     setOpenMobile(false);
   }
 
@@ -256,81 +263,186 @@ export function AppSidebar({ user }: AppSidebarProps) {
 
   return (
     <Sidebar variant="sidebar" collapsible="icon">
-      <div className="flex min-h-0 flex-1">
-        <div className="flex w-(--sidebar-width-icon) shrink-0 flex-col bg-sidebar-rail text-sidebar-rail-foreground">
-          <SidebarHeader className="p-1">
+      <div className="flex min-h-0 flex-1 bg-sidebar-rail">
+        <nav
+          aria-label="Accesos rápidos"
+          data-dashboard-sidebar="rail"
+          className="flex w-(--sidebar-width-icon) shrink-0 flex-col bg-sidebar text-sidebar-foreground"
+        >
+          <SidebarHeader className="h-12 justify-center p-1.5">
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  size="lg"
-                  className="size-10 justify-center p-0 hover:bg-sidebar-rail-accent hover:text-sidebar-rail-foreground"
+                  className="size-9 justify-center rounded-sidebar-item! p-0 group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-0!"
                   render={<Link href={homeHref} onClick={handleNavigation} />}
                   aria-label="Confejas"
                 >
                   <Image
                     src="/logo.png"
                     alt=""
-                    width={32}
-                    height={32}
-                    sizes="32px"
+                    width={24}
+                    height={24}
+                    sizes="24px"
                     priority
-                    className="size-8 rounded-lg bg-background object-cover"
+                    className="size-6 rounded-full object-cover"
                   />
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarHeader>
-          <SidebarContent>
-            <SidebarGroup className="px-1 py-3">
-              <SidebarGroupContent>
-                <SidebarMenu className="gap-1">
-                  {navigationSections.map((section) => (
-                    <SidebarMenuItem key={section.label}>
-                      <SidebarMenuButton
-                        isActive={routeSection?.label === section.label}
-                        tooltip={{ children: section.label, hidden: false }}
-                        aria-label={section.label}
-                        className="size-10 justify-center p-0 hover:bg-sidebar-rail-accent hover:text-sidebar-rail-foreground active:bg-sidebar-rail-accent active:text-sidebar-rail-foreground data-active:bg-sidebar-rail-accent data-active:text-sidebar-rail-foreground"
-                        render={<Link href={section.items[0].href} onClick={handleNavigation} />}
-                      >
-                        <HugeiconsIcon
-                          icon={section.icon}
-                          strokeWidth={2}
-                          aria-hidden="true"
-                        />
-                        <span className="sr-only">{section.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
+          <SidebarContent className="gap-0">
+            <SidebarGroup className="hidden px-1.5 py-1 group-data-[collapsible=icon]:flex">
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    aria-label="Expandir menú lateral"
+                    aria-expanded={false}
+                    tooltip={{ children: "Expandir menú", hidden: false }}
+                    className="size-9 justify-center rounded-sidebar-item! p-0 group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-0!"
+                    onClick={toggleSidebar}
+                  >
+                    <HugeiconsIcon
+                      icon={SidebarLeft01Icon}
+                      strokeWidth={1.5}
+                      aria-hidden="true"
+                    />
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
             </SidebarGroup>
+            {navigationSections.map((section) => (
+              <SidebarGroup key={section.label} className="px-1.5 py-1">
+                {section.label === "Configuración" ? (
+                  <SidebarSeparator className="mx-1 mb-3" />
+                ) : null}
+                <SidebarGroupContent>
+                  <SidebarMenu className="gap-2">
+                    {section.items.map((item) => (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          isActive={pathname.startsWith(item.href)}
+                          tooltip={{ children: item.title, hidden: false }}
+                          aria-label={item.title}
+                          aria-current={
+                            pathname.startsWith(item.href) ? "page" : undefined
+                          }
+                          className="size-9 justify-center rounded-sidebar-item! p-0 group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-0!"
+                          render={
+                            <Link href={item.href} onClick={handleNavigation} />
+                          }
+                        >
+                          <HugeiconsIcon
+                            icon={item.icon}
+                            strokeWidth={1.5}
+                            aria-hidden="true"
+                          />
+                          <span className="sr-only">{item.title}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ))}
           </SidebarContent>
-          <SidebarFooter className="hidden p-1 group-data-[collapsible=icon]:block">
+          <SidebarFooter className="p-1.5 pb-3">
             <AccountMenu
               user={user}
-              compact
               isSigningOut={isSigningOut}
               onSignOut={handleSignOut}
             />
           </SidebarFooter>
-        </div>
+        </nav>
 
-        <div className="flex min-w-0 flex-1 flex-col border-r border-sidebar-border bg-background text-foreground group-data-[collapsible=icon]:hidden">
-          <SidebarHeader className="gap-1 border-b border-sidebar-border p-4">
-            <span className="truncate text-sm font-semibold">Confejas</span>
-            <span className="truncate text-xs text-muted-foreground">
-              Conferencia JAS 2026
-            </span>
+        <div
+          data-dashboard-sidebar="panel"
+          className="flex min-w-0 flex-1 flex-col rounded-l-sidebar-panel bg-sidebar text-sidebar-foreground group-data-[collapsible=icon]:hidden"
+        >
+          <SidebarHeader className="h-12 flex-row items-center gap-1 px-3 py-2">
+            <Link
+              href={homeHref}
+              onClick={handleNavigation}
+              className="mr-auto truncate text-sm font-semibold"
+            >
+              Confejas
+            </Link>
+            <Button
+              ref={searchButtonRef}
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-sidebar-item!"
+              aria-label="Buscar sección"
+              aria-expanded={searchOpen}
+              aria-controls={searchOpen ? "sidebar-search" : undefined}
+              onClick={() => {
+                setSearchOpen((value) => !value);
+                setQuery("");
+              }}
+            >
+              <HugeiconsIcon
+                icon={Search01Icon}
+                strokeWidth={1.5}
+                aria-hidden="true"
+              />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-sidebar-item!"
+              aria-label={
+                isMobile ? "Cerrar menú lateral" : "Contraer menú lateral"
+              }
+              aria-expanded={true}
+              onClick={toggleSidebar}
+            >
+              <HugeiconsIcon
+                icon={SidebarLeft01Icon}
+                strokeWidth={1.5}
+                aria-hidden="true"
+              />
+            </Button>
           </SidebarHeader>
-          <SidebarContent>
-            {navigationSections.map((section) => (
-              <SidebarGroup key={section.label} className="px-2 py-3">
-                <div className="px-2 pb-2 text-xs font-medium text-muted-foreground">
-                  {section.label}
-                </div>
+          {searchOpen ? (
+            <div id="sidebar-search" className="px-2 pb-2">
+              <InputGroup>
+                <InputGroupAddon>
+                  <HugeiconsIcon
+                    icon={Search01Icon}
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  />
+                </InputGroupAddon>
+                <InputGroupInput
+                  autoFocus
+                  aria-label="Filtrar secciones del menú"
+                  placeholder="Buscar sección…"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      setSearchOpen(false);
+                      setQuery("");
+                      searchButtonRef.current?.focus();
+                    }
+                  }}
+                />
+              </InputGroup>
+            </div>
+          ) : null}
+          <SidebarContent
+            role="navigation"
+            aria-label="Menú principal"
+            className="gap-4 pb-4"
+          >
+            {visibleSections.map((section) => (
+              <SidebarGroup key={section.label} className="px-2 py-0">
+                {section.label !== "Acciones" ? (
+                  <div className="flex h-8 items-center px-2 text-xs text-muted-foreground">
+                    {section.label}
+                  </div>
+                ) : null}
                 <SidebarGroupContent>
-                  <SidebarMenu className="gap-1">
+                  <SidebarMenu className="gap-0">
                     {section.items.map((item) => {
                       const isActive = pathname.startsWith(item.href);
 
@@ -339,12 +451,17 @@ export function AppSidebar({ user }: AppSidebarProps) {
                           <SidebarMenuButton
                             isActive={isActive}
                             aria-current={isActive ? "page" : undefined}
-                            className="h-10 gap-3 px-2 hover:bg-muted hover:text-foreground data-active:bg-muted data-active:text-foreground"
-                            render={<Link href={item.href} onClick={handleNavigation} />}
+                            className="h-9 gap-2 rounded-sidebar-item! px-2"
+                            render={
+                              <Link
+                                href={item.href}
+                                onClick={handleNavigation}
+                              />
+                            }
                           >
                             <HugeiconsIcon
                               icon={item.icon}
-                              strokeWidth={2}
+                              strokeWidth={1.5}
                               aria-hidden="true"
                             />
                             <span>{item.title}</span>
@@ -356,15 +473,12 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 </SidebarGroupContent>
               </SidebarGroup>
             ))}
+            {visibleSections.length === 0 ? (
+              <p role="status" className="px-4 text-sm text-muted-foreground">
+                No se encontraron secciones.
+              </p>
+            ) : null}
           </SidebarContent>
-          <SidebarFooter className="p-3">
-            <AccountMenu
-              user={user}
-              compact={false}
-              isSigningOut={isSigningOut}
-              onSignOut={handleSignOut}
-            />
-          </SidebarFooter>
         </div>
       </div>
     </Sidebar>
