@@ -265,7 +265,11 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
   }
 
   return (
-    <Sidebar variant="sidebar" collapsible="icon">
+    <Sidebar
+      variant="sidebar"
+      collapsible="icon"
+      className="inset-y-(--dashboard-frame) h-(--dashboard-content-height)"
+    >
       <div className="flex h-[min(75dvh,44rem)] min-h-0 flex-1 bg-sidebar-rail md:h-full">
         <nav
           aria-label="Accesos rápidos"

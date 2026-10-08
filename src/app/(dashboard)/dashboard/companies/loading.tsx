@@ -85,7 +85,7 @@ function UnassignedParticipantsSkeleton() {
 export default function Loading() {
   return (
     <div
-      className="grid min-h-svh min-w-0 items-start xl:grid-cols-[minmax(0,1fr)_20rem]"
+      className="grid min-h-(--dashboard-content-height) min-w-0 shrink-0 items-start xl:grid-cols-[minmax(0,1fr)_22.5rem]"
       aria-busy="true"
       aria-label="Actualizando compañías"
     >
@@ -101,7 +101,7 @@ export default function Loading() {
       <div className="min-w-0 p-4 sm:p-6 xl:p-8">
         <CompanyCardSkeleton />
       </div>
-      <div className="sticky top-0 hidden h-svh min-h-0 flex-col border-l bg-sidebar pt-4 xl:flex">
+      <div className="sticky top-0 hidden h-(--dashboard-content-height) min-h-0 flex-col border-l bg-sidebar pt-4 xl:flex">
         <UnassignedParticipantsSkeleton />
       </div>
     </div>

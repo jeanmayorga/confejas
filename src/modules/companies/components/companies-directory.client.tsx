@@ -360,6 +360,7 @@ export function CompaniesDirectory({
 }: CompaniesDirectoryProps) {
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
+  const directoryRef = useRef<HTMLDivElement>(null);
   const [activeCompanyId, setActiveCompanyId] = useState("");
   const [participantSheet, setParticipantSheet] = useState<{
     id: string;
@@ -449,7 +450,9 @@ export function CompaniesDirectory({
   function selectCompany(companyId: string) {
     setActiveCompanyId(companyId);
     setOpenMobile(false);
-    window.scrollTo({ top: 0, behavior: "instant" });
+    directoryRef.current
+      ?.closest("[data-dashboard-scroll]")
+      ?.scrollTo({ top: 0, behavior: "instant" });
   }
 
   const requestedSource = displayedCompanies.find(
@@ -811,7 +814,10 @@ export function CompaniesDirectory({
   }
 
   return (
-    <div className="grid min-h-svh min-w-0 items-start xl:grid-cols-[minmax(0,1fr)_22.5rem]">
+    <div
+      ref={directoryRef}
+      className="grid min-h-(--dashboard-content-height) min-w-0 shrink-0 items-start xl:grid-cols-[minmax(0,1fr)_22.5rem]"
+    >
       <DashboardPageSidebar path="/dashboard/companies">
         <div className="px-2 pt-0.5 pb-3">
           <SidebarMenu>

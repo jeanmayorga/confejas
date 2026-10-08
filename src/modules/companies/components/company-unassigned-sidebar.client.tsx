@@ -38,7 +38,7 @@ export function CompanyUnassignedSidebar({
 
   if (desktop) {
     return (
-      <div className="sticky top-0 flex h-svh min-h-0 flex-col border-l bg-sidebar text-sidebar-foreground">
+      <div className="sticky top-0 flex h-(--dashboard-content-height) min-h-0 flex-col border-l bg-sidebar text-sidebar-foreground">
         <div className="flex min-h-14 shrink-0 items-center justify-between gap-2 px-4">
           <h2 className="text-sm font-semibold">Participantes sin compañía</h2>
           {actions}

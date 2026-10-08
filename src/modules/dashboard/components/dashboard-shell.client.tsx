@@ -1,6 +1,12 @@
 "use client";
 
-import { type CSSProperties, type ReactNode, useState } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { usePathname } from "next/navigation";
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -23,6 +29,11 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
     pathname,
     open: defaultOpen,
   });
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    contentRef.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [pathname]);
 
   // Apply each page's default before rendering its sidebar, without a flash.
   if (sidebarState.pathname !== pathname) {
@@ -34,13 +45,26 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
       <SidebarProvider
         open={Boolean(panel) && sidebarState.open}
         onOpenChange={(open) => setSidebarState({ pathname, open })}
-        style={{ "--sidebar-width": panel?.width ?? "3rem" } as CSSProperties}
+        className="h-dvh min-h-0 overflow-hidden bg-sidebar-rail p-(--dashboard-frame) [--dashboard-frame:0rem] md:pl-0 md:[--dashboard-frame:0.5rem]"
+        style={
+          {
+            "--sidebar-width": panel?.width ?? "3rem",
+            "--dashboard-content-height": "calc(100dvh - var(--dashboard-frame) * 2)",
+          } as CSSProperties
+        }
       >
         <AppSidebar user={user} panel={panel} />
-        <main className="flex min-w-0 flex-1 flex-col bg-background">
+        <main
+          className={cn(
+            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background md:rounded-sidebar-panel",
+            panel && sidebarState.open && "md:rounded-l-none",
+          )}
+        >
           <div
+            ref={contentRef}
+            data-dashboard-scroll
             className={cn(
-              "flex min-w-0 flex-1 flex-col",
+              "flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain",
               !panel?.flushContent && "p-4 sm:p-6 lg:p-8",
             )}
           >
