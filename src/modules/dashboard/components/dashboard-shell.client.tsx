@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { type CSSProperties, type ReactNode, useState } from "react";
 import { useRouter } from "next/navigation";
 import Logout01Icon from "@hugeicons/core-free-icons/Logout01Icon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
@@ -64,15 +64,17 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider
+      style={{ "--sidebar-width": "19rem" } as CSSProperties}
+    >
       <AppSidebar user={user} />
       <SidebarInset className="min-w-0 md:my-2 md:mr-2 md:overflow-clip md:rounded-3xl md:border md:shadow-sm">
         <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-2 border-b border-primary-foreground/20 bg-primary px-4 text-primary-foreground sm:px-6 md:top-2 md:rounded-t-3xl md:border-border md:bg-background md:text-foreground lg:px-8">
           <div className="flex items-center gap-2">
             <SidebarTrigger
               variant="ghost"
-              className="size-11 rounded-xl border-primary-foreground/25 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground aria-expanded:bg-primary-foreground/20 aria-expanded:text-primary-foreground md:hidden"
-              aria-label="Abrir menú"
+              className="size-11 rounded-xl border-primary-foreground/25 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground aria-expanded:bg-primary-foreground/20 aria-expanded:text-primary-foreground md:border-transparent md:bg-transparent md:text-foreground md:hover:bg-muted md:hover:text-foreground"
+              aria-label="Alternar menú lateral"
             />
             <h1 className="text-base font-semibold tracking-tight">
               Conferencia JAS 2026

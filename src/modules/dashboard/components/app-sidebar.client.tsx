@@ -32,7 +32,6 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -69,22 +68,119 @@ function getInitials(name: string) {
     .join("");
 }
 
+function AccountMenu({
+  user,
+  compact,
+  isSigningOut,
+  onSignOut,
+}: {
+  user: DashboardUser;
+  compact: boolean;
+  isSigningOut: boolean;
+  onSignOut: () => void;
+}) {
+  const { isMobile } = useSidebar();
+  const roleLabel = getRoleLabel(user.role);
+
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <SidebarMenuButton
+                size="lg"
+                className={
+                  compact
+                    ? "size-10 justify-center p-0"
+                    : "h-14 gap-3 border border-sidebar-border bg-background px-2"
+                }
+                aria-label={`Cuenta de ${user.name}`}
+              />
+            }
+          >
+            <Avatar>
+              {user.image ? <AvatarImage src={user.image} alt={user.name} /> : null}
+              <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+            </Avatar>
+            {compact ? null : (
+              <>
+                <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-medium">{user.name}</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {roleLabel}
+                  </span>
+                </div>
+                <HugeiconsIcon
+                  icon={UnfoldMoreIcon}
+                  strokeWidth={2}
+                  aria-hidden="true"
+                  className="ml-auto"
+                />
+              </>
+            )}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            side={isMobile ? "top" : "right"}
+            align="end"
+            sideOffset={8}
+            className="w-64"
+          >
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>
+                <span className="block truncate font-medium text-foreground">
+                  {user.name}
+                </span>
+                <span className="block truncate font-normal">{user.email}</span>
+                <Badge variant="secondary" className="mt-2">
+                  {roleLabel}
+                </Badge>
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem
+                onClick={onSignOut}
+                disabled={isSigningOut}
+                variant="destructive"
+              >
+                {isSigningOut ? (
+                  <Spinner />
+                ) : (
+                  <HugeiconsIcon
+                    icon={Logout01Icon}
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  />
+                )}
+                Cerrar sesión
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  );
+}
+
 export function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [selectedSection, setSelectedSection] = useState<{
+    label: string;
+    pathname: string;
+  } | null>(null);
   const homeHref = canViewParticipantDirectory(user.role)
     ? "/dashboard/participants"
     : "/dashboard";
-  const roleLabel = getRoleLabel(user.role);
   const actionNavigation = canCheckInParticipants(user.role)
     ? [
         {
           title: "Bienvenida",
           href: "/dashboard/check-in",
           icon: QrCodeScanIcon,
-          exact: false,
         },
       ]
     : [];
@@ -95,7 +191,6 @@ export function AppSidebar({ user }: AppSidebarProps) {
             title: "Participantes",
             href: "/dashboard/participants",
             icon: UserMultiple02Icon,
-            exact: false,
           },
           ...(canManageParticipants(user.role)
             ? [
@@ -103,13 +198,11 @@ export function AppSidebar({ user }: AppSidebarProps) {
                   title: "Compañías",
                   href: "/dashboard/companies",
                   icon: Building03Icon,
-                  exact: false,
                 },
                 {
                   title: "Consejeros",
                   href: "/dashboard/counselors",
                   icon: UserGroup02Icon,
-                  exact: false,
                 },
               ]
             : []),
@@ -117,7 +210,6 @@ export function AppSidebar({ user }: AppSidebarProps) {
             title: "Alojamiento",
             href: "/dashboard/lodging",
             icon: Building06Icon,
-            exact: false,
           },
         ]
       : []),
@@ -129,28 +221,35 @@ export function AppSidebar({ user }: AppSidebarProps) {
             title: "Unidades",
             href: "/dashboard/units",
             icon: ChurchIcon,
-            exact: false,
           },
         ]
       : []),
     ...(canManageUsers(user.role)
       ? [
-        {
-          title: "Usuarios",
-          href: "/dashboard/users",
-          icon: UserGroupIcon,
-          exact: false,
-        },
-      ]
+          {
+            title: "Usuarios",
+            href: "/dashboard/users",
+            icon: UserGroupIcon,
+          },
+        ]
       : []),
   ];
   const navigationSections = [
-    { label: "Acciones", items: actionNavigation },
-    { label: "Gestión", items: managementNavigation },
-    { label: "Configuración", items: configurationNavigation },
+    { label: "Acciones", icon: QrCodeScanIcon, items: actionNavigation },
+    { label: "Gestión", icon: UserMultiple02Icon, items: managementNavigation },
+    { label: "Configuración", icon: ChurchIcon, items: configurationNavigation },
   ].filter((section) => section.items.length > 0);
+  const routeSection = navigationSections.find((section) =>
+    section.items.some((item) => pathname.startsWith(item.href)),
+  );
+  const activeSection =
+    (selectedSection?.pathname === pathname &&
+      navigationSections.find((section) => section.label === selectedSection.label)) ||
+    routeSection ||
+    navigationSections[0];
 
   function handleNavigation() {
+    setSelectedSection(null);
     setOpenMobile(false);
   }
 
@@ -167,148 +266,120 @@ export function AppSidebar({ user }: AppSidebarProps) {
   }
 
   return (
-    <Sidebar variant="inset" collapsible="none">
-      <SidebarHeader className="p-3">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              className="h-16 gap-3 bg-transparent px-2 hover:bg-transparent active:bg-transparent focus-visible:bg-transparent data-active:bg-transparent data-active:text-sidebar-foreground"
-              render={<Link href={homeHref} onClick={handleNavigation} />}
-            >
-              <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-sm ring-1 ring-border">
-                <Image
-                  src="/logo.png"
-                  alt=""
-                  width={56}
-                  height={56}
-                  sizes="56px"
-                  priority
-                  className="size-full rounded-full object-cover"
-                />
-              </div>
-              <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">Confejas</span>
-              </div>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-      <SidebarContent>
-        {navigationSections.map((section) => (
-          <SidebarGroup
-            key={section.label}
-            className="px-3 py-2 first:pt-4 last:pb-4"
-          >
-            <SidebarGroupLabel className="px-2">
-              {section.label}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-1">
-                {section.items.map((item) => {
-                  const isActive = item.exact
-                    ? pathname === item.href
-                    : pathname.startsWith(item.href);
-
-                  return (
-                    <SidebarMenuItem key={item.href}>
+    <Sidebar variant="inset" collapsible="icon">
+      <div className="flex min-h-0 flex-1">
+        <div className="flex w-(--sidebar-width-icon) shrink-0 flex-col border-r border-sidebar-border">
+          <SidebarHeader className="p-1">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  size="lg"
+                  className="size-10 justify-center p-0 hover:bg-transparent"
+                  render={<Link href={homeHref} onClick={handleNavigation} />}
+                  aria-label="Confejas"
+                >
+                  <Image
+                    src="/logo.png"
+                    alt=""
+                    width={32}
+                    height={32}
+                    sizes="32px"
+                    priority
+                    className="size-8 rounded-lg bg-background object-cover"
+                  />
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarGroup className="px-1 py-3">
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-1">
+                  {navigationSections.map((section) => (
+                    <SidebarMenuItem key={section.label}>
                       <SidebarMenuButton
-                        isActive={isActive}
-                        tooltip={item.title}
-                        aria-current={isActive ? "page" : undefined}
-                        className="h-10 gap-3 px-3 hover:bg-primary hover:text-primary-foreground data-active:bg-primary data-active:text-primary-foreground data-active:hover:bg-primary data-active:hover:text-primary-foreground"
-                        render={<Link href={item.href} onClick={handleNavigation} />}
+                        type="button"
+                        isActive={activeSection?.label === section.label}
+                        tooltip={{ children: section.label, hidden: false }}
+                        aria-label={section.label}
+                        aria-pressed={activeSection?.label === section.label}
+                        className="size-10 justify-center p-0 data-active:bg-sidebar-accent"
+                        onClick={() =>
+                          setSelectedSection({ label: section.label, pathname })
+                        }
                       >
                         <HugeiconsIcon
-                          icon={item.icon}
+                          icon={section.icon}
                           strokeWidth={2}
                           aria-hidden="true"
                         />
-                        <span>{item.title}</span>
+                        <span className="sr-only">{section.label}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
-      </SidebarContent>
-      <SidebarFooter className="p-3">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <SidebarMenuButton
-                    size="lg"
-                    className="h-14 gap-3 border border-border bg-white px-2 hover:bg-white data-open:hover:bg-white"
-                    aria-label={`Cuenta de ${user.name}`}
-                  />
-                }
-              >
-                <Avatar>
-                  {user.image ? (
-                    <AvatarImage src={user.image} alt={user.name} />
-                  ) : null}
-                  <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                </Avatar>
-                <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {roleLabel}
-                  </span>
-                </div>
-                <HugeiconsIcon
-                  icon={UnfoldMoreIcon}
-                  strokeWidth={2}
-                  aria-hidden="true"
-                  className="ml-auto"
-                />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                side="top"
-                align="end"
-                sideOffset={8}
-                className="w-64"
-              >
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>
-                    <span className="block truncate font-medium text-foreground">
-                      {user.name}
-                    </span>
-                    <span className="block truncate font-normal">
-                      {user.email}
-                    </span>
-                    <Badge variant="secondary" className="mt-2">
-                      {roleLabel}
-                    </Badge>
-                  </DropdownMenuLabel>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    onClick={handleSignOut}
-                    disabled={isSigningOut}
-                    variant="destructive"
-                  >
-                    {isSigningOut ? (
-                      <Spinner />
-                    ) : (
-                      <HugeiconsIcon
-                        icon={Logout01Icon}
-                        strokeWidth={2}
-                        aria-hidden="true"
-                      />
-                    )}
-                    Cerrar sesión
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+          <SidebarFooter className="hidden p-1 group-data-[collapsible=icon]:block">
+            <AccountMenu
+              user={user}
+              compact
+              isSigningOut={isSigningOut}
+              onSignOut={handleSignOut}
+            />
+          </SidebarFooter>
+        </div>
+
+        <div className="flex min-w-0 flex-1 flex-col group-data-[collapsible=icon]:hidden">
+          <SidebarHeader className="gap-1 border-b border-sidebar-border p-4">
+            <span className="truncate text-sm font-semibold">Confejas</span>
+            <span className="truncate text-xs text-muted-foreground">
+              Conferencia JAS 2026
+            </span>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarGroup className="p-3">
+              <div className="px-3 pb-2 text-sm font-medium">
+                {activeSection?.label}
+              </div>
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-1">
+                  {activeSection?.items.map((item) => {
+                    const isActive = pathname.startsWith(item.href);
+
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          isActive={isActive}
+                          aria-current={isActive ? "page" : undefined}
+                          className="h-10 gap-3 px-3 data-active:bg-sidebar-primary data-active:text-sidebar-primary-foreground"
+                          render={<Link href={item.href} onClick={handleNavigation} />}
+                        >
+                          <HugeiconsIcon
+                            icon={item.icon}
+                            strokeWidth={2}
+                            aria-hidden="true"
+                          />
+                          <span>{item.title}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+          <SidebarFooter className="p-3">
+            <AccountMenu
+              user={user}
+              compact={false}
+              isSigningOut={isSigningOut}
+              onSignOut={handleSignOut}
+            />
+          </SidebarFooter>
+        </div>
+      </div>
     </Sidebar>
   );
 }
