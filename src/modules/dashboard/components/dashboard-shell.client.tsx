@@ -49,7 +49,7 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
       <SidebarProvider
         open={Boolean(panel) && sidebarState.open}
         onOpenChange={(open) => setSidebarState({ pathname, open })}
-        className="min-h-dvh overflow-x-clip bg-sidebar-rail md:h-dvh md:min-h-0 md:overflow-hidden p-(--dashboard-frame) [--dashboard-frame:0rem] md:pl-0 md:[--dashboard-frame:0.5rem]"
+        className="min-h-dvh overflow-x-clip bg-sidebar-rail md:h-dvh md:min-h-0 md:overflow-hidden p-(--dashboard-frame) [--dashboard-frame:0rem] [--app-sticky-offset:3.5rem] md:[--app-sticky-offset:0rem] md:pl-0 md:[--dashboard-frame:0.5rem]"
         style={
           {
             "--sidebar-width": panel?.width ?? "3rem",
@@ -64,11 +64,23 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
             panel && sidebarState.open && "md:rounded-l-none",
           )}
         >
-          <header className="sticky top-0 z-30 flex shrink-0 items-center bg-sidebar-rail px-4 py-1.5 text-sidebar-rail-foreground [--foreground:var(--sidebar-rail-foreground)] [--muted:var(--sidebar-rail-accent)] [--ring:var(--sidebar-rail-foreground)] md:hidden">
+          <header className="sticky top-0 z-30 flex h-(--app-sticky-offset) shrink-0 items-center bg-sidebar-rail px-4 text-sidebar-rail-foreground [--foreground:var(--sidebar-rail-foreground)] [--muted:var(--sidebar-rail-accent)] [--ring:var(--sidebar-rail-foreground)] md:hidden">
             <SidebarTrigger
               className="size-11"
               aria-label="Abrir menú lateral"
-            />
+            >
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                strokeLinecap="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M3 5h14M3 10h14M3 15h14" />
+              </svg>
+            </SidebarTrigger>
           </header>
           <div
             ref={contentRef}
