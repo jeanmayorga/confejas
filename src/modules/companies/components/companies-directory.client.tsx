@@ -39,6 +39,7 @@ import {
   Card,
   CardAction,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -1490,52 +1491,35 @@ function CompanyCard({
           </h3>
 
           {company.counselors.length > 0 ? (
-            <TableFrame className="mt-3">
-              <Table className="block w-full md:table md:min-w-[420px]">
-                <TableHeader className="hidden md:table-header-group">
-                  <TableRow>
-                    <TableHead>Consejero</TableHead>
-                    <TableHead>Estaca</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="block md:table-row-group">
-                  {company.counselors.map((counselor) => (
-                    <TableRow key={counselor.id} className="flex md:table-row">
-                      <TableCell className="min-w-0 flex-1 whitespace-normal border-r-0 px-3 py-3 md:table-cell md:whitespace-nowrap md:border-r md:py-[3px]">
-                        <div className="flex min-w-0 items-start gap-2 md:items-center">
-                          <Avatar
-                            size="sm"
-                            className="overflow-hidden"
-                            aria-hidden="true"
-                          >
-                            <CounselorAvatarImage counselorId={counselor.id} />
-                            <AvatarFallback
-                              className={cn(
-                                "!text-[9px] font-medium",
-                                participantStatusClassNames.registered,
-                              )}
-                            >
-                              {getCounselorInitials(counselor)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0">
-                            <span className="block break-words font-medium">
-                              {counselor.name}
-                            </span>
-                            <span className="mt-1 block text-xs text-muted-foreground md:hidden">
-                              {counselor.stakeName ?? "Sin estaca"}
-                            </span>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {counselor.stakeName ?? "Sin estaca"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableFrame>
+            <ul className="mt-3 grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-3">
+              {company.counselors.map((counselor) => (
+                <li key={counselor.id} className="min-w-0">
+                  <Card size="sm" className="h-full shadow-none">
+                    <CardHeader className="flex flex-row items-center gap-4">
+                      <Avatar
+                        className="size-16 overflow-hidden"
+                        aria-hidden="true"
+                      >
+                        <CounselorAvatarImage counselorId={counselor.id} />
+                        <AvatarFallback className="text-lg font-medium">
+                          {getCounselorInitials(counselor)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <CardTitle>
+                          <h4 className="break-words">{counselor.name}</h4>
+                        </CardTitle>
+                        <CardDescription>
+                          {counselor.stakeName
+                            ? `Estaca ${counselor.stakeName}`
+                            : "Sin estaca asignada"}
+                        </CardDescription>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                </li>
+              ))}
+            </ul>
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">
               Sin consejeros asignados.

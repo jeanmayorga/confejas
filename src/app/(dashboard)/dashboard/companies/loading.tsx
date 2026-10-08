@@ -13,7 +13,19 @@ function CompanyCardSkeleton() {
         <Skeleton className="h-6 w-full rounded-full" />
         <div className="flex flex-col gap-3">
           <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-20 w-full" />
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-3">
+            {Array.from({ length: 2 }, (_, index) => (
+              <Card key={index} size="sm" className="shadow-none">
+                <CardHeader className="flex flex-row items-center gap-4">
+                  <Skeleton className="size-16 shrink-0 rounded-full" />
+                  <div className="flex min-w-0 flex-1 flex-col gap-2">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
         </div>
         <div className="flex flex-col gap-3">
           <Skeleton className="h-4 w-24" />
