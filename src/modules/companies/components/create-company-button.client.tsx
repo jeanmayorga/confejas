@@ -64,7 +64,7 @@ export function CreateCompanyButton({
     <SidebarMenuButton
       type="button"
       className={cn(
-        "h-9 gap-2 rounded-sidebar-item! bg-sidebar-accent px-3 font-normal",
+        "h-9 gap-2 rounded-sidebar-item! px-3 font-normal",
         className,
       )}
       disabled={disabled || pending}

@@ -19,7 +19,6 @@ import MoreHorizontalIcon from "@hugeicons/core-free-icons/MoreHorizontalIcon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
-import { parseAsString, useQueryState } from "nuqs";
 import { toast } from "sonner";
 
 import { DashboardPageSidebar } from "@/modules/dashboard/components/dashboard-page-sidebar.client";
@@ -331,12 +330,20 @@ export function CompaniesDirectory({
 }: CompaniesDirectoryProps) {
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
-  const [activeCompanyId, setActiveCompanyId] = useQueryState(
-    "company",
-    parseAsString
-      .withDefault("")
-      .withOptions({ history: "push", shallow: true, scroll: false }),
-  );
+  const [activeCompanyId, setActiveCompanyId] = useState("");
+
+  // Each visit starts at the first company, including old bookmarked selections.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("company")) {
+      url.searchParams.delete("company");
+      window.history.replaceState(
+        null,
+        "",
+        `${url.pathname}${url.search}${url.hash}`,
+      );
+    }
+  }, []);
   const queryClient = useQueryClient();
   const [draggedParticipant, setDraggedParticipant] =
     useState<DraggedCompanyParticipants | null>(null);
@@ -396,7 +403,7 @@ export function CompaniesDirectory({
   );
 
   function selectCompany(companyId: string) {
-    void setActiveCompanyId(companyId);
+    setActiveCompanyId(companyId);
     setOpenMobile(false);
     window.scrollTo({ top: 0, behavior: "instant" });
   }
