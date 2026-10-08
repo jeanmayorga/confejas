@@ -18,3 +18,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - For every requested feature, commit and push the changes, then provide a pull request targeting `main`.
 
 <!-- END:project-git-workflow -->
+
+# Project WhatsApp account
+
+- For this project, always use the Jean Paul WhatsApp account ending in **5512**, unless the user explicitly requests another account.
+- Apply the `whatsapp-local` skill and pass `--store /Users/jpmayorga/.config/whatsapp-cli-jean-paul` to WhatsApp CLI commands.
+- Verify the account with `whatsapp auth status --store /Users/jpmayorga/.config/whatsapp-cli-jean-paul` before accessing chats or taking account-specific actions. Do not ask which account to use for this project.
