@@ -27,10 +27,7 @@ import {
   FieldSet,
 } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@/components/ui/toggle-group";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import {
   LODGING_DISTRIBUTION_STRATEGIES,
@@ -39,6 +36,7 @@ import {
 import { autoAssignLodgingRoomsAction } from "../server/actions";
 
 type LodgingAutoAssignDialogProps = {
+  appearance?: "default" | "sidebar";
   assignedCount: number;
   registeredCount: number;
 };
@@ -75,6 +73,7 @@ const strategyOptions = [
 const DEFAULT_STRATEGY: LodgingDistributionStrategy = "age";
 
 export function LodgingAutoAssignDialog({
+  appearance = "default",
   assignedCount,
   registeredCount,
 }: LodgingAutoAssignDialogProps) {
@@ -135,7 +134,19 @@ export function LodgingAutoAssignDialog({
         }
       }}
     >
-      <DialogTrigger render={<Button type="button" />}>
+      <DialogTrigger
+        render={
+          <Button
+            type="button"
+            variant={appearance === "sidebar" ? "ghost" : "default"}
+            className={
+              appearance === "sidebar"
+                ? "h-9 w-full justify-start rounded-sidebar-item! px-3"
+                : undefined
+            }
+          />
+        }
+      >
         <HugeiconsIcon
           icon={AiMagicIcon}
           strokeWidth={2}
@@ -199,8 +210,8 @@ export function LodgingAutoAssignDialog({
             <Field>
               <FieldDescription>
                 Hay {registeredCount.toLocaleString("es-EC")} participantes
-                registrados y {assignedCount.toLocaleString("es-EC")} tienen
-                una cama asignada. Al continuar, las asignaciones actuales se
+                registrados y {assignedCount.toLocaleString("es-EC")} tienen una
+                cama asignada. Al continuar, las asignaciones actuales se
                 reemplazarán con la nueva organización. Quienes no tengan sexo
                 registrado quedarán pendientes para asignación manual.
               </FieldDescription>

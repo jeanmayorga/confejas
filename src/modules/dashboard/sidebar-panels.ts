@@ -6,6 +6,11 @@ export type DashboardSidebarPanel = {
 
 // Pages opt in to a secondary sidebar; the icon rail is always available.
 const panels: Record<string, DashboardSidebarPanel> = {
+  "/dashboard/lodging": {
+    title: "Alojamiento",
+    width: "21rem",
+    flushContent: true,
+  },
   "/dashboard/companies": {
     title: "Compañías",
     width: "21rem",

@@ -32,9 +32,11 @@ const sortOptions = [
 export function CompanyParticipantSortMenu({
   value,
   onChange,
+  label = "Ordenar participantes de esta compañía",
 }: {
   value: CompanyParticipantSort;
   onChange: (value: CompanyParticipantSort) => void;
+  label?: string;
 }) {
   const fieldLabel = sortOptions.find(
     (option) => option.value === value.field,
@@ -62,7 +64,7 @@ export function CompanyParticipantSortMenu({
             type="button"
             variant={isDefault ? "ghost" : "secondary"}
             size={isDefault ? "icon-sm" : "sm"}
-            aria-label="Ordenar participantes de esta compañía"
+            aria-label={label}
             aria-description={description}
             title={`Ordenar por ${description}`}
           />

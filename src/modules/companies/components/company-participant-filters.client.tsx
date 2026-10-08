@@ -29,7 +29,6 @@ import {
   PARTICIPANT_STATUS_OPTIONS,
   type ParticipantStatus,
 } from "@/modules/participants/status";
-import type { CompanyParticipant } from "../server/queries";
 
 export type CompanyParticipantFilterValues = {
   status: ParticipantStatus | "all";
@@ -59,10 +58,12 @@ export function CompanyParticipantFilters({
   participants,
   value,
   onChange,
+  label = "Filtrar participantes de esta compañía",
 }: {
-  participants: CompanyParticipant[];
+  participants: readonly { age: number | null }[];
   value: CompanyParticipantFilterValues;
   onChange: (value: CompanyParticipantFilterValues) => void;
+  label?: string;
 }) {
   const ages = [
     ...new Set(participants.flatMap(({ age }) => (age === null ? [] : [age]))),
@@ -100,7 +101,7 @@ export function CompanyParticipantFilters({
             variant={activeFilters.length ? "secondary" : "ghost"}
             size={activeFilters.length ? "sm" : "icon-sm"}
             className="min-w-0 shrink"
-            aria-label="Filtrar participantes de esta compañía"
+            aria-label={label}
             aria-description={activeFilterSummary || undefined}
             title={activeFilterSummary || "Filtrar participantes"}
           />
