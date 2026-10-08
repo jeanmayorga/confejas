@@ -16,6 +16,7 @@ import UserMultiple02Icon from "@hugeicons/core-free-icons/UserMultiple02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { HomeIcon } from "@/components/icons/home-icon";
 import { SidebarIcon } from "@/components/icons/sidebar-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -161,9 +162,9 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const searchButtonRef = useRef<HTMLButtonElement>(null);
-  const homeHref = canViewParticipantDirectory(user.role)
-    ? "/dashboard/participants"
-    : "/dashboard";
+  const homeHref = "/dashboard";
+  const isNavigationActive = (href: string) =>
+    href === "/dashboard" ? pathname === href : pathname.startsWith(href);
   const actionNavigation = canCheckInParticipants(user.role)
     ? [
         {
@@ -224,6 +225,10 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
       : []),
   ];
   const navigationSections = [
+    {
+      label: "Inicio",
+      items: [{ title: "Home", href: "/dashboard", icon: UserMultiple02Icon }],
+    },
     { label: "Acciones", items: actionNavigation },
     { label: "Gestión", items: managementNavigation },
     { label: "Configuración", items: configurationNavigation },
@@ -325,22 +330,26 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
                     {section.items.map((item) => (
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton
-                          isActive={pathname.startsWith(item.href)}
+                          isActive={isNavigationActive(item.href)}
                           tooltip={{ children: item.title, hidden: false }}
                           aria-label={item.title}
                           aria-current={
-                            pathname.startsWith(item.href) ? "page" : undefined
+                            isNavigationActive(item.href) ? "page" : undefined
                           }
                           className="size-9 justify-center rounded-sidebar-item! p-0 group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-0!"
                           render={
                             <Link href={item.href} onClick={handleNavigation} />
                           }
                         >
-                          <HugeiconsIcon
-                            icon={item.icon}
-                            strokeWidth={1.5}
-                            aria-hidden="true"
-                          />
+                          {item.href === "/dashboard" ? (
+                            <HomeIcon />
+                          ) : (
+                            <HugeiconsIcon
+                              icon={item.icon}
+                              strokeWidth={1.5}
+                              aria-hidden="true"
+                            />
+                          )}
                           <span className="sr-only">{item.title}</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -458,7 +467,7 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
                       <SidebarGroupContent>
                         <SidebarMenu className="gap-0">
                           {section.items.map((item) => {
-                            const isActive = pathname.startsWith(item.href);
+                            const isActive = isNavigationActive(item.href);
 
                             return (
                               <SidebarMenuItem key={item.href}>
@@ -473,11 +482,15 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
                                     />
                                   }
                                 >
-                                  <HugeiconsIcon
-                                    icon={item.icon}
-                                    strokeWidth={1.5}
-                                    aria-hidden="true"
-                                  />
+                                  {item.href === "/dashboard" ? (
+                                    <HomeIcon />
+                                  ) : (
+                                    <HugeiconsIcon
+                                      icon={item.icon}
+                                      strokeWidth={1.5}
+                                      aria-hidden="true"
+                                    />
+                                  )}
                                   <span>{item.title}</span>
                                 </SidebarMenuButton>
                               </SidebarMenuItem>
