@@ -15,6 +15,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
+import DragDropVerticalIcon from "@hugeicons/core-free-icons/DragDropVerticalIcon";
 import MoreHorizontalIcon from "@hugeicons/core-free-icons/MoreHorizontalIcon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -169,6 +170,33 @@ const participantStatusClassNames = {
 
 function getParticipantName(participant: CompanyParticipant) {
   return `${participant.firstNames} ${participant.lastNames}`.trim();
+}
+
+const surnamePrefixes = new Set(["de", "del", "la", "las", "los", "san", "santa"]);
+
+function getShortParticipantName(participant: CompanyParticipant) {
+  const firstName = participant.firstNames.trim().split(/\s+/)[0];
+  const surnames = participant.lastNames.trim().split(/\s+/).filter(Boolean);
+  let surnameLength = 1;
+  while (
+    surnameLength < surnames.length &&
+    surnamePrefixes.has(surnames[surnameLength - 1].toLocaleLowerCase("es"))
+  ) {
+    surnameLength += 1;
+  }
+
+  return [firstName, ...surnames.slice(0, surnameLength)]
+    .filter(Boolean)
+    .map((part, index) => {
+      const lower = part.toLocaleLowerCase("es");
+      if (index > 0 && surnamePrefixes.has(lower)) return lower;
+      return lower.replace(
+        /(^|[-'])(\p{L})/gu,
+        (_, separator: string, letter: string) =>
+          `${separator}${letter.toLocaleUpperCase("es")}`,
+      );
+    })
+    .join(" ");
 }
 
 function getParticipantAge(age: number | null) {
@@ -348,9 +376,6 @@ export function CompaniesDirectory({
   const queryClient = useQueryClient();
   const [draggedParticipant, setDraggedParticipant] =
     useState<DraggedCompanyParticipants | null>(null);
-  const [selectedParticipantIds, setSelectedParticipantIds] = useState<
-    ReadonlySet<string>
-  >(new Set());
   const [
     selectedUnassignedParticipantIds,
     setSelectedUnassignedParticipantIds,
@@ -391,13 +416,6 @@ export function CompaniesDirectory({
   const activeCompany =
     displayedCompanies.find((company) => company.id === activeCompanyId) ??
     displayedCompanies[0];
-  const [selectionCompanyId, setSelectionCompanyId] = useState(
-    activeCompany?.id,
-  );
-  if (selectionCompanyId !== activeCompany?.id) {
-    setSelectionCompanyId(activeCompany?.id);
-    setSelectedParticipantIds(new Set());
-  }
 
   function selectCompany(companyId: string) {
     setActiveCompanyId(companyId);
@@ -447,7 +465,7 @@ export function CompaniesDirectory({
   }
 
   function handleParticipantDragStart(
-    event: DragEvent<HTMLTableRowElement>,
+    event: DragEvent<HTMLButtonElement>,
     participant: CompanyParticipant,
     company: CompanyDirectoryItem,
   ) {
@@ -462,28 +480,19 @@ export function CompaniesDirectory({
       name: getParticipantName(participant),
       participant,
     };
-    const participants = selectedParticipantIds.has(participant.id)
-      ? companies.flatMap((currentCompany) =>
-          currentCompany.participants
-            .filter((currentParticipant) =>
-              selectedParticipantIds.has(currentParticipant.id),
-            )
-            .map((currentParticipant) => ({
-              participantId: currentParticipant.id,
-              companyId: currentCompany.id,
-              name: getParticipantName(currentParticipant),
-              participant: currentParticipant,
-            })),
-        )
-      : [dragged];
-
-    if (!selectedParticipantIds.has(participant.id)) {
-      setSelectedParticipantIds(new Set([participant.id]));
+    const row = event.currentTarget.closest("tr");
+    if (row) {
+      const bounds = row.getBoundingClientRect();
+      event.dataTransfer.setDragImage(
+        row,
+        event.clientX - bounds.left,
+        event.clientY - bounds.top,
+      );
     }
 
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", dragged.participantId);
-    setDraggedParticipant({ source: "company", participants });
+    setDraggedParticipant({ source: "company", participants: [dragged] });
   }
 
   function handleUnassignedParticipantDragStart(
@@ -522,42 +531,6 @@ export function CompaniesDirectory({
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", dragged.participantId);
     setDraggedParticipant({ source: "unassigned", participants });
-  }
-
-  function handleParticipantSelectionChange(
-    participantId: string,
-    checked: boolean,
-  ) {
-    setSelectedParticipantIds((current) => {
-      const next = new Set(current);
-
-      if (checked) {
-        next.add(participantId);
-      } else {
-        next.delete(participantId);
-      }
-
-      return next;
-    });
-  }
-
-  function handleCompanyParticipantsSelectionChange(
-    company: CompanyDirectoryItem,
-    checked: boolean,
-  ) {
-    setSelectedParticipantIds((current) => {
-      const next = new Set(current);
-
-      for (const participant of company.participants) {
-        if (checked) {
-          next.add(participant.id);
-        } else {
-          next.delete(participant.id);
-        }
-      }
-
-      return next;
-    });
   }
 
   function handleUnassignedParticipantSelectionChange(
@@ -707,9 +680,7 @@ export function CompaniesDirectory({
           router.refresh();
         });
 
-        if (dragged.source === "company") {
-          setSelectedParticipantIds(new Set());
-        } else {
+        if (dragged.source === "unassigned") {
           setSelectedUnassignedParticipantIds(new Set());
         }
 
@@ -927,15 +898,10 @@ export function CompaniesDirectory({
             canDelete={canDelete}
             capacity={capacity}
             draggedParticipantIds={draggedParticipantIds}
-            selectedParticipantIds={selectedParticipantIds}
             dragDisabled={dragDisabled}
             isDropTarget={companyDropTargetId === activeCompany.id}
             onParticipantDragStart={handleParticipantDragStart}
             onParticipantDragEnd={clearDragState}
-            onParticipantSelectionChange={handleParticipantSelectionChange}
-            onCompanyParticipantsSelectionChange={
-              handleCompanyParticipantsSelectionChange
-            }
             companies={displayedCompanies}
             onParticipantMoveRequest={(participantId, targetCompanyId) => {
               if (!dragDisabled) {
@@ -1387,13 +1353,10 @@ function CompanyCard({
   canDelete,
   capacity,
   draggedParticipantIds,
-  selectedParticipantIds,
   dragDisabled,
   isDropTarget,
   onParticipantDragStart,
   onParticipantDragEnd,
-  onParticipantSelectionChange,
-  onCompanyParticipantsSelectionChange,
   onParticipantMoveRequest,
   onParticipantRemoveRequest,
   onDragOver,
@@ -1406,23 +1369,14 @@ function CompanyCard({
   canDelete: boolean;
   capacity: DistributionCapacity;
   draggedParticipantIds: ReadonlySet<string>;
-  selectedParticipantIds: ReadonlySet<string>;
   dragDisabled: boolean;
   isDropTarget: boolean;
   onParticipantDragStart: (
-    event: DragEvent<HTMLTableRowElement>,
+    event: DragEvent<HTMLButtonElement>,
     participant: CompanyParticipant,
     company: CompanyDirectoryItem,
   ) => void;
   onParticipantDragEnd: () => void;
-  onParticipantSelectionChange: (
-    participantId: string,
-    checked: boolean,
-  ) => void;
-  onCompanyParticipantsSelectionChange: (
-    company: CompanyDirectoryItem,
-    checked: boolean,
-  ) => void;
   onParticipantMoveRequest: (
     participantId: string,
     targetCompanyId: string,
@@ -1438,14 +1392,11 @@ function CompanyCard({
     company: CompanyDirectoryItem,
   ) => void;
 }) {
+  const [openActionsParticipantId, setOpenActionsParticipantId] = useState<
+    string | null
+  >(null);
   const titleId = `company-${company.id}-title`;
   const companyLabel = getCompanyDisplayName(company.name, position);
-  const selectedParticipantCount = company.participants.filter((participant) =>
-    selectedParticipantIds.has(participant.id),
-  ).length;
-  const areAllParticipantsSelected =
-    company.participants.length > 0 &&
-    selectedParticipantCount === company.participants.length;
 
   return (
     <Card
@@ -1536,25 +1487,6 @@ function CompanyCard({
 
           {company.participants.length > 0 ? (
             <TableFrame className="mt-3">
-              <div className="flex items-center gap-2 border-b px-3 py-2 md:hidden">
-                <Checkbox
-                  id={`${titleId}-select-all-mobile`}
-                  checked={areAllParticipantsSelected}
-                  indeterminate={
-                    selectedParticipantCount > 0 && !areAllParticipantsSelected
-                  }
-                  onCheckedChange={(checked) =>
-                    onCompanyParticipantsSelectionChange(company, checked)
-                  }
-                  aria-label={`Seleccionar todos los participantes de ${companyLabel}`}
-                />
-                <label
-                  htmlFor={`${titleId}-select-all-mobile`}
-                  className="cursor-pointer text-xs text-muted-foreground"
-                >
-                  Seleccionar todos
-                </label>
-              </div>
               <Table className="block w-full md:table md:min-w-[620px] md:table-fixed">
                 <colgroup className="hidden md:table-column-group">
                   <col className="md:w-11" />
@@ -1568,22 +1500,11 @@ function CompanyCard({
                 <TableHeader className="hidden md:table-header-group">
                   <TableRow>
                     <TableHead className="text-center">
-                      <Checkbox
-                        checked={areAllParticipantsSelected}
-                        indeterminate={
-                          selectedParticipantCount > 0 &&
-                          !areAllParticipantsSelected
-                        }
-                        onCheckedChange={(checked) =>
-                          onCompanyParticipantsSelectionChange(company, checked)
-                        }
-                        onPointerDown={(event) => event.stopPropagation()}
-                        aria-label={`Seleccionar todos los participantes de ${companyLabel}`}
-                      />
+                      <span className="sr-only">Arrastrar</span>
                     </TableHead>
                     <TableHead className="text-center">#</TableHead>
                     <TableHead>Estado</TableHead>
-                    <TableHead>Nombres</TableHead>
+                    <TableHead>Nombre</TableHead>
                     <TableHead>Edad</TableHead>
                     <TableHead>Sexo</TableHead>
                     <TableHead className="text-center">
@@ -1594,9 +1515,6 @@ function CompanyCard({
                 <TableBody className="block md:table-row-group">
                   {company.participants.map((participant, index) =>
                     (() => {
-                      const isSelected = selectedParticipantIds.has(
-                        participant.id,
-                      );
                       const isDragged = draggedParticipantIds.has(
                         participant.id,
                       );
@@ -1604,32 +1522,44 @@ function CompanyCard({
                       return (
                         <TableRow
                           key={participant.id}
-                          draggable={!dragDisabled}
-                          aria-grabbed={isDragged}
-                          aria-selected={isSelected}
-                          title="Abre el botón de tres puntos para moverlo o eliminarlo de esta compañía, o arrástralo a Participantes sin compañía."
                           className={cn(
-                            "flex min-w-0 items-center gap-2 px-3 py-2 md:table-row md:p-0 cursor-grab active:cursor-grabbing",
-                            isSelected && "bg-primary/5 hover:bg-primary/10",
+                            "flex min-w-0 items-center gap-2 px-3 py-2 md:table-row md:p-0",
                             isDragged && "opacity-50",
                           )}
-                          onDragStart={(event) =>
-                            onParticipantDragStart(event, participant, company)
-                          }
-                          onDragEnd={onParticipantDragEnd}
                         >
-                          <TableCell className="shrink-0 border-r-0 p-0 text-center md:table-cell md:border-r md:px-3 md:py-[3px]">
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={(checked) =>
-                                onParticipantSelectionChange(
-                                  participant.id,
-                                  checked,
-                                )
+                          <TableCell className="shrink-0 border-r-0 p-0 text-center md:table-cell md:border-r md:px-1 md:py-[3px]">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              className="cursor-grab text-muted-foreground active:cursor-grabbing"
+                              disabled={dragDisabled}
+                              draggable={!dragDisabled}
+                              aria-label={`Arrastrar o mover a ${getParticipantName(participant)}`}
+                              aria-haspopup="menu"
+                              aria-expanded={
+                                openActionsParticipantId === participant.id
                               }
-                              onPointerDown={(event) => event.stopPropagation()}
-                              aria-label={`Seleccionar a ${getParticipantName(participant)}`}
-                            />
+                              title="Arrastra para mover o pulsa para ver opciones"
+                              onClick={() =>
+                                setOpenActionsParticipantId(participant.id)
+                              }
+                              onDragStart={(event) => {
+                                setOpenActionsParticipantId(null);
+                                onParticipantDragStart(
+                                  event,
+                                  participant,
+                                  company,
+                                );
+                              }}
+                              onDragEnd={onParticipantDragEnd}
+                            >
+                              <HugeiconsIcon
+                                icon={DragDropVerticalIcon}
+                                strokeWidth={1.5}
+                                aria-hidden="true"
+                              />
+                            </Button>
                           </TableCell>
                           <TableCell className="hidden text-center tabular-nums text-muted-foreground md:table-cell">
                             {index + 1}
@@ -1667,8 +1597,11 @@ function CompanyCard({
                                 </AvatarFallback>
                               </Avatar>
                               <div className="min-w-0">
-                                <span className="block break-words font-medium md:truncate">
-                                  {getParticipantName(participant)}
+                                <span
+                                  className="block truncate font-medium"
+                                  title={getParticipantName(participant)}
+                                >
+                                  {getShortParticipantName(participant)}
                                 </span>
                                 <div className="mt-1 flex flex-wrap items-center gap-1.5 md:hidden">
                                   <Badge
@@ -1702,6 +1635,12 @@ function CompanyCard({
                           </TableCell>
                           <TableCell className="shrink-0 border-r-0 p-0 text-center md:table-cell md:px-3 md:py-[3px]">
                             <CompanyParticipantActionsMenu
+                              open={openActionsParticipantId === participant.id}
+                              onOpenChange={(open) =>
+                                setOpenActionsParticipantId(
+                                  open ? participant.id : null,
+                                )
+                              }
                               participant={participant}
                               company={company}
                               companies={companies}
@@ -1735,6 +1674,8 @@ function CompanyCard({
 }
 
 function CompanyParticipantActionsMenu({
+  open,
+  onOpenChange,
   participant,
   company,
   companies,
@@ -1743,6 +1684,8 @@ function CompanyParticipantActionsMenu({
   onMoveRequest,
   onRemoveRequest,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   participant: CompanyParticipant;
   company: CompanyDirectoryItem;
   companies: CompanyDirectoryItem[];
@@ -1751,10 +1694,8 @@ function CompanyParticipantActionsMenu({
   onMoveRequest: (participantId: string, targetCompanyId: string) => void;
   onRemoveRequest: (participantId: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
-
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu open={open} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger
         render={
           <Button
