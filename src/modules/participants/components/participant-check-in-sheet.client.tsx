@@ -187,6 +187,25 @@ export function ParticipantCheckInSheet({
 
             <section
               className="rounded-xl border bg-card p-4"
+              aria-labelledby="participant-assignment-heading"
+            >
+              <h2 id="participant-assignment-heading" className="font-medium">
+                Compañía, Habitación y Edificio
+              </h2>
+              <dl className="mt-4 grid grid-cols-1 gap-4">
+                <DetailItem
+                  label="Compañía"
+                  value={participant.companyName ?? "Sin compañía"}
+                />
+                <DetailItem
+                  label="Edificio y habitación"
+                  value={participant.roomName ?? "Sin habitación ni edificio asignados"}
+                />
+              </dl>
+            </section>
+
+            <section
+              className="rounded-xl border bg-card p-4"
               aria-labelledby="participant-location-heading"
             >
               <h2 id="participant-location-heading" className="font-medium">
@@ -198,25 +217,6 @@ export function ParticipantCheckInSheet({
                 <DetailItem
                   label="Talla de la camiseta"
                   value={participant.shirtSize ?? "No registrada"}
-                />
-              </dl>
-            </section>
-
-            <section
-              className="rounded-xl border bg-card p-4"
-              aria-labelledby="participant-assignment-heading"
-            >
-              <h2 id="participant-assignment-heading" className="font-medium">
-                Compañía y alojamiento
-              </h2>
-              <dl className="mt-4 grid grid-cols-1 gap-4">
-                <DetailItem
-                  label="Compañía"
-                  value={participant.companyName ?? "Sin compañía"}
-                />
-                <DetailItem
-                  label="Edificio y habitación"
-                  value={participant.roomName ?? "Sin alojamiento"}
                 />
               </dl>
             </section>
