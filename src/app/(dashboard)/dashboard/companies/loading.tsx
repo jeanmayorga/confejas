@@ -10,7 +10,24 @@ function CompanyCardSkeleton() {
         <Skeleton className="h-6 w-20" />
       </CardHeader>
       <CardContent className="flex flex-col gap-5 px-0">
-        <Skeleton className="h-6 w-full rounded-full" />
+        <Card size="sm" className="border shadow-none ring-0">
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <div className="flex flex-col gap-1">
+              <Skeleton className="h-6 w-20" />
+              <Skeleton className="h-5 w-36" />
+            </div>
+            <Skeleton className="h-5 w-24 rounded-full" />
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-5 sm:gap-8">
+            {Array.from({ length: 2 }, (_, index) => (
+              <div key={index} className="flex flex-col gap-2">
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-1.5 w-full rounded-full" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
         <div className="flex flex-col gap-3">
           <Skeleton className="h-4 w-20" />
           <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-3">

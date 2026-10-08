@@ -91,7 +91,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Progress, ProgressTrack } from "@/components/ui/progress";
+import {
+  Progress,
+  ProgressIndicator,
+  ProgressLabel,
+  ProgressTrack,
+} from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { getParticipantInitials } from "@/modules/participants/components/participant-details.client";
 import {
@@ -1902,86 +1907,111 @@ function CapacityProgress({
   capacity: DistributionCapacity;
 }) {
   const totalCapacity = capacity.female + capacity.male;
-  const assigned = female + male + unsupported;
-  const progress =
-    totalCapacity > 0 ? Math.min(100, (assigned / totalCapacity) * 100) : 0;
-  const maleProgress =
-    totalCapacity > 0 ? Math.min(100, (male / totalCapacity) * 100) : 0;
-  const femaleProgress =
-    totalCapacity > 0
-      ? Math.min(100 - maleProgress, (female / totalCapacity) * 100)
-      : 0;
-
-  if (assigned === 0) {
-    return (
-      <Progress
-        value={0}
-        renderTrack={false}
-        aria-label="Sin participantes asignados"
-      >
-        <ProgressTrack className="h-3 text-xs font-bold md:h-6">
-          <span className="hidden h-full w-1/2 items-center bg-muted px-3 text-muted-foreground md:flex">
-            Hombres 0/{capacity.male}
-          </span>
-          <span className="hidden h-full w-1/2 items-center border-l bg-muted px-3 text-muted-foreground md:flex">
-            Mujeres 0/{capacity.female}
-          </span>
-        </ProgressTrack>
-        <div className="flex w-full flex-wrap gap-x-4 gap-y-1 text-xs md:hidden">
-          <span>Hombres 0/{capacity.male}</span>
-          <span>Mujeres 0/{capacity.female}</span>
-        </div>
-      </Progress>
-    );
-  }
+  const available = Math.max(0, totalCapacity - total);
+  const exceedsCapacity =
+    total > totalCapacity || male > capacity.male || female > capacity.female;
+  const groups = [
+    { label: "Hombres", count: male, limit: capacity.male, color: "bg-primary" },
+    {
+      label: "Mujeres",
+      count: female,
+      limit: capacity.female,
+      color: "bg-company-female",
+    },
+  ];
 
   return (
-    <Progress
-      value={progress}
-      renderTrack={false}
-      aria-label={`Ocupación de ${total.toLocaleString("es-EC")} participantes: ${male.toLocaleString("es-EC")} hombres de ${capacity.male} y ${female.toLocaleString("es-EC")} mujeres de ${capacity.female}`}
+    <Card
+      size="sm"
+      className="border shadow-none ring-0"
+      role="region"
+      aria-label="Ocupación de la compañía"
     >
-      <ProgressTrack className="h-3 md:h-6">
-        <span
-          aria-hidden="true"
-          className="h-full shrink-0 bg-primary transition-[width]"
-          style={{ width: `${maleProgress}%` }}
-        />
-        <span
-          aria-hidden="true"
-          className="h-full shrink-0 bg-company-female transition-[width]"
-          style={{ width: `${femaleProgress}%` }}
-        />
-        <div className="pointer-events-none absolute inset-0 hidden text-xs font-bold text-primary-foreground md:block">
-          <span className="absolute top-1/2 left-3 -translate-y-1/2 whitespace-nowrap">
-            Hombres {male.toLocaleString("es-EC")}/{capacity.male}
-          </span>
-          <span
-            className="absolute top-1/2 -translate-y-1/2 whitespace-nowrap"
-            style={{ left: `calc(${maleProgress}% + 0.75rem)` }}
-          >
-            Mujeres {female.toLocaleString("es-EC")}/{capacity.female}
-          </span>
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <CardTitle>Ocupación</CardTitle>
+          <CardDescription>
+            <span className="font-medium tabular-nums text-foreground">
+              {total.toLocaleString("es-EC")}
+            </span>{" "}
+            de {totalCapacity} participantes
+          </CardDescription>
         </div>
-      </ProgressTrack>
-      <div className="flex w-full flex-wrap gap-x-4 gap-y-1 text-xs font-medium md:hidden">
-        <span className="flex items-center gap-1.5">
-          <span className="size-2 rounded-full bg-primary" aria-hidden="true" />
-          Hombres {male.toLocaleString("es-EC")}/{capacity.male}
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span
-            className="size-2 rounded-full bg-company-female"
-            aria-hidden="true"
-          />
-          Mujeres {female.toLocaleString("es-EC")}/{capacity.female}
-        </span>
-      </div>
-      {unsupported > 0 ? (
-        <span className="text-sm text-muted-foreground">
-          Otro o sin registrar {unsupported.toLocaleString("es-EC")}
-        </span>
-      ) : null}
-    </Progress>
+        <Badge variant={exceedsCapacity ? "destructive" : "secondary"}>
+          {exceedsCapacity
+            ? "Cupo excedido"
+            : available === 0
+              ? "Sin cupos libres"
+              : `${available} ${available === 1 ? "cupo libre" : "cupos libres"}`}
+        </Badge>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-5 sm:gap-8">
+          {groups.map(({ label, count, limit, color }) => {
+            const remaining = Math.max(0, Math.min(limit - count, available));
+            const overCapacity = count > limit;
+            const progress =
+              limit > 0
+                ? Math.min(100, (count / limit) * 100)
+                : count > 0
+                  ? 100
+                  : 0;
+
+            return (
+              <div key={label} className="flex min-w-0 flex-col gap-2">
+                <Progress
+                  value={progress}
+                  renderTrack={false}
+                  className="gap-2"
+                  aria-valuetext={`${count} de ${limit} cupos ocupados`}
+                >
+                  <div className="flex w-full flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                    <ProgressLabel className="flex items-center gap-2">
+                      <span
+                        className={cn("size-1.5 rounded-full", color)}
+                        aria-hidden="true"
+                      />
+                      {label}
+                    </ProgressLabel>
+                    <span className="text-sm tabular-nums text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        {count}
+                      </span>
+                      {" / "}
+                      {limit}
+                    </span>
+                  </div>
+                  <ProgressTrack className="h-1.5">
+                    <ProgressIndicator
+                      className={cn(
+                        "rounded-full transition-[width] duration-300 motion-reduce:transition-none",
+                        color,
+                      )}
+                    />
+                  </ProgressTrack>
+                </Progress>
+                <p
+                  className={cn(
+                    "text-xs text-muted-foreground",
+                    overCapacity && "text-destructive",
+                  )}
+                >
+                  {overCapacity
+                    ? `${count - limit} sobre el cupo`
+                    : remaining === 0
+                      ? "Sin cupos libres"
+                      : `${remaining} ${remaining === 1 ? "disponible" : "disponibles"}`}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+        {unsupported > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Otro o sin registrar: {unsupported.toLocaleString("es-EC")}
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }
