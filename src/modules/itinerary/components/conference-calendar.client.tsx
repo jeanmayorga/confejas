@@ -8,14 +8,13 @@ import {
   getConferenceDayTimeline,
   getGuayaquilMinute,
 } from "@/modules/itinerary/activity-status";
-import { conferenceDays } from "@/modules/itinerary/schedule";
+import { staffConferenceDays as conferenceDays } from "@/modules/itinerary/schedule";
 
 import { useConferenceClock } from "./use-conference-clock.client";
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
 const PIXELS_PER_MINUTE = 1.8;
-const FIRST_HOUR = 6;
 
 const clockFormatter = new Intl.DateTimeFormat("es-EC", {
   timeZone: "America/Guayaquil",
@@ -46,7 +45,10 @@ export function ConferenceCalendar({ initialNow }: { initialNow: string }) {
     conferenceDays[0];
   const activities = getConferenceDayTimeline(selectedDay.id);
   const dayStart = getDayStart(selectedDay.date);
-  const timelineStart = dayStart + FIRST_HOUR * HOUR_MS;
+  const firstHour = Math.floor(
+    ((activities[0]?.startsAt ?? dayStart + 6 * HOUR_MS) - dayStart) / HOUR_MS,
+  );
+  const timelineStart = dayStart + firstHour * HOUR_MS;
   const lastActivity = activities.at(-1);
   const timelineEnd = lastActivity
     ? Math.ceil((lastActivity.endsAt - dayStart) / HOUR_MS) * HOUR_MS + dayStart
@@ -84,7 +86,7 @@ export function ConferenceCalendar({ initialNow }: { initialNow: string }) {
             Calendario
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Actividades del 9 y 10 de octubre
+            Actividades del 8 al 10 de octubre
           </p>
         </div>
         <time
@@ -99,7 +101,7 @@ export function ConferenceCalendar({ initialNow }: { initialNow: string }) {
         <div
           role="group"
           aria-label="Seleccionar día"
-          className="grid grid-cols-2 gap-2"
+          className="grid grid-cols-3 gap-2"
         >
           {conferenceDays.map((day) => (
             <button
@@ -135,7 +137,7 @@ export function ConferenceCalendar({ initialNow }: { initialNow: string }) {
               style={{ top: hourIndex * 60 * PIXELS_PER_MINUTE }}
             >
               <span className="w-12 shrink-0 -translate-y-1.5 text-right font-mono text-[10px] text-muted-foreground">
-                {formatHour(FIRST_HOUR + hourIndex)}
+                {formatHour(firstHour + hourIndex)}
               </span>
               <span className="mt-px w-full border-t border-border/70" />
             </div>
