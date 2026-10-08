@@ -7,6 +7,8 @@ import {
   useRef,
   useState,
 } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -64,9 +66,25 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
             panel && sidebarState.open && "md:rounded-l-none",
           )}
         >
-          <header className="sticky top-0 z-30 flex h-(--app-sticky-offset) shrink-0 items-center bg-sidebar-rail px-4 text-sidebar-rail-foreground [--foreground:var(--sidebar-rail-foreground)] [--muted:var(--sidebar-rail-accent)] [--ring:var(--sidebar-rail-foreground)] md:hidden">
+          <header className="sticky top-0 z-30 flex h-(--app-sticky-offset) shrink-0 items-center justify-between gap-3 bg-sidebar-rail px-4 text-sidebar-rail-foreground [--foreground:var(--sidebar-rail-foreground)] [--muted:var(--sidebar-rail-accent)] [--ring:var(--sidebar-rail-foreground)] md:hidden">
+            <Link
+              href="/dashboard"
+              aria-label="Confejas, ir a Home"
+              className="flex min-h-11 items-center gap-2.5 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-rail-foreground"
+            >
+              <Image
+                src="/logo.png"
+                alt=""
+                width={32}
+                height={32}
+                sizes="32px"
+                className="size-8 rounded-full object-cover"
+              />
+              <span className="text-sm font-semibold">Confejas</span>
+            </Link>
             <SidebarTrigger
-              className="size-11"
+              variant="outline"
+              className="size-11 rounded-xl border-sidebar-rail-foreground/25 bg-sidebar-rail-accent"
               aria-label="Abrir menú lateral"
             >
               <svg
