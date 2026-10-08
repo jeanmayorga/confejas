@@ -7,7 +7,7 @@ import Link from "next/link";
 
 import { getConferenceActivityStatus } from "@/modules/itinerary/activity-status";
 
-import { useConferenceClock } from "./use-conference-clock.client";
+import { useConferenceClock } from "@/modules/itinerary/components/use-conference-clock.client";
 
 export function CounselorActivitySpotlight({
   initialNow,
