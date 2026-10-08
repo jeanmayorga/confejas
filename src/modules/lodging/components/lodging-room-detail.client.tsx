@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { type DragEvent, useState } from "react";
 import ArrowDown01Icon from "@hugeicons/core-free-icons/ArrowDown01Icon";
 import DragDropVerticalIcon from "@hugeicons/core-free-icons/DragDropVerticalIcon";
@@ -252,7 +253,9 @@ export function LodgingRoomDetail({
             </ProgressTrack>
           </Progress>
           <p className="text-xs text-muted-foreground">
-            {room.coordinatorCapacity} camas adicionales para coordinación
+            <Link className="underline" href={`/dashboard/lodging/counselors#room-${room.id}`}>
+              Habitación {room.number} consejeros · {room.coordinatorCapacity} camas
+              </Link>
           </p>
         </CardContent>
       </Card>
