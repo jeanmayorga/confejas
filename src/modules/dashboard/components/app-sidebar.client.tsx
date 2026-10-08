@@ -10,13 +10,13 @@ import Logout01Icon from "@hugeicons/core-free-icons/Logout01Icon";
 import ChurchIcon from "@hugeicons/core-free-icons/ChurchIcon";
 import QrCodeScanIcon from "@hugeicons/core-free-icons/QrCodeScanIcon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
-import SidebarLeft01Icon from "@hugeicons/core-free-icons/SidebarLeft01Icon";
 import UserGroupIcon from "@hugeicons/core-free-icons/UserGroupIcon";
 import UserGroup02Icon from "@hugeicons/core-free-icons/UserGroup02Icon";
 import UserMultiple02Icon from "@hugeicons/core-free-icons/UserMultiple02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SidebarIcon } from "@/components/icons/sidebar-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -305,11 +305,7 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
                       className="size-9 justify-center rounded-sidebar-item! p-0 group-data-[collapsible=icon]:size-9! group-data-[collapsible=icon]:p-0!"
                       onClick={toggleSidebar}
                     >
-                      <HugeiconsIcon
-                        icon={SidebarLeft01Icon}
-                        strokeWidth={1.5}
-                        aria-hidden="true"
-                      />
+                      <SidebarIcon />
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>
@@ -409,11 +405,7 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
                 aria-expanded={true}
                 onClick={toggleSidebar}
               >
-                <HugeiconsIcon
-                  icon={SidebarLeft01Icon}
-                  strokeWidth={1.5}
-                  aria-hidden="true"
-                />
+                <SidebarIcon />
               </Button>
             </SidebarHeader>
             {panel ? (
