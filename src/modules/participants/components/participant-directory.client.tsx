@@ -425,7 +425,7 @@ export function ParticipantDirectory({
       >
         <SheetContent
           side="right"
-          className="data-[side=right]:w-full data-[side=right]:sm:max-w-2xl"
+          className="overflow-hidden data-[side=right]:sm:max-w-2xl"
         >
           <SheetHeader className="pr-16">
             <SheetTitle>Nuevo participante</SheetTitle>
@@ -433,7 +433,7 @@ export function ParticipantDirectory({
               Registra su información personal, de la conferencia y de salud.
             </SheetDescription>
           </SheetHeader>
-          <div className="flex-1 overflow-y-auto px-6 pb-6">
+          <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-6 pb-6">
             <ParticipantForm
               companies={companies}
               wards={wards}

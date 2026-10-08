@@ -480,8 +480,8 @@ export function CounselorDirectory({
           side="right"
           className={
             counselorSheetMode === "edit"
-              ? "data-[side=right]:w-full data-[side=right]:sm:max-w-2xl"
-              : "data-[side=right]:w-full data-[side=right]:sm:max-w-lg"
+              ? "data-[side=right]:w-[calc(100%-2rem)] data-[side=right]:sm:max-w-2xl"
+              : "data-[side=right]:w-[calc(100%-2rem)] data-[side=right]:sm:max-w-lg"
           }
         >
           <SheetHeader className="justify-center border-b py-4 pr-16">
@@ -620,7 +620,7 @@ export function CounselorDirectory({
       >
         <SheetContent
           side="right"
-          className="data-[side=right]:w-full data-[side=right]:sm:max-w-sm"
+          className="data-[side=right]:w-[calc(100%-2rem)] data-[side=right]:sm:max-w-sm"
         >
           {selectedCompany ? (
             <>
