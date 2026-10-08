@@ -45,7 +45,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -385,10 +384,6 @@ export function CompaniesDirectory({
     useState<DraggedCompanyParticipants | null>(null);
   const clearDragPreviewRef = useRef<(() => void) | null>(null);
   useEffect(() => () => clearDragPreviewRef.current?.(), []);
-  const [
-    selectedUnassignedParticipantIds,
-    setSelectedUnassignedParticipantIds,
-  ] = useState<ReadonlySet<string>>(new Set());
   const [isUnassignedDropTarget, setIsUnassignedDropTarget] = useState(false);
   const [companyDropTargetId, setCompanyDropTargetId] = useState<string | null>(
     null,
@@ -527,7 +522,6 @@ export function CompaniesDirectory({
   function handleUnassignedParticipantDragStart(
     event: DragEvent<HTMLButtonElement>,
     participant: CompanyParticipant,
-    availableParticipants: CompanyParticipant[],
   ) {
     if (dragDisabled) {
       event.preventDefault();
@@ -540,23 +534,6 @@ export function CompaniesDirectory({
       name: getParticipantName(participant),
       participant,
     };
-    const participants = selectedUnassignedParticipantIds.has(participant.id)
-      ? availableParticipants
-          .filter((currentParticipant) =>
-            selectedUnassignedParticipantIds.has(currentParticipant.id),
-          )
-          .map((currentParticipant) => ({
-            participantId: currentParticipant.id,
-            companyId: null,
-            name: getParticipantName(currentParticipant),
-            participant: currentParticipant,
-          }))
-      : [dragged];
-
-    if (!selectedUnassignedParticipantIds.has(participant.id)) {
-      setSelectedUnassignedParticipantIds(new Set([participant.id]));
-    }
-
     clearDragPreviewRef.current?.();
     clearDragPreviewRef.current = setParticipantDragPreview(event.dataTransfer, {
       name: dragged.name,
@@ -564,47 +541,10 @@ export function CompaniesDirectory({
         participant.firstNames,
         participant.lastNames,
       ),
-      count: participants.length,
     });
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", dragged.participantId);
-    setDraggedParticipant({ source: "unassigned", participants });
-  }
-
-  function handleUnassignedParticipantSelectionChange(
-    participantId: string,
-    checked: boolean,
-  ) {
-    setSelectedUnassignedParticipantIds((current) => {
-      const next = new Set(current);
-
-      if (checked) {
-        next.add(participantId);
-      } else {
-        next.delete(participantId);
-      }
-
-      return next;
-    });
-  }
-
-  function handleUnassignedParticipantsSelectionChange(
-    participants: CompanyParticipant[],
-    checked: boolean,
-  ) {
-    setSelectedUnassignedParticipantIds((current) => {
-      const next = new Set(current);
-
-      for (const participant of participants) {
-        if (checked) {
-          next.add(participant.id);
-        } else {
-          next.delete(participant.id);
-        }
-      }
-
-      return next;
-    });
+    setDraggedParticipant({ source: "unassigned", participants: [dragged] });
   }
 
   async function moveDraggedParticipants(
@@ -721,10 +661,6 @@ export function CompaniesDirectory({
         startTransition(() => {
           router.refresh();
         });
-
-        if (dragged.source === "unassigned") {
-          setSelectedUnassignedParticipantIds(new Set());
-        }
 
         return result;
       })
@@ -1062,19 +998,12 @@ export function CompaniesDirectory({
           draggedParticipantIds={draggedParticipantIds}
           isDropTarget={isUnassignedDropTarget}
           dragDisabled={dragDisabled}
-          selectedParticipantIds={selectedUnassignedParticipantIds}
           onDragOver={handleUnassignedDragOver}
           onDragLeave={handleUnassignedDragLeave}
           onDrop={handleUnassignedDrop}
           onParticipantDragStart={handleUnassignedParticipantDragStart}
           onParticipantDragEnd={clearDragState}
           onParticipantOpen={(id) => setParticipantSheet({ id, mode: "view" })}
-          onParticipantSelectionChange={
-            handleUnassignedParticipantSelectionChange
-          }
-          onParticipantsSelectionChange={
-            handleUnassignedParticipantsSelectionChange
-          }
         />
       </CompanyUnassignedSidebar>
       <ParticipantDetailSheet
@@ -1148,39 +1077,26 @@ function UnassignedParticipantsPanel({
   draggedParticipantIds,
   isDropTarget,
   dragDisabled,
-  selectedParticipantIds,
   onDragOver,
   onDragLeave,
   onDrop,
   onParticipantDragStart,
   onParticipantDragEnd,
   onParticipantOpen,
-  onParticipantSelectionChange,
-  onParticipantsSelectionChange,
 }: {
   draggedParticipant: DraggedCompanyParticipants | null;
   draggedParticipantIds: ReadonlySet<string>;
   isDropTarget: boolean;
   dragDisabled: boolean;
-  selectedParticipantIds: ReadonlySet<string>;
   onDragOver: (event: DragEvent<HTMLDivElement>) => void;
   onDragLeave: (event: DragEvent<HTMLDivElement>) => void;
   onDrop: (event: DragEvent<HTMLDivElement>) => void;
   onParticipantDragStart: (
     event: DragEvent<HTMLButtonElement>,
     participant: CompanyParticipant,
-    availableParticipants: CompanyParticipant[],
   ) => void;
   onParticipantDragEnd: () => void;
   onParticipantOpen: (participantId: string) => void;
-  onParticipantSelectionChange: (
-    participantId: string,
-    checked: boolean,
-  ) => void;
-  onParticipantsSelectionChange: (
-    participants: CompanyParticipant[],
-    checked: boolean,
-  ) => void;
 }) {
   const listViewportRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -1219,11 +1135,6 @@ function UnassignedParticipantsPanel({
     unassignedParticipantsQuery.data?.pages.flatMap((page) => page.rows) ?? [];
   const firstPage = unassignedParticipantsQuery.data?.pages[0];
   const total = firstPage?.total ?? 0;
-  const selectedParticipantCount = participants.filter((participant) =>
-    selectedParticipantIds.has(participant.id),
-  ).length;
-  const areAllParticipantsSelected =
-    participants.length > 0 && selectedParticipantCount === participants.length;
   const draggedCompanyParticipants =
     draggedParticipant?.source === "company" ? draggedParticipant : null;
   const { fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -1385,32 +1296,14 @@ function UnassignedParticipantsPanel({
               </Empty>
             ) : participants.length > 0 ? (
               <>
-                <div className="flex items-center justify-between gap-2 px-4 pb-3 text-xs text-muted-foreground">
-                  <span>
-                    {selectedParticipantCount > 0
-                      ? `${selectedParticipantCount} seleccionados`
-                      : "Arrastra a una compañía"}
-                  </span>
-                  <Checkbox
-                    checked={areAllParticipantsSelected}
-                    indeterminate={
-                      selectedParticipantCount > 0 &&
-                      !areAllParticipantsSelected
-                    }
-                    onCheckedChange={(checked) =>
-                      onParticipantsSelectionChange(participants, checked)
-                    }
-                    aria-label="Seleccionar todos los participantes cargados"
-                  />
-                </div>
+                <p className="px-4 pb-3 text-xs text-muted-foreground">
+                  Arrastra a una compañía
+                </p>
                 <ul
                   className="flex flex-col gap-2 px-3 pb-3"
                   aria-label="Participantes disponibles para asignar"
                 >
                   {participants.map((participant) => {
-                    const isSelected = selectedParticipantIds.has(
-                      participant.id,
-                    );
                     const isDragged =
                       draggedParticipant?.source === "unassigned" &&
                       draggedParticipantIds.has(participant.id);
@@ -1419,8 +1312,7 @@ function UnassignedParticipantsPanel({
                       <li
                         key={participant.id}
                         className={cn(
-                          "rounded-2xl border border-border/70 bg-card p-3 transition-[border-color,background-color,opacity] motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-right-2 motion-safe:duration-200",
-                          isSelected && "border-primary/30 bg-primary/5",
+                          "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 rounded-2xl border border-border/70 bg-card p-3 transition-opacity motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-right-2 motion-safe:duration-200",
                           isDragged && "opacity-40",
                         )}
                       >
@@ -1451,52 +1343,31 @@ function UnassignedParticipantsPanel({
                               {getParticipantSexLabel(participant.sex)}
                             </p>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon-md"
-                            className="-mt-0.5 -mr-1 cursor-grab text-muted-foreground active:cursor-grabbing"
-                            disabled={dragDisabled}
-                            draggable={!dragDisabled}
-                            aria-label={`Arrastrar o seleccionar a ${getParticipantName(participant)}`}
-                            aria-pressed={isSelected}
-                            title="Arrastra a una compañía o pulsa para seleccionar"
-                            onClick={() =>
-                              onParticipantSelectionChange(
-                                participant.id,
-                                !isSelected,
-                              )
-                            }
-                            onDragStart={(event) =>
-                              onParticipantDragStart(
-                                event,
-                                participant,
-                                participants,
-                              )
-                            }
-                            onDragEnd={onParticipantDragEnd}
-                          >
-                            <HugeiconsIcon
-                              icon={DragDropVerticalIcon}
-                              strokeWidth={1.5}
-                              aria-hidden="true"
-                            />
-                          </Button>
                         </div>
-                        <div className="mt-3 flex items-center justify-between gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon-md"
+                          className="row-span-2 cursor-grab text-muted-foreground active:cursor-grabbing"
+                          disabled={dragDisabled}
+                          draggable={!dragDisabled}
+                          aria-label={`Arrastrar a ${getParticipantName(participant)}`}
+                          title="Arrastra a una compañía"
+                          onDragStart={(event) =>
+                            onParticipantDragStart(event, participant)
+                          }
+                          onDragEnd={onParticipantDragEnd}
+                        >
+                          <HugeiconsIcon
+                            icon={DragDropVerticalIcon}
+                            strokeWidth={1.5}
+                            aria-hidden="true"
+                          />
+                        </Button>
+                        <div className="mt-3 flex items-center gap-2">
                           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                             <ParticipantStatusDot status={participant.status} />
                             {getParticipantStatusLabel(participant.status)}
                           </span>
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={(checked) =>
-                              onParticipantSelectionChange(
-                                participant.id,
-                                checked,
-                              )
-                            }
-                            aria-label={`Seleccionar a ${getParticipantName(participant)}`}
-                          />
                         </div>
                       </li>
                     );
