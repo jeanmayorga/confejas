@@ -36,6 +36,12 @@ const companySixImage = {
   height: 2561,
 };
 
+const companySevenImage = {
+  src: "/counselors/company-07.png",
+  width: 2047,
+  height: 2561,
+};
+
 const companyEightImage = {
   src: "/counselors/company-08.png",
   width: 2047,
@@ -83,6 +89,12 @@ const portraits: Record<
   },
   "bd14f774-1632-4a74-9f6c-cfb2e9bede88": {
     image: companySixImage, x: 1046, y: 840, size: 400,
+  },
+  "069aabda-e877-4e55-918d-ea1ee2392a00": {
+    image: companySevenImage, x: 605, y: 970, size: 400,
+  },
+  "e45f2a61-0e68-42e6-b245-a9ce6949a6e0": {
+    image: companySevenImage, x: 995, y: 820, size: 430,
   },
   "9013dc50-59d2-4086-92f4-d971de4a8b76": {
     image: companyEightImage, x: 317, y: 838, size: 430,
