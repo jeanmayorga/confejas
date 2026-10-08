@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import Calendar03Icon from "@hugeicons/core-free-icons/Calendar03Icon";
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
 import Building06Icon from "@hugeicons/core-free-icons/Building06Icon";
 import Logout01Icon from "@hugeicons/core-free-icons/Logout01Icon";
@@ -227,7 +228,18 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
   const navigationSections = [
     {
       label: "Inicio",
-      items: [{ title: "Home", href: "/dashboard", icon: UserMultiple02Icon }],
+      items: [
+        { title: "Home", href: "/dashboard", icon: UserMultiple02Icon },
+        ...(canViewParticipantDirectory(user.role)
+          ? [
+              {
+                title: "Calendario",
+                href: "/dashboard/calendar",
+                icon: Calendar03Icon,
+              },
+            ]
+          : []),
+      ],
     },
     { label: "Acciones", items: actionNavigation },
     { label: "Gestión", items: managementNavigation },
