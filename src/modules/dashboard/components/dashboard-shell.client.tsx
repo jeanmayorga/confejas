@@ -36,16 +36,11 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
     >
       <AppSidebar user={user} />
       <main className="flex min-w-0 flex-1 flex-col bg-background">
-        <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 bg-background px-4 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 flex-1 flex-col p-4 sm:p-6 lg:p-8">
           <SidebarTrigger
-            className="md:hidden"
+            className="mb-3 md:hidden"
             aria-label="Abrir menú lateral"
           />
-          <span className="text-sm text-muted-foreground">
-            Conferencia JAS 2026
-          </span>
-        </header>
-        <div className="flex min-w-0 flex-1 flex-col p-4 sm:p-6 lg:p-8">
           {children}
         </div>
       </main>
