@@ -2009,7 +2009,7 @@ function CompanyCard({
                               {getParticipantSexLabel(participant.sex)}
                             </Badge>
                           </TableCell>
-                          <TableCell className="shrink-0 border-r-0 p-0 text-center md:table-cell md:px-3 md:py-[3px]">
+                          <TableCell className="shrink-0 border-r-0 p-0 text-center md:table-cell md:px-0 md:py-[3px]">
                             <CompanyParticipantActionsMenu
                               open={openActionsParticipantId === participant.id}
                               onOpenChange={(open) =>
