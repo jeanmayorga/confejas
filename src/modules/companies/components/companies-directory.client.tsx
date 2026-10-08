@@ -1312,10 +1312,29 @@ function UnassignedParticipantsPanel({
                       <li
                         key={participant.id}
                         className={cn(
-                          "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 rounded-2xl border border-border/70 bg-card p-3 transition-opacity motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-right-2 motion-safe:duration-200",
+                          "grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 rounded-2xl border border-border/70 bg-card p-3 transition-opacity motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-right-2 motion-safe:duration-200",
                           isDragged && "opacity-40",
                         )}
                       >
+                        <Button
+                          variant="ghost"
+                          size="icon-md"
+                          className="row-span-2 cursor-grab text-muted-foreground active:cursor-grabbing"
+                          disabled={dragDisabled}
+                          draggable={!dragDisabled}
+                          aria-label={`Arrastrar a ${getParticipantName(participant)}`}
+                          title="Arrastra a una compañía"
+                          onDragStart={(event) =>
+                            onParticipantDragStart(event, participant)
+                          }
+                          onDragEnd={onParticipantDragEnd}
+                        >
+                          <HugeiconsIcon
+                            icon={DragDropVerticalIcon}
+                            strokeWidth={1.5}
+                            aria-hidden="true"
+                          />
+                        </Button>
                         <div className="flex items-start gap-2.5">
                           <Avatar
                             aria-hidden="true"
@@ -1344,25 +1363,6 @@ function UnassignedParticipantsPanel({
                             </p>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon-md"
-                          className="row-span-2 cursor-grab text-muted-foreground active:cursor-grabbing"
-                          disabled={dragDisabled}
-                          draggable={!dragDisabled}
-                          aria-label={`Arrastrar a ${getParticipantName(participant)}`}
-                          title="Arrastra a una compañía"
-                          onDragStart={(event) =>
-                            onParticipantDragStart(event, participant)
-                          }
-                          onDragEnd={onParticipantDragEnd}
-                        >
-                          <HugeiconsIcon
-                            icon={DragDropVerticalIcon}
-                            strokeWidth={1.5}
-                            aria-hidden="true"
-                          />
-                        </Button>
                         <div className="mt-3 flex items-center gap-2">
                           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                             <ParticipantStatusDot status={participant.status} />
