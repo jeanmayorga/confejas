@@ -71,3 +71,25 @@ export const conferenceDays = [
     ],
   },
 ] as const;
+
+// Day 0 is preparation for staff and counselors; the public itinerary starts Friday.
+export const staffConferenceDays = [
+  {
+    id: "jueves-8",
+    date: "2026-10-08",
+    dayNumber: "08",
+    shortTitle: "Jueves 8",
+    title: "Jueves 8 de octubre",
+    activities: [
+      { time: "14:00 – 17:00", title: "Viaje del Staff" },
+      { time: "17:00 – 17:30", title: "Recorrido General" },
+      { time: "17:30 – 18:30", title: "Asignaciones" },
+      { time: "18:30 – 19:15", title: "Cena" },
+      { time: "19:15 – 20:00", title: "Devocional de Apertura para el Staff" },
+      { time: "20:00 – 22:00", title: "Asignaciones" },
+      { time: "22:00 – 22:30", title: "Simulacro" },
+      { time: "22:30 – 00:00", title: "Recibir Estacas" },
+    ],
+  },
+  ...conferenceDays,
+] as const;

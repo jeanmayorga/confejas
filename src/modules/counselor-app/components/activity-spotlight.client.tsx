@@ -28,7 +28,7 @@ export function CounselorActivitySpotlight({
             Calendario
           </h2>
           <p className="text-xs text-muted-foreground">
-            9 y 10 de octubre de 2026
+            Del 8 al 10 de octubre de 2026
           </p>
         </div>
       </div>
