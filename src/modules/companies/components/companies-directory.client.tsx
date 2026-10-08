@@ -69,7 +69,6 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { Separator } from "@/components/ui/separator";
 import {
   SidebarContent,
   SidebarMenu,
@@ -1650,8 +1649,6 @@ function CompanyCard({
             </p>
           )}
         </section>
-
-        <Separator />
 
         <section aria-labelledby={`${titleId}-participants`}>
           <div className="flex items-center justify-between gap-3">
