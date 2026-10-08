@@ -79,6 +79,11 @@ import {
 } from "@/components/ui/sidebar";
 import { CompanyUnassignedSidebar } from "./company-unassigned-sidebar.client";
 import { CompanyActionsMenu } from "./company-actions-menu.client";
+import {
+  CompanyParticipantFilters,
+  DEFAULT_COMPANY_PARTICIPANT_FILTERS,
+  type CompanyParticipantFilterValues,
+} from "./company-participant-filters.client";
 import { CounselorAvatarImage } from "@/modules/counselors/components/counselor-avatar-image";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -1509,16 +1514,35 @@ function CompanyCard({
     string | null
   >(null);
   const [companySearch, setCompanySearch] = useState("");
+  const [participantFilters, setParticipantFilters] =
+    useState<CompanyParticipantFilterValues>(DEFAULT_COMPANY_PARTICIPANT_FILTERS);
+  const hasParticipantFilters = Object.values(participantFilters).some(
+    (value) => value !== "all",
+  );
   const searchTerms = normalizeParticipantName(companySearch)
     .split(/\s+/)
     .filter(Boolean);
-  const matchingParticipants = searchTerms.length
+  const matchingParticipants = searchTerms.length || hasParticipantFilters
     ? visibleParticipants.filter((participant) => {
         const name = normalizeParticipantName(getParticipantName(participant));
-        return searchTerms.every((term) => name.includes(term));
+        const sex =
+          participant.sex === MALE_PARTICIPANT_SEX
+            ? "male"
+            : participant.sex === FEMALE_PARTICIPANT_SEX
+              ? "female"
+              : "other";
+        const age = participant.age === null ? "unknown" : String(participant.age);
+        return (
+          searchTerms.every((term) => name.includes(term)) &&
+          (participantFilters.status === "all" ||
+            participant.status === participantFilters.status) &&
+          (participantFilters.sex === "all" || sex === participantFilters.sex) &&
+          (participantFilters.age === "all" || age === participantFilters.age)
+        );
       })
     : visibleParticipants;
-  const isFilteringParticipants = hasParticipantSearch || searchTerms.length > 0;
+  const isFilteringParticipants =
+    hasParticipantSearch || searchTerms.length > 0 || hasParticipantFilters;
   const titleId = `company-${company.id}-title`;
   const companyLabel = getCompanyDisplayName(company.name, position);
 
@@ -1643,9 +1667,12 @@ function CompanyCard({
         <Separator />
 
         <section aria-labelledby={`${titleId}-participants`}>
-          <h3 id={`${titleId}-participants`} className="text-sm font-semibold">
-            Participantes
-          </h3>
+          <CompanyParticipantFilters
+            titleId={`${titleId}-participants`}
+            participants={company.participants}
+            value={participantFilters}
+            onChange={setParticipantFilters}
+          />
           {isFilteringParticipants ? (
             <p className="mt-1 text-sm text-muted-foreground" role="status">
               Mostrando {matchingParticipants.length} de {company.participantCount}{" "}
@@ -1835,14 +1862,22 @@ function CompanyCard({
                 </EmptyTitle>
                 <p className="text-sm text-muted-foreground">
                   {isFilteringParticipants
-                    ? "Prueba con otro nombre o apellido en esta compañía."
+                    ? "Prueba con otra búsqueda o ajusta los filtros de esta compañía."
                     : "No hay participantes asignados a esta compañía."}
                 </p>
               </EmptyHeader>
-              {companySearch ? (
+              {companySearch || hasParticipantFilters ? (
                 <EmptyContent>
-                  <Button variant="outline" onClick={() => setCompanySearch("")}>
-                    Limpiar búsqueda
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setCompanySearch("");
+                      setParticipantFilters(DEFAULT_COMPANY_PARTICIPANT_FILTERS);
+                    }}
+                  >
+                    {hasParticipantFilters
+                      ? "Limpiar búsqueda y filtros"
+                      : "Limpiar búsqueda"}
                   </Button>
                 </EmptyContent>
               ) : null}

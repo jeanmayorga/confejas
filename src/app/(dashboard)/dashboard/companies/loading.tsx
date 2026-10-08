@@ -48,7 +48,10 @@ function CompanyCardSkeleton() {
           </div>
         </div>
         <div className="flex flex-col gap-3">
-          <Skeleton className="h-4 w-24" />
+          <div className="flex items-center justify-between gap-3">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="size-8 rounded-full" />
+          </div>
           <Skeleton className="h-48 w-full" />
         </div>
       </CardContent>
