@@ -4,12 +4,12 @@ import { DashboardPageSidebar } from "@/modules/dashboard/components/dashboard-p
 
 function CompanyCardSkeleton() {
   return (
-    <Card className="py-3">
-      <CardHeader className="border-b !pb-2">
+    <Card className="rounded-none bg-transparent p-0 shadow-none ring-0">
+      <CardHeader className="px-0">
         <Skeleton className="h-5 w-28" />
         <Skeleton className="h-6 w-20" />
       </CardHeader>
-      <CardContent className="flex flex-col gap-5">
+      <CardContent className="flex flex-col gap-5 px-0">
         <Skeleton className="h-6 w-full rounded-full" />
         <div className="flex flex-col gap-3">
           <Skeleton className="h-4 w-20" />
@@ -50,28 +50,24 @@ function UnassignedParticipantsSkeleton() {
 export default function Loading() {
   return (
     <div
-      className="flex flex-col gap-6"
+      className="grid min-h-svh min-w-0 items-start xl:grid-cols-[minmax(0,1fr)_20rem]"
       aria-busy="true"
       aria-label="Actualizando compañías"
     >
       <span className="sr-only">Actualizando compañías…</span>
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-8 w-36" />
-          <Skeleton className="h-4 w-64" />
-        </div>
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-32" />
-          <Skeleton className="h-9 w-32" />
-        </div>
-      </header>
-
       <DashboardPageSidebar path="/dashboard/companies">
-        <UnassignedParticipantsSkeleton />
+        <div className="flex flex-col gap-4 p-3">
+          <Skeleton className="h-9 w-full" />
+          {Array.from({ length: 8 }, (_, index) => (
+            <Skeleton key={index} className="h-9 w-full" />
+          ))}
+        </div>
       </DashboardPageSidebar>
-      <div className="flex min-w-0 flex-col gap-5">
+      <div className="min-w-0 p-4 sm:p-6 xl:p-8">
         <CompanyCardSkeleton />
-        <CompanyCardSkeleton />
+      </div>
+      <div className="sticky top-0 hidden h-svh min-h-0 flex-col border-l bg-sidebar pt-4 xl:flex">
+        <UnassignedParticipantsSkeleton />
       </div>
     </div>
   );

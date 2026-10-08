@@ -1262,7 +1262,10 @@ export async function updateCompanyCapacityAction(
   }
 }
 
-export async function createCompanyAction(): Promise<CompanyActionResult> {
+export async function createCompanyAction(): Promise<
+  | { success: true; message: string; companyId: string }
+  | { success: false; message: string }
+> {
   try {
     const session = await requireSession();
     if (!canManageParticipants(session.user.role)) {
@@ -1276,9 +1279,9 @@ export async function createCompanyAction(): Promise<CompanyActionResult> {
       getNextCompanyNumber(companyRows.map((company) => company.name)),
     );
 
-    await db.insert(companies).values({ name });
+    const [company] = await db.insert(companies).values({ name }).returning({ id: companies.id });
     revalidateCompanyPaths();
-    return { success: true, message: `${name} creada correctamente.` };
+    return { success: true, message: `${name} creada correctamente.`, companyId: company.id };
   } catch (error) {
     return { success: false, message: getSafeError(error) };
   }

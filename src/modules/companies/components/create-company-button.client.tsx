@@ -12,10 +12,14 @@ import { createCompanyAction } from "@/modules/companies/server/actions";
 
 type CreateCompanyButtonProps = {
   disabled?: boolean;
+  className?: string;
+  onCreated?: (companyId: string) => void;
 };
 
 export function CreateCompanyButton({
   disabled = false,
+  className,
+  onCreated,
 }: CreateCompanyButtonProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -30,12 +34,18 @@ export function CreateCompanyButton({
       }
 
       toast.success(result.message);
+      onCreated?.(result.companyId);
       router.refresh();
     });
   }
 
   return (
-    <Button type="button" disabled={disabled || pending} onClick={handleCreate}>
+    <Button
+      type="button"
+      className={className}
+      disabled={disabled || pending}
+      onClick={handleCreate}
+    >
       {pending ? (
         <Spinner data-icon="inline-start" />
       ) : (

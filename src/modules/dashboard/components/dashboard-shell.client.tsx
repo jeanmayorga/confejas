@@ -4,6 +4,7 @@ import { type CSSProperties, type ReactNode, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 import { AppSidebar, type DashboardUser } from "./app-sidebar.client";
 import { DashboardPageSidebarProvider } from "./dashboard-page-sidebar.client";
@@ -37,9 +38,17 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
       >
         <AppSidebar user={user} panel={panel} />
         <main className="flex min-w-0 flex-1 flex-col bg-background">
-          <div className="flex min-w-0 flex-1 flex-col p-4 sm:p-6 lg:p-8">
+          <div
+            className={cn(
+              "flex min-w-0 flex-1 flex-col",
+              !panel?.flushContent && "p-4 sm:p-6 lg:p-8",
+            )}
+          >
             <SidebarTrigger
-              className="mb-3 md:hidden"
+              className={cn(
+                "mb-3 md:hidden",
+                panel?.flushContent && "m-4 mb-0",
+              )}
               aria-label="Abrir menú lateral"
             />
             {children}

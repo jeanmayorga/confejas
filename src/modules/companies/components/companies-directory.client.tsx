@@ -19,6 +19,7 @@ import MoreHorizontalIcon from "@hugeicons/core-free-icons/MoreHorizontalIcon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
+import { parseAsString, useQueryState } from "nuqs";
 import { toast } from "sonner";
 
 import { DashboardPageSidebar } from "@/modules/dashboard/components/dashboard-page-sidebar.client";
@@ -67,6 +68,16 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { Separator } from "@/components/ui/separator";
+import {
+  SidebarContent,
+  SidebarFooter,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/sidebar";
+import { ClearCompanyParticipantsButton } from "./clear-company-participants-button.client";
+import { CompanyUnassignedSidebar } from "./company-unassigned-sidebar.client";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -319,6 +330,13 @@ export function CompaniesDirectory({
   capacity,
 }: CompaniesDirectoryProps) {
   const router = useRouter();
+  const { setOpenMobile } = useSidebar();
+  const [activeCompanyId, setActiveCompanyId] = useQueryState(
+    "company",
+    parseAsString
+      .withDefault("")
+      .withOptions({ history: "push", shallow: true, scroll: false }),
+  );
   const queryClient = useQueryClient();
   const [draggedParticipant, setDraggedParticipant] =
     useState<DraggedCompanyParticipants | null>(null);
@@ -362,6 +380,27 @@ export function CompaniesDirectory({
       ),
     [capacity, companies, pendingCompanyMoves],
   );
+  const activeCompany =
+    displayedCompanies.find((company) => company.id === activeCompanyId) ??
+    displayedCompanies[0];
+  const [selectionCompanyId, setSelectionCompanyId] = useState(
+    activeCompany?.id,
+  );
+  if (selectionCompanyId !== activeCompany?.id) {
+    setSelectionCompanyId(activeCompany?.id);
+    setSelectedParticipantIds(new Set());
+  }
+  const assignedParticipantCount = displayedCompanies.reduce(
+    (total, company) => total + company.participantCount,
+    0,
+  );
+
+  function selectCompany(companyId: string) {
+    void setActiveCompanyId(companyId);
+    setOpenMobile(false);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
   const requestedSource = displayedCompanies.find(
     (company) => company.id === requestedChange?.sourceCompanyId,
   );
@@ -802,8 +841,119 @@ export function CompaniesDirectory({
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-5">
+    <div className="grid min-h-svh min-w-0 items-start xl:grid-cols-[minmax(0,1fr)_20rem]">
       <DashboardPageSidebar path="/dashboard/companies">
+        <div className="px-3 pb-4">
+          <CreateCompanyButton className="w-full" onCreated={selectCompany} />
+        </div>
+        <SidebarContent className="gap-0 px-2 pb-3">
+          <nav aria-label="Compañías">
+            <SidebarMenu className="gap-1">
+              {displayedCompanies.map((company, index) => (
+                <SidebarMenuItem key={company.id}>
+                  <SidebarMenuButton
+                    isActive={company.id === activeCompany?.id}
+                    aria-current={
+                      company.id === activeCompany?.id ? "page" : undefined
+                    }
+                    className="h-10 rounded-sidebar-item! px-3"
+                    onClick={() => selectCompany(company.id)}
+                  >
+                    <HugeiconsIcon
+                      icon={Building03Icon}
+                      strokeWidth={1.5}
+                      aria-hidden="true"
+                    />
+                    <span>
+                      {getCompanyDisplayName(company.name, index + 1)}
+                    </span>
+                    <span
+                      className="ml-auto text-xs tabular-nums text-muted-foreground"
+                      aria-label={`${company.participantCount} participantes`}
+                    >
+                      {company.participantCount}
+                    </span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </nav>
+          {displayedCompanies.length === 0 ? (
+            <p className="px-3 py-4 text-sm text-muted-foreground">
+              Aún no hay compañías.
+            </p>
+          ) : null}
+        </SidebarContent>
+        <SidebarFooter className="border-t p-3">
+          <ClearCompanyParticipantsButton
+            participantCount={assignedParticipantCount}
+          />
+          <p className="text-xs text-muted-foreground">
+            {displayedCompanies.length} compañías · {assignedParticipantCount}{" "}
+            participantes
+          </p>
+        </SidebarFooter>
+      </DashboardPageSidebar>
+      <div className="min-w-0 p-4 pb-24 sm:p-6 xl:p-8">
+        {displayedCompanies.length === 0 ? (
+          <Empty className="min-h-80">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <HugeiconsIcon icon={Building03Icon} strokeWidth={2} />
+              </EmptyMedia>
+              <EmptyTitle>Aún no hay compañías</EmptyTitle>
+              <p className="text-sm text-muted-foreground">
+                Crea la primera compañía para empezar a asignar participantes.
+              </p>
+            </EmptyHeader>
+            <EmptyContent>
+              <CreateCompanyButton onCreated={selectCompany} />
+            </EmptyContent>
+          </Empty>
+        ) : null}
+        {activeCompany ? (
+          <CompanyCard
+            key={activeCompany.id}
+            company={activeCompany}
+            position={displayedCompanies.indexOf(activeCompany) + 1}
+            canDelete={canDelete}
+            capacity={capacity}
+            draggedParticipantIds={draggedParticipantIds}
+            selectedParticipantIds={selectedParticipantIds}
+            dragDisabled={dragDisabled}
+            isDropTarget={companyDropTargetId === activeCompany.id}
+            onParticipantDragStart={handleParticipantDragStart}
+            onParticipantDragEnd={clearDragState}
+            onParticipantSelectionChange={handleParticipantSelectionChange}
+            onCompanyParticipantsSelectionChange={
+              handleCompanyParticipantsSelectionChange
+            }
+            companies={displayedCompanies}
+            onParticipantMoveRequest={(participantId, targetCompanyId) => {
+              if (!dragDisabled) {
+                setRequestedChange({
+                  participantId,
+                  sourceCompanyId: activeCompany.id,
+                  targetCompanyId,
+                });
+              }
+            }}
+            onParticipantRemoveRequest={(participantId) => {
+              if (!dragDisabled) {
+                setRequestedChange({
+                  participantId,
+                  sourceCompanyId: activeCompany.id,
+                  targetCompanyId: null,
+                });
+              }
+            }}
+            onDragOver={handleCompanyDragOver}
+            onDragLeave={handleCompanyDragLeave}
+            onDrop={handleCompanyDrop}
+          />
+        ) : null}
+      </div>
+      <CompanyUnassignedSidebar>
         <UnassignedParticipantsPanel
           capacity={capacity}
           draggedParticipant={draggedParticipant}
@@ -823,66 +973,7 @@ export function CompaniesDirectory({
             handleUnassignedParticipantsSelectionChange
           }
         />
-      </DashboardPageSidebar>
-      {displayedCompanies.length === 0 ? (
-        <Empty className="min-h-80">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <HugeiconsIcon icon={Building03Icon} strokeWidth={2} />
-            </EmptyMedia>
-            <EmptyTitle>Aún no hay compañías</EmptyTitle>
-            <p className="text-sm text-muted-foreground">
-              Crea la primera compañía para empezar a asignar participantes.
-            </p>
-          </EmptyHeader>
-          <EmptyContent>
-            <CreateCompanyButton />
-          </EmptyContent>
-        </Empty>
-      ) : null}
-      <div className="flex min-w-0 flex-col gap-5">
-        {displayedCompanies.map((company, index) => (
-          <CompanyCard
-            key={company.id}
-            company={company}
-            position={index + 1}
-            canDelete={canDelete}
-            capacity={capacity}
-            draggedParticipantIds={draggedParticipantIds}
-            selectedParticipantIds={selectedParticipantIds}
-            dragDisabled={dragDisabled}
-            isDropTarget={companyDropTargetId === company.id}
-            onParticipantDragStart={handleParticipantDragStart}
-            onParticipantDragEnd={clearDragState}
-            onParticipantSelectionChange={handleParticipantSelectionChange}
-            onCompanyParticipantsSelectionChange={
-              handleCompanyParticipantsSelectionChange
-            }
-            companies={displayedCompanies}
-            onParticipantMoveRequest={(participantId, targetCompanyId) => {
-              if (!dragDisabled) {
-                setRequestedChange({
-                  participantId,
-                  sourceCompanyId: company.id,
-                  targetCompanyId,
-                });
-              }
-            }}
-            onParticipantRemoveRequest={(participantId) => {
-              if (!dragDisabled) {
-                setRequestedChange({
-                  participantId,
-                  sourceCompanyId: company.id,
-                  targetCompanyId: null,
-                });
-              }
-            }}
-            onDragOver={handleCompanyDragOver}
-            onDragLeave={handleCompanyDragLeave}
-            onDrop={handleCompanyDrop}
-          />
-        ))}
-      </div>
+      </CompanyUnassignedSidebar>
       <AlertDialog
         open={requestedChange !== null}
         onOpenChange={(open) => {
@@ -1351,7 +1442,7 @@ function CompanyCard({
   return (
     <Card
       className={cn(
-        "py-3 transition-[background-color,box-shadow]",
+        "gap-6 rounded-none bg-transparent p-0 shadow-none ring-0 transition-[background-color,box-shadow]",
         isDropTarget && "bg-primary/5 ring-2 ring-primary ring-offset-2",
       )}
       aria-labelledby={titleId}
@@ -1359,9 +1450,11 @@ function CompanyCard({
       onDragLeave={onDragLeave}
       onDrop={(event) => onDrop(event, company)}
     >
-      <CardHeader className="border-b !pb-2">
-        <CardTitle id={titleId} className="text-lg">
-          {companyLabel}
+      <CardHeader className="px-0">
+        <CardTitle>
+          <h1 id={titleId} className="text-2xl font-semibold">
+            {companyLabel}
+          </h1>
           {isDropTarget ? (
             <span className="text-sm font-medium text-primary">
               {" · Suelta para asignar"}
@@ -1375,7 +1468,7 @@ function CompanyCard({
         </CardAction>
       </CardHeader>
 
-      <CardContent className="flex flex-col gap-5">
+      <CardContent className="flex flex-col gap-6 px-0">
         <CapacityProgress
           total={company.participantCount}
           female={company.femaleCount}
