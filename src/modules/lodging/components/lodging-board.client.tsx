@@ -8,12 +8,14 @@ import {
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Add01Icon from "@hugeicons/core-free-icons/Add01Icon";
 import BedBunkIcon from "@hugeicons/core-free-icons/BedBunkIcon";
 import Building06Icon from "@hugeicons/core-free-icons/Building06Icon";
 import MoreHorizontalIcon from "@hugeicons/core-free-icons/MoreHorizontalIcon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import Tick02Icon from "@hugeicons/core-free-icons/Tick02Icon";
+import UserEdit01Icon from "@hugeicons/core-free-icons/UserEdit01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { toast } from "sonner";
 
@@ -255,6 +257,18 @@ function LodgingParticipantActionsMenu({
       </DropdownMenuTrigger>
       {open ? (
         <DropdownMenuContent align="end">
+          <DropdownMenuGroup>
+            <DropdownMenuItem
+              render={
+                <Link href={`/dashboard/participants/${participant.id}/edit`} />
+              }
+              disabled={disabled}
+            >
+              <HugeiconsIcon icon={UserEdit01Icon} strokeWidth={2} />
+              Editar perfil
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger disabled={disabled}>
