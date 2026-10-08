@@ -14,6 +14,7 @@ import Building06Icon from "@hugeicons/core-free-icons/Building06Icon";
 import MoreHorizontalIcon from "@hugeicons/core-free-icons/MoreHorizontalIcon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import Tick02Icon from "@hugeicons/core-free-icons/Tick02Icon";
+import UserEdit01Icon from "@hugeicons/core-free-icons/UserEdit01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { toast } from "sonner";
 
@@ -81,6 +82,13 @@ import {
   ProgressValue,
 } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
@@ -92,6 +100,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { ParticipantForm } from "@/modules/participants/components/participant-form.client";
+import { getParticipantEditDataAction } from "@/modules/participants/server/actions";
 import {
   getParticipantStatusLabel,
   type ParticipantStatus,
@@ -138,6 +148,11 @@ type DraggedLodgingParticipants = {
 type PendingLodgingMove = LodgingParticipantMove & { id: number };
 
 type RequestedLodgingMove = LodgingParticipantMove;
+
+type ParticipantEditData = Extract<
+  Awaited<ReturnType<typeof getParticipantEditDataAction>>,
+  { success: true }
+>;
 
 const sexPresentation = {
   female: { label: "Mujeres", participantValue: "Femenino" },
@@ -214,12 +229,14 @@ function LodgingParticipantActionsMenu({
   participant,
   rooms,
   disabled,
+  onEditRequest,
   onMoveRequest,
   onRemoveRequest,
 }: {
   participant: LodgingParticipantSummary;
   rooms: LodgingRoomTarget[];
   disabled: boolean;
+  onEditRequest: (participant: LodgingParticipantSummary) => void;
   onMoveRequest: (
     participant: LodgingParticipantSummary,
     targetRoomName: string,
@@ -255,6 +272,16 @@ function LodgingParticipantActionsMenu({
       </DropdownMenuTrigger>
       {open ? (
         <DropdownMenuContent align="end">
+          <DropdownMenuGroup>
+            <DropdownMenuItem
+              disabled={disabled}
+              onClick={() => onEditRequest(participant)}
+            >
+              <HugeiconsIcon icon={UserEdit01Icon} strokeWidth={2} />
+              Editar perfil
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger disabled={disabled}>
@@ -322,6 +349,7 @@ function UnassignedParticipantsPanel({
   onParticipantsSelectionChange,
   onParticipantDragStart,
   onParticipantDragEnd,
+  onEditRequest,
   onMoveRequest,
   onPickRoomsRequest,
   onDragOver,
@@ -350,6 +378,7 @@ function UnassignedParticipantsPanel({
     participant: LodgingParticipantSummary,
   ) => void;
   onParticipantDragEnd: () => void;
+  onEditRequest: (participant: LodgingParticipantSummary) => void;
   onMoveRequest: (
     participant: LodgingParticipantSummary,
     targetRoomName: string,
@@ -540,6 +569,7 @@ function UnassignedParticipantsPanel({
                           participant={participant}
                           rooms={rooms}
                           disabled={dragDisabled}
+                          onEditRequest={onEditRequest}
                           onMoveRequest={onMoveRequest}
                         />
                       ) : null}
@@ -590,6 +620,7 @@ export function LodgingBoard({
   const router = useRouter();
   const [activeRoom, setActiveRoom] = useState<ActiveRoom | null>(null);
   const [search, setSearch] = useState("");
+  const [participantSearch, setParticipantSearch] = useState("");
   const [selectedParticipantId, setSelectedParticipantId] = useState<
     string | null
   >(null);
@@ -615,6 +646,12 @@ export function LodgingBoard({
   >(null);
   const [moving, setMoving] = useState(false);
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
+  const [editingParticipant, setEditingParticipant] =
+    useState<LodgingParticipantSummary | null>(null);
+  const [editData, setEditData] = useState<ParticipantEditData | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isLoadingEdit, startLoadingEdit] = useTransition();
+  const editRequestId = useRef(0);
   const [refreshing, startTransition] = useTransition();
   const dragDisabled = !canManage || moving || refreshing;
   const displayedOverview = useMemo(
@@ -643,6 +680,34 @@ export function LodgingBoard({
       ),
     [displayedOverview.buildings],
   );
+  const normalizedParticipantSearch = normalizeSearch(participantSearch);
+  const participantSearchResults = useMemo(() => {
+    const participantSearchTerms = normalizedParticipantSearch.split(/\s+/).filter(Boolean);
+    if (participantSearchTerms.length === 0) return [];
+
+    const participantsWithLocation = [
+      ...displayedOverview.buildings.flatMap((building) =>
+        building.rooms.flatMap((room) =>
+          room.occupants.map((participant) => ({
+            participant,
+            location: room.name,
+          })),
+        ),
+      ),
+      ...displayedOverview.unassignedParticipants.map((participant) => ({
+        participant,
+        location: "Sin alojamiento",
+      })),
+    ];
+
+    return participantsWithLocation.filter(({ participant, location }) => {
+      const searchableText = normalizeSearch(
+        `${getDisplayName(participant)} ${participant.preferredName ?? ""} ${participant.wardName} ${participant.stakeName} ${location}`,
+      );
+
+      return participantSearchTerms.every((term) => searchableText.includes(term));
+    });
+  }, [displayedOverview, normalizedParticipantSearch]);
   const requestedTarget = displayedRooms.find(
     (room) => room.name === requestedChange?.targetRoomName,
   );
@@ -913,6 +978,34 @@ export function LodgingBoard({
     });
   }
 
+  function openParticipantEdit(participant: LodgingParticipantSummary) {
+    const requestId = editRequestId.current + 1;
+    editRequestId.current = requestId;
+    setMobilePanelOpen(false);
+    setEditingParticipant(participant);
+    setEditData(null);
+    setEditError(null);
+
+    startLoadingEdit(async () => {
+      const result = await getParticipantEditDataAction(participant.id);
+
+      if (editRequestId.current !== requestId) return;
+
+      if (result.success) {
+        setEditData(result);
+      } else {
+        setEditError(result.message);
+      }
+    });
+  }
+
+  function closeParticipantEdit() {
+    editRequestId.current += 1;
+    setEditingParticipant(null);
+    setEditData(null);
+    setEditError(null);
+  }
+
   function renderUnassignedPanel(inSheet: boolean) {
     return (
       <UnassignedParticipantsPanel
@@ -945,6 +1038,7 @@ export function LodgingBoard({
         }
         onParticipantDragStart={handleUnassignedParticipantDragStart}
         onParticipantDragEnd={clearDragState}
+        onEditRequest={openParticipantEdit}
         onPickRoomsRequest={(participants) => {
           if (inSheet) setMobilePanelOpen(false);
           setPickerParticipants(participants);
@@ -964,6 +1058,63 @@ export function LodgingBoard({
 
   return (
     <>
+      <Card className="gap-0 py-0">
+        <CardContent className="p-4 sm:p-5">
+          <InputGroup>
+            <InputGroupAddon>
+              <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
+            </InputGroupAddon>
+            <InputGroupInput
+              type="search"
+              placeholder="Buscar participante en todos los alojamientos"
+              aria-label="Buscar participante en todos los alojamientos"
+              value={participantSearch}
+              onChange={(event) => setParticipantSearch(event.target.value)}
+            />
+          </InputGroup>
+          {normalizedParticipantSearch ? (
+            <div className="mt-4">
+              <p className="mb-2 text-sm text-muted-foreground" aria-live="polite">
+                {participantSearchResults.length.toLocaleString("es-EC")}{" "}
+                {participantSearchResults.length === 1
+                  ? "participante encontrado"
+                  : "participantes encontrados"}
+              </p>
+              {participantSearchResults.length > 0 ? (
+                <ul className="max-h-80 divide-y overflow-y-auto rounded-lg border">
+                  {participantSearchResults.map(({ participant, location }) => (
+                    <li
+                      key={participant.id}
+                      className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium">{getDisplayName(participant)}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {location} · {participant.wardName} · {getAgeLabel(participant.age)}
+                        </p>
+                      </div>
+                      {canManage ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openParticipantEdit(participant)}
+                        >
+                          Editar perfil
+                        </Button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No se encontraron participantes. Prueba con otro nombre o barrio.
+                </p>
+              )}
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="flex min-w-0 flex-col gap-5">
           {displayedOverview.buildings.map((building) => {
@@ -1161,18 +1312,20 @@ export function LodgingBoard({
                                   ) : null}
                                   <TableFrame>
                                     <Table
-                                      className="table-fixed"
+                                      className="min-w-[760px] table-fixed"
                                       aria-label={`Participantes en dormitorio ${room.number} de ${building.name}`}
                                     >
                                       <colgroup>
                                         {canManage ? (
-                                          <col className="w-9 sm:w-11" />
+                                          <col className="w-11" />
                                         ) : null}
-                                        <col className="hidden w-12 sm:table-column" />
-                                        <col className="hidden w-24 sm:table-column" />
                                         <col />
+                                        <col className="w-24" />
+                                        <col className="w-20" />
+                                        <col className="w-32" />
+                                        <col className="w-32" />
                                         {canManage ? (
-                                          <col className="w-10 sm:w-11" />
+                                          <col className="w-11" />
                                         ) : null}
                                       </colgroup>
                                       <TableHeader>
@@ -1184,17 +1337,15 @@ export function LodgingBoard({
                                               </span>
                                             </TableHead>
                                           ) : null}
-                                          <TableHead className="hidden text-center sm:table-cell">
-                                            #
-                                          </TableHead>
-                                          <TableHead className="hidden sm:table-cell">
-                                            Estado
-                                          </TableHead>
-                                          <TableHead className="px-1 sm:px-3">
+                                          <TableHead>
                                             Participante
                                           </TableHead>
+                                          <TableHead>Sexo</TableHead>
+                                          <TableHead>Edad</TableHead>
+                                          <TableHead>Barrio</TableHead>
+                                          <TableHead>Estaca</TableHead>
                                           {canManage ? (
-                                            <TableHead className="px-1 text-center sm:px-3">
+                                            <TableHead className="text-center">
                                               <span className="sr-only">
                                                 Acciones
                                               </span>
@@ -1204,7 +1355,7 @@ export function LodgingBoard({
                                       </TableHeader>
                                       <TableBody>
                                         {room.occupants.map(
-                                          (participant, index) => {
+                                          (participant) => {
                                             const selected =
                                               selectedRoomParticipantIds.has(
                                                 participant.id,
@@ -1264,20 +1415,11 @@ export function LodgingBoard({
                                                     />
                                                   </TableCell>
                                                 ) : null}
-                                                <TableCell className="hidden text-center tabular-nums text-muted-foreground sm:table-cell">
-                                                  {index + 1}
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
-                                                  <ParticipantStatusBadge
-                                                    status={participant.status}
-                                                  />
-                                                </TableCell>
-                                                <TableCell className="max-w-0 overflow-hidden px-1 whitespace-normal sm:px-3">
+                                                <TableCell className="max-w-0 overflow-hidden">
                                                   <div className="flex min-w-0 items-center gap-2">
                                                     <Avatar
                                                       size="sm"
                                                       aria-hidden="true"
-                                                      className="hidden sm:flex"
                                                     >
                                                       <AvatarFallback>
                                                         {getInitials(
@@ -1286,33 +1428,36 @@ export function LodgingBoard({
                                                       </AvatarFallback>
                                                     </Avatar>
                                                     <div className="min-w-0 py-1">
-                                                      <span className="block break-words font-medium">
+                                                      <span
+                                                        className="block truncate font-medium"
+                                                        title={getDisplayName(participant)}
+                                                      >
                                                         {getDisplayName(
                                                           participant,
                                                         )}
                                                       </span>
-                                                      <span className="block text-xs text-muted-foreground">
-                                                        {participant.wardName} ·{" "}
-                                                        {getAgeLabel(
-                                                          participant.age,
-                                                        )}
-                                                      </span>
-                                                      <span className="mt-1 inline-flex sm:hidden">
-                                                        <ParticipantStatusBadge
-                                                          status={
-                                                            participant.status
-                                                          }
-                                                        />
-                                                      </span>
                                                     </div>
                                                   </div>
                                                 </TableCell>
+                                                <TableCell>
+                                                  {participant.sex ?? "Sin registrar"}
+                                                </TableCell>
+                                                <TableCell className="tabular-nums">
+                                                  {participant.age ?? "—"}
+                                                </TableCell>
+                                                <TableCell className="max-w-0 truncate" title={participant.wardName}>
+                                                  {participant.wardName}
+                                                </TableCell>
+                                                <TableCell className="max-w-0 truncate" title={participant.stakeName}>
+                                                  {participant.stakeName}
+                                                </TableCell>
                                                 {canManage ? (
-                                                  <TableCell className="px-1 text-center sm:px-3">
+                                                  <TableCell className="text-center">
                                                     <LodgingParticipantActionsMenu
                                                       participant={participant}
                                                       rooms={displayedRooms}
                                                       disabled={dragDisabled}
+                                                      onEditRequest={openParticipantEdit}
                                                       onMoveRequest={(
                                                         participant,
                                                         targetRoomName,
@@ -1403,6 +1548,60 @@ export function LodgingBoard({
       >
         {renderUnassignedPanel(true)}
       </MobileUnassignedSheet>
+
+      <Sheet
+        open={editingParticipant !== null}
+        onOpenChange={(open) => {
+          if (!open) closeParticipantEdit();
+        }}
+      >
+        <SheetContent
+          side="right"
+          className="data-[side=right]:w-full data-[side=right]:sm:max-w-2xl"
+        >
+          <SheetHeader className="pr-16">
+            <SheetTitle>Editar perfil</SheetTitle>
+            <SheetDescription>
+              {editingParticipant && getDisplayName(editingParticipant)}
+            </SheetDescription>
+          </SheetHeader>
+          {isLoadingEdit ? (
+            <div className="flex flex-1 items-center justify-center gap-2 px-6 pb-6" role="status">
+              <Spinner />
+              Cargando perfil…
+            </div>
+          ) : editError ? (
+            <div className="flex flex-1 flex-col items-start gap-4 px-6 pb-6">
+              <p role="alert" className="text-sm text-destructive">
+                {editError}
+              </p>
+              {editingParticipant ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => openParticipantEdit(editingParticipant)}
+                >
+                  Reintentar
+                </Button>
+              ) : null}
+            </div>
+          ) : editData ? (
+            <div className="flex-1 overflow-y-auto px-6 pb-6">
+              <ParticipantForm
+                key={editData.participant.id}
+                participant={editData.participant}
+                companies={editData.companies}
+                wards={editData.wards}
+                stakes={editData.stakes}
+                lodgingBuildings={editData.lodgingBuildings}
+                presentation="sheet"
+                onCancel={closeParticipantEdit}
+                onSuccess={closeParticipantEdit}
+              />
+            </div>
+          ) : null}
+        </SheetContent>
+      </Sheet>
 
       <AlertDialog
         open={requestedChange !== null}

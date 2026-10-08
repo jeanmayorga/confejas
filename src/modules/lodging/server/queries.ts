@@ -2,7 +2,7 @@ import "server-only";
 
 import { and, asc, count, eq, ne, sql } from "drizzle-orm";
 
-import { wards } from "@/modules/church-units/server/schema";
+import { stakes, wards } from "@/modules/church-units/server/schema";
 import { participants } from "@/modules/participants/server/schema";
 import type { ParticipantStatus } from "@/modules/participants/status";
 import { db } from "@/server/db";
@@ -30,6 +30,7 @@ export type LodgingParticipantSummary = {
   sex: string | null;
   status: ParticipantStatus;
   wardName: string;
+  stakeName: string;
   roomName: string | null;
 };
 
@@ -76,10 +77,12 @@ export async function getLodgingOverview() {
         sex: participants.sex,
         status: participants.status,
         wardName: wards.name,
+        stakeName: stakes.name,
         roomName: participants.roomName,
       })
       .from(participants)
       .innerJoin(wards, eq(participants.wardId, wards.id))
+      .innerJoin(stakes, eq(wards.stakeId, stakes.id))
       .orderBy(
         asc(participants.firstNames),
         asc(participants.lastNames),
@@ -172,6 +175,7 @@ export async function getLodgingOverview() {
       sex: participant.sex,
       status: participant.status,
       wardName: participant.wardName,
+      stakeName: participant.stakeName,
       roomName: participant.roomName,
     }));
   const totals = buildings.reduce(

@@ -25,6 +25,7 @@ const participant: LodgingParticipantSummary = {
   sex: "Femenino",
   status: "confirmed",
   wardName: "Centro",
+  stakeName: "Estaca Centro",
   roomName: null,
 };
 
