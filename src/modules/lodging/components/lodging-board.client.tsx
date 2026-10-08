@@ -8,7 +8,6 @@ import {
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import Add01Icon from "@hugeicons/core-free-icons/Add01Icon";
 import BedBunkIcon from "@hugeicons/core-free-icons/BedBunkIcon";
 import Building06Icon from "@hugeicons/core-free-icons/Building06Icon";
@@ -83,6 +82,13 @@ import {
   ProgressValue,
 } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
@@ -94,6 +100,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { ParticipantForm } from "@/modules/participants/components/participant-form.client";
+import { getParticipantEditDataAction } from "@/modules/participants/server/actions";
 import {
   getParticipantStatusLabel,
   type ParticipantStatus,
@@ -140,6 +148,11 @@ type DraggedLodgingParticipants = {
 type PendingLodgingMove = LodgingParticipantMove & { id: number };
 
 type RequestedLodgingMove = LodgingParticipantMove;
+
+type ParticipantEditData = Extract<
+  Awaited<ReturnType<typeof getParticipantEditDataAction>>,
+  { success: true }
+>;
 
 const sexPresentation = {
   female: { label: "Mujeres", participantValue: "Femenino" },
@@ -216,12 +229,14 @@ function LodgingParticipantActionsMenu({
   participant,
   rooms,
   disabled,
+  onEditRequest,
   onMoveRequest,
   onRemoveRequest,
 }: {
   participant: LodgingParticipantSummary;
   rooms: LodgingRoomTarget[];
   disabled: boolean;
+  onEditRequest: (participant: LodgingParticipantSummary) => void;
   onMoveRequest: (
     participant: LodgingParticipantSummary,
     targetRoomName: string,
@@ -259,10 +274,8 @@ function LodgingParticipantActionsMenu({
         <DropdownMenuContent align="end">
           <DropdownMenuGroup>
             <DropdownMenuItem
-              render={
-                <Link href={`/dashboard/participants/${participant.id}/edit`} />
-              }
               disabled={disabled}
+              onClick={() => onEditRequest(participant)}
             >
               <HugeiconsIcon icon={UserEdit01Icon} strokeWidth={2} />
               Editar perfil
@@ -336,6 +349,7 @@ function UnassignedParticipantsPanel({
   onParticipantsSelectionChange,
   onParticipantDragStart,
   onParticipantDragEnd,
+  onEditRequest,
   onMoveRequest,
   onPickRoomsRequest,
   onDragOver,
@@ -364,6 +378,7 @@ function UnassignedParticipantsPanel({
     participant: LodgingParticipantSummary,
   ) => void;
   onParticipantDragEnd: () => void;
+  onEditRequest: (participant: LodgingParticipantSummary) => void;
   onMoveRequest: (
     participant: LodgingParticipantSummary,
     targetRoomName: string,
@@ -554,6 +569,7 @@ function UnassignedParticipantsPanel({
                           participant={participant}
                           rooms={rooms}
                           disabled={dragDisabled}
+                          onEditRequest={onEditRequest}
                           onMoveRequest={onMoveRequest}
                         />
                       ) : null}
@@ -629,6 +645,12 @@ export function LodgingBoard({
   >(null);
   const [moving, setMoving] = useState(false);
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
+  const [editingParticipant, setEditingParticipant] =
+    useState<LodgingParticipantSummary | null>(null);
+  const [editData, setEditData] = useState<ParticipantEditData | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isLoadingEdit, startLoadingEdit] = useTransition();
+  const editRequestId = useRef(0);
   const [refreshing, startTransition] = useTransition();
   const dragDisabled = !canManage || moving || refreshing;
   const displayedOverview = useMemo(
@@ -927,6 +949,34 @@ export function LodgingBoard({
     });
   }
 
+  function openParticipantEdit(participant: LodgingParticipantSummary) {
+    const requestId = editRequestId.current + 1;
+    editRequestId.current = requestId;
+    setMobilePanelOpen(false);
+    setEditingParticipant(participant);
+    setEditData(null);
+    setEditError(null);
+
+    startLoadingEdit(async () => {
+      const result = await getParticipantEditDataAction(participant.id);
+
+      if (editRequestId.current !== requestId) return;
+
+      if (result.success) {
+        setEditData(result);
+      } else {
+        setEditError(result.message);
+      }
+    });
+  }
+
+  function closeParticipantEdit() {
+    editRequestId.current += 1;
+    setEditingParticipant(null);
+    setEditData(null);
+    setEditError(null);
+  }
+
   function renderUnassignedPanel(inSheet: boolean) {
     return (
       <UnassignedParticipantsPanel
@@ -959,6 +1009,7 @@ export function LodgingBoard({
         }
         onParticipantDragStart={handleUnassignedParticipantDragStart}
         onParticipantDragEnd={clearDragState}
+        onEditRequest={openParticipantEdit}
         onPickRoomsRequest={(participants) => {
           if (inSheet) setMobilePanelOpen(false);
           setPickerParticipants(participants);
@@ -1320,6 +1371,7 @@ export function LodgingBoard({
                                                       participant={participant}
                                                       rooms={displayedRooms}
                                                       disabled={dragDisabled}
+                                                      onEditRequest={openParticipantEdit}
                                                       onMoveRequest={(
                                                         participant,
                                                         targetRoomName,
@@ -1410,6 +1462,60 @@ export function LodgingBoard({
       >
         {renderUnassignedPanel(true)}
       </MobileUnassignedSheet>
+
+      <Sheet
+        open={editingParticipant !== null}
+        onOpenChange={(open) => {
+          if (!open) closeParticipantEdit();
+        }}
+      >
+        <SheetContent
+          side="right"
+          className="data-[side=right]:w-full data-[side=right]:sm:max-w-2xl"
+        >
+          <SheetHeader className="pr-16">
+            <SheetTitle>Editar perfil</SheetTitle>
+            <SheetDescription>
+              {editingParticipant && getDisplayName(editingParticipant)}
+            </SheetDescription>
+          </SheetHeader>
+          {isLoadingEdit ? (
+            <div className="flex flex-1 items-center justify-center gap-2 px-6 pb-6" role="status">
+              <Spinner />
+              Cargando perfil…
+            </div>
+          ) : editError ? (
+            <div className="flex flex-1 flex-col items-start gap-4 px-6 pb-6">
+              <p role="alert" className="text-sm text-destructive">
+                {editError}
+              </p>
+              {editingParticipant ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => openParticipantEdit(editingParticipant)}
+                >
+                  Reintentar
+                </Button>
+              ) : null}
+            </div>
+          ) : editData ? (
+            <div className="flex-1 overflow-y-auto px-6 pb-6">
+              <ParticipantForm
+                key={editData.participant.id}
+                participant={editData.participant}
+                companies={editData.companies}
+                wards={editData.wards}
+                stakes={editData.stakes}
+                lodgingBuildings={editData.lodgingBuildings}
+                presentation="sheet"
+                onCancel={closeParticipantEdit}
+                onSuccess={closeParticipantEdit}
+              />
+            </div>
+          ) : null}
+        </SheetContent>
+      </Sheet>
 
       <AlertDialog
         open={requestedChange !== null}
