@@ -1549,7 +1549,7 @@ function CompanyCard({
   return (
     <Card
       className={cn(
-        "gap-6 rounded-none bg-transparent p-0 shadow-none ring-0 transition-[background-color,box-shadow]",
+        "gap-6 overflow-visible rounded-none bg-transparent p-0 shadow-none ring-0 transition-[background-color,box-shadow]",
         isDropTarget && "bg-primary/5 ring-2 ring-primary ring-offset-2",
       )}
       aria-labelledby={titleId}
