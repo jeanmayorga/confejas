@@ -232,7 +232,7 @@ export function ParticipantCheckInSheet({
                 <ul className="grid gap-3 sm:grid-cols-2">
                   {participant.counselors.map((counselor) => (
                     <li key={counselor.id} className="flex items-center gap-3">
-                      <Avatar className="size-14 shrink-0">
+                      <Avatar className="size-14 shrink-0 overflow-hidden">
                         <CounselorAvatarImage counselorId={counselor.id} />
                         <AvatarFallback>
                           {counselor.name
