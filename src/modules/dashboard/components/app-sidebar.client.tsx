@@ -362,7 +362,7 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
         {panel || isMobile ? (
           <div
             data-dashboard-sidebar="panel"
-            className="flex min-w-0 flex-1 flex-col rounded-l-sidebar-panel bg-sidebar text-sidebar-foreground group-data-[collapsible=icon]:hidden"
+            className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-sidebar-panel bg-sidebar text-sidebar-foreground md:rounded-r-none group-data-[collapsible=icon]:hidden"
           >
             <SidebarHeader className="h-11 shrink-0 flex-row items-center gap-1 px-4 py-1.5">
               {panel ? (

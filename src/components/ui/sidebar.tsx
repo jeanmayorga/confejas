@@ -171,7 +171,7 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="overscroll-contain border-0 bg-sidebar-rail text-sidebar-rail-foreground [&>[data-slot=drawer-swipe-handle]]:after:bg-sidebar-rail-foreground/25"
+          className="overflow-hidden overscroll-contain rounded-[calc(var(--radius-sidebar-panel)+0.75rem)] border-0 bg-sidebar-rail text-sidebar-rail-foreground [&>[data-slot=drawer-content]]:rounded-none [&>[data-slot=drawer-content]]:pr-3 [&>[data-slot=drawer-content]]:pb-3 [&>[data-slot=drawer-swipe-handle]]:after:bg-sidebar-rail-foreground/25"
           {...props}
         >
           <DrawerHeader className="sr-only">
