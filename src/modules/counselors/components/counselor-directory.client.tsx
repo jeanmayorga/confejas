@@ -49,6 +49,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CounselorFormDialog } from "@/modules/counselors/components/counselor-form-dialog.client";
+import { CounselorAvatarImage } from "@/modules/counselors/components/counselor-avatar-image";
 import { CounselorForm } from "@/modules/counselors/components/counselor-form.client";
 import { DeleteCounselorButton } from "@/modules/counselors/components/delete-counselor-button.client";
 import { SendCounselorCredentialsButton } from "@/modules/counselors/components/send-counselor-credentials-button.client";
@@ -416,7 +417,12 @@ export function CounselorDirectory({
                     </TableCell>
                   <TableCell className="h-9 max-h-9 max-w-0 overflow-hidden truncate">
                     <div className="flex items-center gap-2">
-                      <Avatar size="sm" className="!size-5" aria-hidden="true">
+                      <Avatar
+                        size="sm"
+                        className="!size-5 overflow-hidden"
+                        aria-hidden="true"
+                      >
+                        <CounselorAvatarImage counselorId={counselor.id} />
                         <AvatarFallback className="!text-[9px] font-medium">
                           {getCounselorInitials(counselor)}
                         </AvatarFallback>
@@ -508,9 +514,10 @@ export function CounselorDirectory({
                 <section className="mt-6 rounded-2xl bg-muted p-5">
                   <Avatar
                     size="lg"
-                    className="size-14 bg-background after:border-0"
+                    className="size-14 overflow-hidden bg-background after:border-0"
                     aria-hidden="true"
                   >
+                    <CounselorAvatarImage counselorId={selectedCounselor.id} />
                     <AvatarFallback className="bg-background font-medium">
                       {getCounselorInitials(selectedCounselor)}
                     </AvatarFallback>

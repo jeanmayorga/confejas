@@ -11,13 +11,10 @@ import { useRouter } from "next/navigation";
 import Add01Icon from "@hugeicons/core-free-icons/Add01Icon";
 import BedBunkIcon from "@hugeicons/core-free-icons/BedBunkIcon";
 import Building06Icon from "@hugeicons/core-free-icons/Building06Icon";
-import MoreHorizontalIcon from "@hugeicons/core-free-icons/MoreHorizontalIcon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import Tick02Icon from "@hugeicons/core-free-icons/Tick02Icon";
-import UserEdit01Icon from "@hugeicons/core-free-icons/UserEdit01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { toast } from "sonner";
-
 import { MobileUnassignedSheet } from "@/components/mobile-unassigned-sheet.client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -30,29 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogClose,
@@ -77,40 +52,20 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import {
-  Progress,
-  ProgressLabel,
-  ProgressValue,
-} from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  SidebarContent,
+  SidebarFooter,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarSeparator,
+  useSidebar,
+} from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFrame,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { ParticipantForm } from "@/modules/participants/components/participant-form.client";
-import { getParticipantEditDataAction } from "@/modules/participants/server/actions";
-import {
-  getParticipantStatusLabel,
-  type ParticipantStatus,
-} from "@/modules/participants/status";
-import {
-  UnassignedStatusFilter,
-  type UnassignedStatusFilterValue,
-} from "@/modules/participants/components/unassigned-status-filter.client";
-
+import { DashboardPageSidebar } from "@/modules/dashboard/components/dashboard-page-sidebar.client";
+import { ParticipantDetailSheet } from "@/modules/participants/components/participant-detail-sheet.client";
+import { DEFAULT_COMPANY_PARTICIPANT_FILTERS } from "@/modules/companies/components/company-participant-filters.client";
+import { setParticipantDragPreview } from "@/modules/companies/components/participant-drag-preview";
 import {
   applyOptimisticLodgingMove,
   getLodgingMoveUnavailableReason,
@@ -124,6 +79,18 @@ import type {
   LodgingRoomOverview,
 } from "../server/queries";
 import type { LodgingSex } from "../server/schema";
+import { LodgingAutoAssignDialog } from "./lodging-auto-assign-dialog.client";
+import { LodgingRoomDetail } from "./lodging-room-detail.client";
+import { LodgingUnassignedPanel } from "./lodging-unassigned-panel.client";
+import {
+  getDisplayName,
+  getInitials,
+  normalizeSearch,
+  ParticipantStatusBadge,
+  matchesLodgingParticipant,
+  type DraggedLodgingParticipants,
+  type LodgingRoomTarget,
+} from "./lodging-participant-ui.client";
 
 type LodgingBoardProps = {
   buildings: LodgingBuildingOverview[];
@@ -136,23 +103,9 @@ type ActiveRoom = LodgingRoomOverview & {
   buildingSex: LodgingSex;
 };
 
-type LodgingRoomTarget = LodgingRoomOverview & {
-  buildingSex: LodgingSex;
-};
-
-type DraggedLodgingParticipants = {
-  source: "room" | "unassigned";
-  participants: LodgingParticipantSummary[];
-};
-
 type PendingLodgingMove = LodgingParticipantMove & { id: number };
 
 type RequestedLodgingMove = LodgingParticipantMove;
-
-type ParticipantEditData = Extract<
-  Awaited<ReturnType<typeof getParticipantEditDataAction>>,
-  { success: true }
->;
 
 const sexPresentation = {
   female: { label: "Mujeres", participantValue: "Femenino" },
@@ -162,462 +115,16 @@ const sexPresentation = {
   { label: string; participantValue: "Femenino" | "Masculino" }
 >;
 
-const participantStatusClassNames = {
-  registered: "bg-muted text-muted-foreground",
-  confirmed: "bg-participant-confirmed/10 text-participant-confirmed",
-  arrived: "bg-participant-arrived/10 text-participant-arrived",
-  cancelled: "bg-participant-cancelled/10 text-participant-cancelled",
-  pending: "bg-participant-pending/10 text-participant-pending",
-} satisfies Record<ParticipantStatus, string>;
-
-function ParticipantStatusBadge({ status }: { status: ParticipantStatus }) {
-  return (
-    <Badge
-      variant="outline"
-      className={cn("border-transparent", participantStatusClassNames[status])}
-    >
-      {getParticipantStatusLabel(status)}
-    </Badge>
-  );
-}
-
-function getOccupancyPercent(assigned: number, capacity: number) {
-  if (capacity <= 0) {
-    return 0;
-  }
-
-  return Math.min(100, Math.round((assigned / capacity) * 100));
-}
-
-function getInitials(participant: LodgingParticipantSummary) {
-  return `${participant.firstNames.trim().charAt(0)}${participant.lastNames
-    .trim()
-    .charAt(0)}`.toUpperCase();
-}
-
-function normalizeSearch(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .trim();
-}
-
-function getDisplayName(participant: LodgingParticipantSummary) {
-  return `${participant.firstNames} ${participant.lastNames}`;
-}
-
-function setParticipantDragPreview(
-  event: DragEvent<HTMLElement>,
-  participant: LodgingParticipantSummary,
-) {
-  const preview = document.createElement("div");
-  preview.textContent = getDisplayName(participant);
-  preview.className =
-    "pointer-events-none fixed top-0 left-0 z-50 max-w-72 truncate rounded-lg border bg-card px-3 py-2 font-medium text-card-foreground shadow-lg";
-  preview.setAttribute("aria-hidden", "true");
-  document.body.append(preview);
-  event.dataTransfer.setDragImage(preview, 16, 16);
-  requestAnimationFrame(() => preview.remove());
-}
-
-function getAgeLabel(age: number | null) {
-  return age === null ? "Edad no registrada" : `${age} años`;
-}
-
-function LodgingParticipantActionsMenu({
-  participant,
-  rooms,
-  disabled,
-  onEditRequest,
-  onMoveRequest,
-  onRemoveRequest,
-}: {
-  participant: LodgingParticipantSummary;
-  rooms: LodgingRoomTarget[];
-  disabled: boolean;
-  onEditRequest: (participant: LodgingParticipantSummary) => void;
-  onMoveRequest: (
-    participant: LodgingParticipantSummary,
-    targetRoomName: string,
-  ) => void;
-  onRemoveRequest?: (participant: LodgingParticipantSummary) => void;
-}) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            disabled={disabled}
-            draggable={false}
-            aria-label={`Acciones para ${getDisplayName(participant)}`}
-            onPointerDown={(event) => event.stopPropagation()}
-            onDragStart={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-            }}
-          />
-        }
-      >
-        <HugeiconsIcon
-          icon={MoreHorizontalIcon}
-          strokeWidth={2}
-          aria-hidden="true"
-        />
-      </DropdownMenuTrigger>
-      {open ? (
-        <DropdownMenuContent align="end">
-          <DropdownMenuGroup>
-            <DropdownMenuItem
-              disabled={disabled}
-              onClick={() => onEditRequest(participant)}
-            >
-              <HugeiconsIcon icon={UserEdit01Icon} strokeWidth={2} />
-              Editar perfil
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger disabled={disabled}>
-                {onRemoveRequest
-                  ? "Mover a otro dormitorio"
-                  : "Asignar a dormitorio"}
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="max-h-[70dvh] min-w-64 overflow-y-auto">
-                <DropdownMenuGroup>
-                  {rooms.map((room) => {
-                    const unavailableReason = getLodgingMoveUnavailableReason(
-                      [participant],
-                      room,
-                    );
-
-                    return (
-                      <DropdownMenuItem
-                        key={room.id}
-                        disabled={disabled || Boolean(unavailableReason)}
-                        onClick={() => onMoveRequest(participant, room.name)}
-                      >
-                        <span>{room.name}</span>
-                        <span className="ml-auto text-xs text-muted-foreground">
-                          {unavailableReason ??
-                            `${room.assignedParticipants}/${room.participantCapacity}`}
-                        </span>
-                      </DropdownMenuItem>
-                    );
-                  })}
-                </DropdownMenuGroup>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-          </DropdownMenuGroup>
-          {onRemoveRequest ? (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem
-                  variant="destructive"
-                  disabled={disabled}
-                  onClick={() => onRemoveRequest(participant)}
-                >
-                  Quitar del dormitorio
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </>
-          ) : null}
-        </DropdownMenuContent>
-      ) : null}
-    </DropdownMenu>
-  );
-}
-
-function UnassignedParticipantsPanel({
-  titleId,
-  inSheet,
-  participants,
-  rooms,
-  canManage,
-  draggedParticipant,
-  selectedParticipantIds,
-  isDropTarget,
-  dragDisabled,
-  onParticipantSelectionChange,
-  onParticipantsSelectionChange,
-  onParticipantDragStart,
-  onParticipantDragEnd,
-  onEditRequest,
-  onMoveRequest,
-  onPickRoomsRequest,
-  onDragOver,
-  onDragLeave,
-  onDrop,
-}: {
-  titleId: string;
-  inSheet: boolean;
-  participants: LodgingParticipantSummary[];
-  rooms: LodgingRoomTarget[];
-  canManage: boolean;
-  draggedParticipant: DraggedLodgingParticipants | null;
-  selectedParticipantIds: ReadonlySet<string>;
-  isDropTarget: boolean;
-  dragDisabled: boolean;
-  onParticipantSelectionChange: (
-    participantId: string,
-    checked: boolean,
-  ) => void;
-  onParticipantsSelectionChange: (
-    participants: LodgingParticipantSummary[],
-    checked: boolean,
-  ) => void;
-  onParticipantDragStart: (
-    event: DragEvent<HTMLLIElement>,
-    participant: LodgingParticipantSummary,
-  ) => void;
-  onParticipantDragEnd: () => void;
-  onEditRequest: (participant: LodgingParticipantSummary) => void;
-  onMoveRequest: (
-    participant: LodgingParticipantSummary,
-    targetRoomName: string,
-  ) => void;
-  onPickRoomsRequest: (participants: LodgingParticipantSummary[]) => void;
-  onDragOver: (event: DragEvent<HTMLDivElement>) => void;
-  onDragLeave: (event: DragEvent<HTMLDivElement>) => void;
-  onDrop: (event: DragEvent<HTMLDivElement>) => void;
-}) {
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<UnassignedStatusFilterValue>("all");
-  const filteredParticipants = useMemo(() => {
-    const normalizedSearch = normalizeSearch(search);
-
-    return participants.filter(
-      (participant) =>
-        (status === "all" || participant.status === status) &&
-        (!normalizedSearch ||
-          normalizeSearch(
-            `${participant.firstNames} ${participant.lastNames} ${participant.preferredName ?? ""} ${participant.wardName}`,
-          ).includes(normalizedSearch)),
-    );
-  }, [participants, search, status]);
-  const selectedCount = filteredParticipants.filter((participant) =>
-    selectedParticipantIds.has(participant.id),
-  ).length;
-  const areAllSelected =
-    filteredParticipants.length > 0 &&
-    selectedCount === filteredParticipants.length;
-
-  return (
-    <aside
-      className={cn(
-        "min-w-0 self-start xl:sticky xl:top-6",
-        inSheet && "flex min-h-0 flex-1 flex-col self-stretch",
-      )}
-      aria-labelledby={titleId}
-    >
-      <Card
-        className={cn(
-          "max-h-[50dvh] gap-0 py-3 transition-[background-color,box-shadow] xl:max-h-[calc(100dvh-3rem)]",
-          inSheet && "min-h-0 flex-1 max-h-none",
-          draggedParticipant?.source === "room" &&
-            "bg-primary/5 ring-1 ring-primary/40",
-          isDropTarget && "bg-primary/5 ring-2 ring-primary ring-offset-2",
-        )}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
-      >
-        <CardHeader className="shrink-0 border-b !pb-3">
-          <CardTitle id={titleId} className="text-lg">
-            Participantes sin alojamiento
-          </CardTitle>
-          <CardDescription>
-            {isDropTarget
-              ? "Suelta para retirar de su dormitorio."
-              : "Arrastra una persona a un dormitorio. Para varias, usa la selección."}
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="shrink-0 border-b py-3">
-          <InputGroup>
-            <InputGroupAddon>
-              <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
-            </InputGroupAddon>
-            <InputGroupInput
-              type="search"
-              placeholder="Buscar participante"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              aria-label="Buscar participantes sin alojamiento"
-            />
-          </InputGroup>
-          <div className="pt-2">
-            <UnassignedStatusFilter value={status} onChange={setStatus} />
-          </div>
-          {canManage && filteredParticipants.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-2 pt-2 text-xs text-muted-foreground">
-              <Checkbox
-                checked={areAllSelected}
-                indeterminate={selectedCount > 0 && !areAllSelected}
-                onCheckedChange={(checked) =>
-                  onParticipantsSelectionChange(filteredParticipants, checked)
-                }
-                aria-label="Seleccionar todos los participantes sin alojamiento visibles"
-                disabled={dragDisabled}
-              />
-              <span>
-                {selectedCount > 0
-                  ? `${selectedCount} seleccionados`
-                  : "Seleccionar visibles para asignar juntos"}
-              </span>
-              {selectedCount > 0 ? (
-                <Button
-                  type="button"
-                  size="xs"
-                  variant="outline"
-                  disabled={dragDisabled}
-                  onClick={() =>
-                    onPickRoomsRequest(
-                      filteredParticipants.filter((participant) =>
-                        selectedParticipantIds.has(participant.id),
-                      ),
-                    )
-                  }
-                >
-                  Asignar seleccionados
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
-        </CardContent>
-
-        <CardContent className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-0 touch-pan-y">
-          {filteredParticipants.length > 0 ? (
-            <ul aria-label="Participantes sin alojamiento">
-                {filteredParticipants.map((participant) => {
-                  const selected = selectedParticipantIds.has(participant.id);
-
-                  return (
-                    <li
-                      key={participant.id}
-                      draggable={canManage && !dragDisabled}
-                      aria-grabbed={
-                        draggedParticipant?.participants.some(
-                          (item) => item.id === participant.id,
-                        ) ?? false
-                      }
-                      title={
-                        canManage
-                          ? "Arrastra a esta persona a un dormitorio o abre el botón de tres puntos para asignar."
-                          : getDisplayName(participant)
-                      }
-                      className={cn(
-                        "flex min-w-0 items-start gap-2 px-6 py-3 not-last:border-b",
-                        canManage && "cursor-grab active:cursor-grabbing",
-                        selected && "bg-primary/5",
-                      )}
-                      onDragStart={(event) =>
-                        onParticipantDragStart(event, participant)
-                      }
-                      onDragEnd={onParticipantDragEnd}
-                    >
-                      {canManage ? (
-                        <Checkbox
-                          checked={selected}
-                          onCheckedChange={(checked) =>
-                            onParticipantSelectionChange(
-                              participant.id,
-                              checked,
-                            )
-                          }
-                          onPointerDown={(event) => event.stopPropagation()}
-                          aria-label={`Seleccionar a ${getDisplayName(participant)}`}
-                          disabled={dragDisabled}
-                        />
-                      ) : null}
-                      <Avatar size="sm" aria-hidden="true">
-                        <AvatarFallback>
-                          {getInitials(participant)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <p
-                          className="truncate font-medium"
-                          title={getDisplayName(participant)}
-                        >
-                          {getDisplayName(participant)}
-                        </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {participant.wardName} ·{" "}
-                          {getAgeLabel(participant.age)}
-                        </p>
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          <ParticipantStatusBadge status={participant.status} />
-                          <Badge variant="secondary">
-                            {participant.sex === "Femenino"
-                              ? "Mujer"
-                              : participant.sex === "Masculino"
-                                ? "Varón"
-                                : "Sin definir"}
-                          </Badge>
-                        </div>
-                      </div>
-                      {canManage ? (
-                        <LodgingParticipantActionsMenu
-                          participant={participant}
-                          rooms={rooms}
-                          disabled={dragDisabled}
-                          onEditRequest={onEditRequest}
-                          onMoveRequest={onMoveRequest}
-                        />
-                      ) : null}
-                    </li>
-                  );
-                })}
-            </ul>
-          ) : (
-            <Empty className="min-h-32 px-6 py-8">
-              <EmptyHeader>
-                <EmptyTitle>
-                  {search || status !== "all"
-                    ? "Sin coincidencias"
-                    : "Todos tienen alojamiento"}
-                </EmptyTitle>
-                <EmptyDescription>
-                  {search || status !== "all"
-                    ? "Prueba con otro nombre, barrio o estado."
-                    : "No hay participantes pendientes de dormitorio."}
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          )}
-        </CardContent>
-
-        <CardFooter className="justify-between border-t !pt-3">
-          <span className="font-medium">
-            {search || status !== "all"
-              ? "Resultados"
-              : "Total sin alojamiento"}
-          </span>
-          <Badge variant="secondary" aria-live="polite">
-            {search || status !== "all"
-              ? `${filteredParticipants.length.toLocaleString("es-EC")} de ${participants.length.toLocaleString("es-EC")}`
-              : participants.length.toLocaleString("es-EC")}
-          </Badge>
-        </CardFooter>
-      </Card>
-    </aside>
-  );
-}
-
 export function LodgingBoard({
   buildings,
   unassignedParticipants,
   canManage,
 }: LodgingBoardProps) {
   const router = useRouter();
+  const { setOpenMobile } = useSidebar();
+  const directoryRef = useRef<HTMLDivElement>(null);
+  const dragPreviewCleanup = useRef<(() => void) | null>(null);
+  const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const [activeRoom, setActiveRoom] = useState<ActiveRoom | null>(null);
   const [search, setSearch] = useState("");
   const [participantSearch, setParticipantSearch] = useState("");
@@ -638,6 +145,10 @@ export function LodgingBoard({
   );
   const [isUnassignedDropTarget, setIsUnassignedDropTarget] = useState(false);
   const [pendingMoves, setPendingMoves] = useState<PendingLodgingMove[]>([]);
+  const [sourceOverview, setSourceOverview] = useState({
+    buildings,
+    unassignedParticipants,
+  });
   const nextPendingMoveIdRef = useRef(0);
   const [requestedChange, setRequestedChange] =
     useState<RequestedLodgingMove | null>(null);
@@ -646,13 +157,26 @@ export function LodgingBoard({
   >(null);
   const [moving, setMoving] = useState(false);
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
-  const [editingParticipant, setEditingParticipant] =
-    useState<LodgingParticipantSummary | null>(null);
-  const [editData, setEditData] = useState<ParticipantEditData | null>(null);
-  const [editError, setEditError] = useState<string | null>(null);
-  const [isLoadingEdit, startLoadingEdit] = useTransition();
-  const editRequestId = useRef(0);
+  const [participantSheet, setParticipantSheet] = useState<{
+    id: string;
+    mode: "view" | "edit";
+  } | null>(null);
   const [refreshing, startTransition] = useTransition();
+
+  if (
+    sourceOverview.buildings !== buildings ||
+    sourceOverview.unassignedParticipants !== unassignedParticipants
+  ) {
+    setSourceOverview({ buildings, unassignedParticipants });
+    // Retire saved moves so a later edit or reorganization stays authoritative.
+    setPendingMoves((current) =>
+      current.filter(
+        (move) =>
+          !isLodgingMoveReflected(buildings, unassignedParticipants, move),
+      ),
+    );
+  }
+
   const dragDisabled = !canManage || moving || refreshing;
   const displayedOverview = useMemo(
     () =>
@@ -680,34 +204,46 @@ export function LodgingBoard({
       ),
     [displayedOverview.buildings],
   );
-  const normalizedParticipantSearch = normalizeSearch(participantSearch);
-  const participantSearchResults = useMemo(() => {
-    const participantSearchTerms = normalizedParticipantSearch.split(/\s+/).filter(Boolean);
-    if (participantSearchTerms.length === 0) return [];
-
-    const participantsWithLocation = [
-      ...displayedOverview.buildings.flatMap((building) =>
-        building.rooms.flatMap((room) =>
-          room.occupants.map((participant) => ({
-            participant,
-            location: room.name,
-          })),
-        ),
+  const currentRoom =
+    displayedRooms.find((room) => room.id === selectedRoomId) ??
+    displayedRooms[0];
+  const currentBuilding = displayedOverview.buildings.find((building) =>
+    building.rooms.some((room) => room.id === currentRoom?.id),
+  );
+  const assignedCount = displayedOverview.buildings.reduce(
+    (count, building) => count + building.assignedParticipants,
+    0,
+  );
+  const navigationQuery = normalizeSearch(participantSearch);
+  const navigationBuildings = displayedOverview.buildings
+    .map((building) => ({
+      ...building,
+      rooms: building.rooms.filter(
+        (room) =>
+          !navigationQuery ||
+          normalizeSearch(
+            `Edificio ${building.name} Dormitorio ${room.number}`,
+          ).includes(navigationQuery) ||
+          room.occupants.some((participant) =>
+            matchesLodgingParticipant(
+              participant,
+              navigationQuery,
+              DEFAULT_COMPANY_PARTICIPANT_FILTERS,
+            ),
+          ),
       ),
-      ...displayedOverview.unassignedParticipants.map((participant) => ({
-        participant,
-        location: "Sin alojamiento",
-      })),
-    ];
+    }))
+    .filter((building) => building.rooms.length > 0);
 
-    return participantsWithLocation.filter(({ participant, location }) => {
-      const searchableText = normalizeSearch(
-        `${getDisplayName(participant)} ${participant.preferredName ?? ""} ${participant.wardName} ${participant.stakeName} ${location}`,
-      );
+  function selectRoom(roomId: number) {
+    setSelectedRoomId(roomId);
+    setSelectedRoomParticipantIds(new Set());
+    setOpenMobile(false);
+    directoryRef.current
+      ?.closest("[data-dashboard-scroll]")
+      ?.scrollTo({ top: 0, behavior: "instant" });
+  }
 
-      return participantSearchTerms.every((term) => searchableText.includes(term));
-    });
-  }, [displayedOverview, normalizedParticipantSearch]);
   const requestedTarget = displayedRooms.find(
     (room) => room.name === requestedChange?.targetRoomName,
   );
@@ -774,6 +310,8 @@ export function LodgingBoard({
   }
 
   function clearDragState() {
+    dragPreviewCleanup.current?.();
+    dragPreviewCleanup.current = null;
     setDraggedParticipant(null);
     setRoomDropTargetName(null);
     setIsUnassignedDropTarget(false);
@@ -852,7 +390,7 @@ export function LodgingBoard({
   }
 
   function handleRoomParticipantDragStart(
-    event: DragEvent<HTMLTableRowElement>,
+    event: DragEvent<HTMLButtonElement>,
     participant: LodgingParticipantSummary,
   ) {
     if (dragDisabled) {
@@ -870,17 +408,19 @@ export function LodgingBoard({
         )
       : [participant];
 
-    if (!selectedRoomParticipantIds.has(participant.id)) {
-      setSelectedRoomParticipantIds(new Set([participant.id]));
-    }
-
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", participant.id);
+    dragPreviewCleanup.current?.();
+    dragPreviewCleanup.current = setParticipantDragPreview(event.dataTransfer, {
+      name: getDisplayName(participant),
+      initials: getInitials(participant),
+      count: selected.length,
+    });
     setDraggedParticipant({ source: "room", participants: selected });
   }
 
   function handleUnassignedParticipantDragStart(
-    event: DragEvent<HTMLLIElement>,
+    event: DragEvent<HTMLButtonElement>,
     participant: LodgingParticipantSummary,
   ) {
     if (dragDisabled) {
@@ -890,12 +430,19 @@ export function LodgingBoard({
 
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", participant.id);
-    setParticipantDragPreview(event, participant);
-    setDraggedParticipant({ source: "unassigned", participants: [participant] });
+    dragPreviewCleanup.current?.();
+    dragPreviewCleanup.current = setParticipantDragPreview(event.dataTransfer, {
+      name: getDisplayName(participant),
+      initials: getInitials(participant),
+    });
+    setDraggedParticipant({
+      source: "unassigned",
+      participants: [participant],
+    });
   }
 
   function handleRoomDragOver(
-    event: DragEvent<HTMLDivElement>,
+    event: DragEvent<HTMLElement>,
     room: LodgingRoomTarget,
   ) {
     if (!draggedParticipant || dragDisabled) return;
@@ -910,13 +457,18 @@ export function LodgingBoard({
     setRoomDropTargetName(room.name);
   }
 
-  function handleRoomDragLeave(event: DragEvent<HTMLDivElement>) {
-    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+  function handleRoomDragLeave(event: DragEvent<HTMLElement>) {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    if (
+      event.clientX < bounds.left ||
+      event.clientX >= bounds.right ||
+      event.clientY < bounds.top ||
+      event.clientY >= bounds.bottom
+    )
       setRoomDropTargetName(null);
-    }
   }
 
-  function handleRoomDrop(event: DragEvent<HTMLDivElement>, roomName: string) {
+  function handleRoomDrop(event: DragEvent<HTMLElement>, roomName: string) {
     event.preventDefault();
     const dragged = draggedParticipant;
     clearDragState();
@@ -935,9 +487,14 @@ export function LodgingBoard({
   }
 
   function handleUnassignedDragLeave(event: DragEvent<HTMLDivElement>) {
-    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    if (
+      event.clientX < bounds.left ||
+      event.clientX >= bounds.right ||
+      event.clientY < bounds.top ||
+      event.clientY >= bounds.bottom
+    )
       setIsUnassignedDropTarget(false);
-    }
   }
 
   function handleUnassignedDrop(event: DragEvent<HTMLDivElement>) {
@@ -978,43 +535,22 @@ export function LodgingBoard({
     });
   }
 
-  function openParticipantEdit(participant: LodgingParticipantSummary) {
-    const requestId = editRequestId.current + 1;
-    editRequestId.current = requestId;
+  function openParticipant(
+    participant: LodgingParticipantSummary,
+    mode: "view" | "edit" = "view",
+  ) {
     setMobilePanelOpen(false);
-    setEditingParticipant(participant);
-    setEditData(null);
-    setEditError(null);
-
-    startLoadingEdit(async () => {
-      const result = await getParticipantEditDataAction(participant.id);
-
-      if (editRequestId.current !== requestId) return;
-
-      if (result.success) {
-        setEditData(result);
-      } else {
-        setEditError(result.message);
-      }
-    });
+    setParticipantSheet({ id: participant.id, mode });
   }
 
-  function closeParticipantEdit() {
-    editRequestId.current += 1;
-    setEditingParticipant(null);
-    setEditData(null);
-    setEditError(null);
+  function openParticipantEdit(participant: LodgingParticipantSummary) {
+    openParticipant(participant, "edit");
   }
 
   function renderUnassignedPanel(inSheet: boolean) {
     return (
-      <UnassignedParticipantsPanel
-        titleId={
-          inSheet
-            ? "unassigned-lodging-mobile-title"
-            : "unassigned-lodging-title"
-        }
-        inSheet={inSheet}
+      <LodgingUnassignedPanel
+        onOpenRequest={openParticipant}
         participants={displayedOverview.unassignedParticipants}
         rooms={displayedRooms}
         canManage={canManage}
@@ -1057,551 +593,223 @@ export function LodgingBoard({
   }
 
   return (
-    <>
-      <Card className="gap-0 py-0">
-        <CardContent className="p-4 sm:p-5">
+    <div
+      ref={directoryRef}
+      className="grid min-h-(--dashboard-content-height) min-w-0 shrink-0 items-start xl:grid-cols-[minmax(0,1fr)_22.5rem]"
+    >
+      <DashboardPageSidebar path="/dashboard/lodging">
+        {canManage ? (
+          <div className="px-2 pt-0.5 pb-3">
+            <LodgingAutoAssignDialog
+              appearance="sidebar"
+              assignedCount={assignedCount}
+              registeredCount={
+                assignedCount + displayedOverview.unassignedParticipants.length
+              }
+            />
+          </div>
+        ) : null}
+        <div className="shrink-0 px-3 pb-3">
           <InputGroup>
             <InputGroupAddon>
-              <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
+              <HugeiconsIcon icon={Search01Icon} strokeWidth={1.5} />
             </InputGroupAddon>
             <InputGroupInput
               type="search"
-              placeholder="Buscar participante en todos los alojamientos"
-              aria-label="Buscar participante en todos los alojamientos"
+              placeholder="Buscar en alojamiento"
+              aria-label="Buscar dormitorio o participante"
               value={participantSearch}
               onChange={(event) => setParticipantSearch(event.target.value)}
             />
           </InputGroup>
-          {normalizedParticipantSearch ? (
-            <div className="mt-4">
-              <p className="mb-2 text-sm text-muted-foreground" aria-live="polite">
-                {participantSearchResults.length.toLocaleString("es-EC")}{" "}
-                {participantSearchResults.length === 1
-                  ? "participante encontrado"
-                  : "participantes encontrados"}
-              </p>
-              {participantSearchResults.length > 0 ? (
-                <ul className="max-h-80 divide-y overflow-y-auto rounded-lg border">
-                  {participantSearchResults.map(({ participant, location }) => (
-                    <li
-                      key={participant.id}
-                      className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-medium">{getDisplayName(participant)}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {location} · {participant.wardName} · {getAgeLabel(participant.age)}
-                        </p>
-                      </div>
-                      {canManage ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openParticipantEdit(participant)}
-                        >
-                          Editar perfil
-                        </Button>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No se encontraron participantes. Prueba con otro nombre o barrio.
-                </p>
-              )}
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="flex min-w-0 flex-col gap-5">
-          {displayedOverview.buildings.map((building) => {
-            const buildingPercent = getOccupancyPercent(
-              building.assignedParticipants,
-              building.participantCapacity,
-            );
-            const presentation = sexPresentation[building.sex];
-
-            return (
+        </div>
+        <SidebarContent className="gap-4 px-2 pb-3">
+          <nav
+            aria-label="Edificios y dormitorios"
+            className="flex flex-col gap-4"
+          >
+            {navigationBuildings.map((building) => (
               <section
                 key={building.id}
-                aria-labelledby={`building-${building.id}-title`}
+                aria-labelledby={`lodging-building-${building.id}`}
               >
-                <Card>
-                  <CardHeader>
-                    <CardTitle
-                      id={`building-${building.id}-title`}
-                      className="flex items-center gap-2 text-xl"
-                    >
-                      <HugeiconsIcon icon={Building06Icon} strokeWidth={2} />
-                      Edificio {building.name}
-                    </CardTitle>
-                    <CardDescription>
-                      {building.rooms.length} dormitorios listos ·{" "}
-                      {building.participantCapacity} camas para{" "}
-                      {presentation.label.toLowerCase()} ·{" "}
-                      {building.coordinatorCapacity} camas de coordinación
-                    </CardDescription>
-                    <CardAction>
-                      <Badge
-                        variant={
-                          buildingPercent === 100 ? "default" : "secondary"
-                        }
-                      >
-                        {buildingPercent}% ocupado
-                      </Badge>
-                    </CardAction>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-5">
-                    <Progress value={buildingPercent}>
-                      <ProgressLabel>
-                        {building.assignedParticipants} camas ocupadas ·{" "}
-                        {building.availableParticipantCapacity} disponibles
-                      </ProgressLabel>
-                      <ProgressValue />
-                    </Progress>
-
-                    <div className="flex flex-col gap-4">
-                      {building.rooms.map((room) => {
-                        const roomPercent = getOccupancyPercent(
-                          room.assignedParticipants,
-                          room.participantCapacity,
-                        );
-                        const roomTarget = {
-                          ...room,
-                          buildingSex: building.sex,
-                        };
-                        const isDropTarget = roomDropTargetName === room.name;
-                        const dropUnavailableReason =
-                          isDropTarget && draggedParticipant
-                            ? getLodgingMoveUnavailableReason(
-                                draggedParticipant.participants,
-                                roomTarget,
-                              )
-                            : null;
-                        const selectedCount = room.occupants.filter(
-                          (participant) =>
-                            selectedRoomParticipantIds.has(participant.id),
-                        ).length;
-                        const allSelected =
-                          room.occupants.length > 0 &&
-                          selectedCount === room.occupants.length;
-                        return (
-                          <Card
-                            key={room.id}
-                            size="sm"
-                            className={cn(
-                              "min-w-0 transition-[background-color,box-shadow]",
-                              isDropTarget &&
-                                (dropUnavailableReason
-                                  ? "bg-destructive/5 ring-2 ring-destructive"
-                                  : "bg-primary/5 ring-2 ring-primary ring-offset-2"),
-                            )}
-                            onDragOver={(event) =>
-                              handleRoomDragOver(event, roomTarget)
-                            }
-                            onDragLeave={handleRoomDragLeave}
-                            onDrop={(event) => handleRoomDrop(event, room.name)}
-                          >
-                            <CardHeader>
-                              <CardTitle className="flex items-center gap-2">
-                                <HugeiconsIcon
-                                  icon={BedBunkIcon}
-                                  strokeWidth={2}
-                                />
-                                Dormitorio {room.number}
-                              </CardTitle>
-                              <CardDescription>
-                                {isDropTarget
-                                  ? (dropUnavailableReason ??
-                                    "Suelta para asignar aquí")
-                                  : `${room.availableParticipantCapacity} cupos disponibles`}
-                              </CardDescription>
-                              <CardAction>
-                                <Badge
-                                  variant={
-                                    roomPercent === 100
-                                      ? "default"
-                                      : room.assignedParticipants > 0
-                                        ? "outline"
-                                        : "secondary"
-                                  }
-                                >
-                                  {room.assignedParticipants}/
-                                  {room.participantCapacity}
-                                </Badge>
-                              </CardAction>
-                            </CardHeader>
-                            <CardContent className="flex flex-col gap-3">
-                              <Progress value={roomPercent}>
-                                <ProgressLabel>Ocupación</ProgressLabel>
-                                <ProgressValue />
-                              </Progress>
-
-                              <Separator />
-
-                              {room.occupants.length > 0 ? (
-                                <>
-                                  {canManage ? (
-                                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                      <Checkbox
-                                        checked={allSelected}
-                                        indeterminate={
-                                          selectedCount > 0 && !allSelected
-                                        }
-                                        onCheckedChange={(checked) =>
-                                          handleGroupSelectionChange(
-                                            setSelectedRoomParticipantIds,
-                                            room.occupants,
-                                            checked,
-                                          )
-                                        }
-                                        aria-label={`Seleccionar todos los participantes del dormitorio ${room.number} de ${building.name}`}
-                                        disabled={dragDisabled}
-                                      />
-                                      <span>
-                                        {selectedCount > 0
-                                          ? `${selectedCount} seleccionados`
-                                          : "Seleccionar para arrastrar juntos"}
-                                      </span>
-                                      {selectedCount > 0 ? (
-                                        <>
-                                          <Button
-                                            type="button"
-                                            size="xs"
-                                            variant="outline"
-                                            disabled={dragDisabled}
-                                            onClick={() =>
-                                              setPickerParticipants(
-                                                room.occupants.filter(
-                                                  (participant) =>
-                                                    selectedRoomParticipantIds.has(
-                                                      participant.id,
-                                                    ),
-                                                ),
-                                              )
-                                            }
-                                          >
-                                            Mover seleccionados
-                                          </Button>
-                                          <Button
-                                            type="button"
-                                            size="xs"
-                                            variant="destructive"
-                                            disabled={dragDisabled}
-                                            onClick={() =>
-                                              setRequestedChange({
-                                                participants:
-                                                  room.occupants.filter(
-                                                    (participant) =>
-                                                      selectedRoomParticipantIds.has(
-                                                        participant.id,
-                                                      ),
-                                                  ),
-                                                targetRoomName: null,
-                                              })
-                                            }
-                                          >
-                                            Quitar
-                                          </Button>
-                                        </>
-                                      ) : null}
-                                    </div>
-                                  ) : null}
-                                  <TableFrame>
-                                    <Table
-                                      className="min-w-[760px] table-fixed"
-                                      aria-label={`Participantes en dormitorio ${room.number} de ${building.name}`}
-                                    >
-                                      <colgroup>
-                                        {canManage ? (
-                                          <col className="w-11" />
-                                        ) : null}
-                                        <col />
-                                        <col className="w-24" />
-                                        <col className="w-20" />
-                                        <col className="w-32" />
-                                        <col className="w-32" />
-                                        {canManage ? (
-                                          <col className="w-11" />
-                                        ) : null}
-                                      </colgroup>
-                                      <TableHeader>
-                                        <TableRow>
-                                          {canManage ? (
-                                            <TableHead className="text-center">
-                                              <span className="sr-only">
-                                                Seleccionar
-                                              </span>
-                                            </TableHead>
-                                          ) : null}
-                                          <TableHead>
-                                            Participante
-                                          </TableHead>
-                                          <TableHead>Sexo</TableHead>
-                                          <TableHead>Edad</TableHead>
-                                          <TableHead>Barrio</TableHead>
-                                          <TableHead>Estaca</TableHead>
-                                          {canManage ? (
-                                            <TableHead className="text-center">
-                                              <span className="sr-only">
-                                                Acciones
-                                              </span>
-                                            </TableHead>
-                                          ) : null}
-                                        </TableRow>
-                                      </TableHeader>
-                                      <TableBody>
-                                        {room.occupants.map(
-                                          (participant) => {
-                                            const selected =
-                                              selectedRoomParticipantIds.has(
-                                                participant.id,
-                                              );
-
-                                            return (
-                                              <TableRow
-                                                key={participant.id}
-                                                draggable={
-                                                  canManage && !dragDisabled
-                                                }
-                                                aria-grabbed={
-                                                  draggedParticipant?.participants.some(
-                                                    (item) =>
-                                                      item.id ===
-                                                      participant.id,
-                                                  ) ?? false
-                                                }
-                                                aria-selected={selected}
-                                                title={
-                                                  canManage
-                                                    ? "Arrastra a otro dormitorio o a la lista de pendientes; abre el botón de tres puntos para más opciones."
-                                                    : getDisplayName(participant)
-                                                }
-                                                className={cn(
-                                                  canManage &&
-                                                    "cursor-grab active:cursor-grabbing",
-                                                  selected &&
-                                                    "bg-primary/5 hover:bg-primary/10",
-                                                )}
-                                                onDragStart={(event) =>
-                                                  handleRoomParticipantDragStart(
-                                                    event,
-                                                    participant,
-                                                  )
-                                                }
-                                                onDragEnd={clearDragState}
-                                              >
-                                                {canManage ? (
-                                                  <TableCell className="text-center">
-                                                    <Checkbox
-                                                      checked={selected}
-                                                      onCheckedChange={(
-                                                        checked,
-                                                      ) =>
-                                                        handleSelectionChange(
-                                                          setSelectedRoomParticipantIds,
-                                                          participant.id,
-                                                          checked,
-                                                        )
-                                                      }
-                                                      onPointerDown={(event) =>
-                                                        event.stopPropagation()
-                                                      }
-                                                      aria-label={`Seleccionar a ${getDisplayName(participant)}`}
-                                                      disabled={dragDisabled}
-                                                    />
-                                                  </TableCell>
-                                                ) : null}
-                                                <TableCell className="max-w-0 overflow-hidden">
-                                                  <div className="flex min-w-0 items-center gap-2">
-                                                    <Avatar
-                                                      size="sm"
-                                                      aria-hidden="true"
-                                                    >
-                                                      <AvatarFallback>
-                                                        {getInitials(
-                                                          participant,
-                                                        )}
-                                                      </AvatarFallback>
-                                                    </Avatar>
-                                                    <div className="min-w-0 py-1">
-                                                      <span
-                                                        className="block truncate font-medium"
-                                                        title={getDisplayName(participant)}
-                                                      >
-                                                        {getDisplayName(
-                                                          participant,
-                                                        )}
-                                                      </span>
-                                                    </div>
-                                                  </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                  {participant.sex ?? "Sin registrar"}
-                                                </TableCell>
-                                                <TableCell className="tabular-nums">
-                                                  {participant.age ?? "—"}
-                                                </TableCell>
-                                                <TableCell className="max-w-0 truncate" title={participant.wardName}>
-                                                  {participant.wardName}
-                                                </TableCell>
-                                                <TableCell className="max-w-0 truncate" title={participant.stakeName}>
-                                                  {participant.stakeName}
-                                                </TableCell>
-                                                {canManage ? (
-                                                  <TableCell className="text-center">
-                                                    <LodgingParticipantActionsMenu
-                                                      participant={participant}
-                                                      rooms={displayedRooms}
-                                                      disabled={dragDisabled}
-                                                      onEditRequest={openParticipantEdit}
-                                                      onMoveRequest={(
-                                                        participant,
-                                                        targetRoomName,
-                                                      ) =>
-                                                        setRequestedChange({
-                                                          participants: [
-                                                            participant,
-                                                          ],
-                                                          targetRoomName,
-                                                        })
-                                                      }
-                                                      onRemoveRequest={(
-                                                        participant,
-                                                      ) =>
-                                                        setRequestedChange({
-                                                          participants: [
-                                                            participant,
-                                                          ],
-                                                          targetRoomName: null,
-                                                        })
-                                                      }
-                                                    />
-                                                  </TableCell>
-                                                ) : null}
-                                              </TableRow>
-                                            );
-                                          },
-                                        )}
-                                      </TableBody>
-                                    </Table>
-                                  </TableFrame>
-                                </>
-                              ) : (
-                                <Empty className="min-h-24 p-3">
-                                  <EmptyHeader>
-                                    <EmptyTitle>Sin participantes</EmptyTitle>
-                                    <EmptyDescription>
-                                      Este dormitorio todavía está vacío.
-                                    </EmptyDescription>
-                                  </EmptyHeader>
-                                </Empty>
-                              )}
-                            </CardContent>
-                            {canManage ? (
-                              <CardFooter>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  className="w-full"
-                                  disabled={
-                                    dragDisabled ||
-                                    room.availableParticipantCapacity === 0
-                                  }
-                                  onClick={() =>
-                                    openAssignmentDialog(building, room)
-                                  }
-                                >
-                                  <HugeiconsIcon
-                                    icon={Add01Icon}
-                                    strokeWidth={2}
-                                    data-icon="inline-start"
-                                  />
-                                  {room.availableParticipantCapacity === 0
-                                    ? "Habitación llena"
-                                    : "Agregar participante"}
-                                </Button>
-                              </CardFooter>
-                            ) : null}
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
+                <h2
+                  id={`lodging-building-${building.id}`}
+                  className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground"
+                >
+                  <HugeiconsIcon
+                    icon={Building06Icon}
+                    strokeWidth={1.5}
+                    className="size-4"
+                  />
+                  Edificio {building.name}
+                </h2>
+                <SidebarMenu className="gap-0">
+                  {building.rooms.map((room) => {
+                    const target = { ...room, buildingSex: building.sex };
+                    const isTarget = roomDropTargetName === room.name;
+                    const unavailable = draggedParticipant
+                      ? getLodgingMoveUnavailableReason(
+                          draggedParticipant.participants,
+                          target,
+                        )
+                      : null;
+                    return (
+                      <SidebarMenuItem key={room.id}>
+                        <SidebarMenuButton
+                          isActive={currentRoom?.id === room.id}
+                          aria-current={
+                            currentRoom?.id === room.id ? "page" : undefined
+                          }
+                          aria-label={`Edificio ${building.name}, Dormitorio ${room.number}, ${room.assignedParticipants} participantes`}
+                          className={cn(
+                            "h-9 rounded-sidebar-item! px-3 data-active:font-normal",
+                            isTarget &&
+                              (unavailable
+                                ? "ring-1 ring-destructive"
+                                : "ring-1 ring-primary"),
+                          )}
+                          onClick={() => selectRoom(room.id)}
+                          onDragOver={(event) =>
+                            handleRoomDragOver(event, target)
+                          }
+                          onDragLeave={handleRoomDragLeave}
+                          onDrop={(event) => handleRoomDrop(event, room.name)}
+                        >
+                          <HugeiconsIcon icon={BedBunkIcon} strokeWidth={1.5} />
+                          <span className="flex-1 truncate">
+                            Dormitorio {room.number}
+                          </span>
+                          <span className="text-xs tabular-nums text-muted-foreground">
+                            {room.assignedParticipants}
+                          </span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
               </section>
-            );
-          })}
-        </div>
-        <div className="hidden xl:block">{renderUnassignedPanel(false)}</div>
+            ))}
+          </nav>
+          {!navigationBuildings.length ? (
+            <p className="px-3 py-4 text-sm text-muted-foreground">
+              {navigationQuery
+                ? "No se encontraron dormitorios con esa búsqueda."
+                : "Aún no hay dormitorios."}
+            </p>
+          ) : null}
+        </SidebarContent>
+        <SidebarSeparator className="mx-0" />
+        <SidebarFooter className="shrink-0 px-5 py-3">
+          <dl className="flex items-center justify-between gap-3 text-sm">
+            <dt className="text-muted-foreground">Participantes alojados</dt>
+            <dd className="font-medium tabular-nums">{assignedCount}</dd>
+          </dl>
+        </SidebarFooter>
+      </DashboardPageSidebar>
+      <div className="min-w-0 p-4 pb-24 sm:p-6 sm:pb-24 xl:p-8">
+        {currentRoom && currentBuilding ? (
+          <LodgingRoomDetail
+            key={currentRoom.id}
+            building={currentBuilding}
+            room={currentRoom}
+            rooms={displayedRooms}
+            canManage={canManage}
+            disabled={dragDisabled}
+            dropTarget={roomDropTargetName === currentRoom.name}
+            dropError={
+              draggedParticipant
+                ? getLodgingMoveUnavailableReason(
+                    draggedParticipant.participants,
+                    currentRoom,
+                  )
+                : null
+            }
+            selectedIds={selectedRoomParticipantIds}
+            onSelect={(id, checked) =>
+              handleSelectionChange(setSelectedRoomParticipantIds, id, checked)
+            }
+            onSelectAll={(participants, checked) =>
+              handleGroupSelectionChange(
+                setSelectedRoomParticipantIds,
+                participants,
+                checked,
+              )
+            }
+            onAdd={() => openAssignmentDialog(currentBuilding, currentRoom)}
+            onOpen={openParticipant}
+            onEdit={openParticipantEdit}
+            onMove={(participant, targetRoomName) =>
+              setRequestedChange({
+                participants: [participant],
+                targetRoomName,
+              })
+            }
+            onRemove={(participant) =>
+              setRequestedChange({
+                participants: [participant],
+                targetRoomName: null,
+              })
+            }
+            onPickRooms={setPickerParticipants}
+            onRemoveSelected={(participants) =>
+              setRequestedChange({ participants, targetRoomName: null })
+            }
+            onDragStart={handleRoomParticipantDragStart}
+            onDragEnd={clearDragState}
+            onDragOver={(event) => handleRoomDragOver(event, currentRoom)}
+            onDragLeave={handleRoomDragLeave}
+            onDrop={(event) => handleRoomDrop(event, currentRoom.name)}
+          />
+        ) : (
+          <Empty className="min-h-80">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <HugeiconsIcon icon={BedBunkIcon} strokeWidth={1.5} />
+              </EmptyMedia>
+              <EmptyTitle>Sin dormitorios</EmptyTitle>
+              <EmptyDescription>
+                Los dormitorios aparecerán aquí cuando estén disponibles.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )}
       </div>
-
+      <aside
+        aria-label="Participantes sin alojamiento"
+        className="sticky top-0 hidden h-(--dashboard-content-height) min-h-0 flex-col border-l bg-sidebar text-sidebar-foreground xl:flex"
+      >
+        <h2 className="flex min-h-14 shrink-0 items-center px-4 text-sm font-semibold">
+          Participantes sin alojamiento
+        </h2>
+        {renderUnassignedPanel(false)}
+      </aside>
       <MobileUnassignedSheet
-        title="Sin alojamiento"
-        description="Busca y filtra participantes sin dormitorio."
-        icon={<HugeiconsIcon icon={BedBunkIcon} strokeWidth={2} data-icon="inline-start" />}
+        title="Participantes sin alojamiento"
+        description="Busca participantes para asignarlos a un dormitorio."
+        icon={
+          <HugeiconsIcon
+            icon={BedBunkIcon}
+            strokeWidth={1.5}
+            data-icon="inline-start"
+          />
+        }
         open={mobilePanelOpen}
         onOpenChange={setMobilePanelOpen}
       >
-        {renderUnassignedPanel(true)}
+        {mobilePanelOpen ? renderUnassignedPanel(true) : null}
       </MobileUnassignedSheet>
-
-      <Sheet
-        open={editingParticipant !== null}
-        onOpenChange={(open) => {
-          if (!open) closeParticipantEdit();
-        }}
-      >
-        <SheetContent
-          side="right"
-          className="data-[side=right]:w-full data-[side=right]:sm:max-w-2xl"
-        >
-          <SheetHeader className="pr-16">
-            <SheetTitle>Editar perfil</SheetTitle>
-            <SheetDescription>
-              {editingParticipant && getDisplayName(editingParticipant)}
-            </SheetDescription>
-          </SheetHeader>
-          {isLoadingEdit ? (
-            <div className="flex flex-1 items-center justify-center gap-2 px-6 pb-6" role="status">
-              <Spinner />
-              Cargando perfil…
-            </div>
-          ) : editError ? (
-            <div className="flex flex-1 flex-col items-start gap-4 px-6 pb-6">
-              <p role="alert" className="text-sm text-destructive">
-                {editError}
-              </p>
-              {editingParticipant ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => openParticipantEdit(editingParticipant)}
-                >
-                  Reintentar
-                </Button>
-              ) : null}
-            </div>
-          ) : editData ? (
-            <div className="flex-1 overflow-y-auto px-6 pb-6">
-              <ParticipantForm
-                key={editData.participant.id}
-                participant={editData.participant}
-                companies={editData.companies}
-                wards={editData.wards}
-                stakes={editData.stakes}
-                lodgingBuildings={editData.lodgingBuildings}
-                presentation="sheet"
-                onCancel={closeParticipantEdit}
-                onSuccess={closeParticipantEdit}
-              />
-            </div>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+      <ParticipantDetailSheet
+        key={
+          participantSheet
+            ? `${participantSheet.id}-${participantSheet.mode}`
+            : "closed"
+        }
+        participantId={participantSheet?.id ?? null}
+        initialMode={participantSheet?.mode}
+        onClose={() => setParticipantSheet(null)}
+        onDataChanged={() => startTransition(() => router.refresh())}
+      />
 
       <AlertDialog
         open={requestedChange !== null}
@@ -1846,6 +1054,6 @@ export function LodgingBoard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

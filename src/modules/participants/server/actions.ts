@@ -9,6 +9,7 @@ import {
   canCheckInParticipants,
   canDeleteParticipants,
   canManageParticipants,
+  canViewParticipantDirectory,
 } from "@/modules/auth/roles";
 import { requireSession } from "@/modules/auth/server/session";
 import { listStakes, listWards } from "@/modules/church-units/server/queries";
@@ -330,6 +331,44 @@ export async function findParticipantForQrCheckInAction(
   }
 
   return { success: true, participantId: participant.id };
+}
+
+export async function getParticipantDetailAction(participantId: string) {
+  try {
+    const session = await requireSession();
+
+    if (!canViewParticipantDirectory(session.user.role)) {
+      return {
+        success: false as const,
+        message: "No tienes permiso para ver participantes.",
+      };
+    }
+
+    if (!isParticipantId(participantId)) {
+      return { success: false as const, message: "El participante no es válido." };
+    }
+
+    const participant = await getParticipantById(participantId);
+    if (!participant) {
+      return { success: false as const, message: "El participante ya no existe." };
+    }
+
+    return {
+      success: true as const,
+      participant: {
+        ...participant,
+        checkedInAt: participant.checkedInAt?.toISOString() ?? null,
+        welcomeEmailSentAt: participant.welcomeEmailSentAt?.toISOString() ?? null,
+      },
+      canManage: canManageParticipants(session.user.role),
+      canDelete: canDeleteParticipants(session.user.role),
+    };
+  } catch {
+    return {
+      success: false as const,
+      message: "No se pudo cargar el participante. Inténtalo nuevamente.",
+    };
+  }
 }
 
 export async function getParticipantEditDataAction(participantId: string) {

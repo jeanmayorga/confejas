@@ -19,6 +19,7 @@ export function MobileUnassignedSheet({
   open,
   onOpenChange,
   children,
+  headerActions,
 }: {
   title: string;
   description: string;
@@ -26,6 +27,7 @@ export function MobileUnassignedSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
+  headerActions?: ReactNode;
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -45,7 +47,14 @@ export function MobileUnassignedSheet({
         className="h-[min(85dvh,46rem)] max-h-[calc(100dvh-2rem)] min-h-0 overflow-hidden p-0"
       >
         <SheetHeader className="shrink-0 border-b px-5 py-4">
-          <SheetTitle>{title}</SheetTitle>
+          {headerActions ? (
+            <div className="flex items-center justify-between gap-2 pr-8">
+              <SheetTitle>{title}</SheetTitle>
+              {headerActions}
+            </div>
+          ) : (
+            <SheetTitle>{title}</SheetTitle>
+          )}
           <SheetDescription>{description}</SheetDescription>
         </SheetHeader>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3">

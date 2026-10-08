@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  devIndicators: {
+    position: "bottom-right",
+  },
   experimental: {
     optimizePackageImports: ["@hugeicons/core-free-icons"],
   },

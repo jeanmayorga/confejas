@@ -23,8 +23,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { Menu01Icon } from "@hugeicons/core-free-icons"
+import { SidebarIcon } from "@/components/icons/sidebar-icon"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -172,7 +171,7 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="overscroll-contain bg-sidebar text-sidebar-foreground"
+          className="overflow-hidden overscroll-contain rounded-[calc(var(--radius-sidebar-panel)+0.75rem)] border-0 bg-sidebar-rail text-sidebar-rail-foreground [&>[data-slot=drawer-content]]:rounded-none [&>[data-slot=drawer-content]]:pr-3 [&>[data-slot=drawer-content]]:pb-3 [&>[data-slot=drawer-swipe-handle]]:after:bg-sidebar-rail-foreground/25"
           {...props}
         >
           <DrawerHeader className="sr-only">
@@ -253,11 +252,7 @@ function SidebarTrigger({
       }}
       {...props}
     >
-      <HugeiconsIcon
-        icon={Menu01Icon}
-        strokeWidth={2}
-        aria-hidden="true"
-      />
+      <SidebarIcon />
       <span className="sr-only">Alternar barra lateral</span>
     </Button>
   )
