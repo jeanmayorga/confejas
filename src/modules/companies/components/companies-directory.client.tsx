@@ -19,6 +19,7 @@ import Cancel01Icon from "@hugeicons/core-free-icons/Cancel01Icon";
 import DragDropVerticalIcon from "@hugeicons/core-free-icons/DragDropVerticalIcon";
 import MoreHorizontalIcon from "@hugeicons/core-free-icons/MoreHorizontalIcon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
+import UserCheck01Icon from "@hugeicons/core-free-icons/UserCheck01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -59,6 +60,7 @@ import {
 import {
   Empty,
   EmptyContent,
+  EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
@@ -77,6 +79,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { CompanyUnassignedSidebar } from "./company-unassigned-sidebar.client";
+import { CompanyUnassignedActions } from "./company-unassigned-actions.client";
 import { CompanyActionsMenu } from "./company-actions-menu.client";
 import {
   CompanyParticipantFilters,
@@ -119,9 +122,7 @@ import {
   sortParticipantsByName,
   type CompanyParticipantSort,
 } from "@/modules/companies/participant-order";
-import { CompanyCapacityDialog } from "@/modules/companies/components/company-capacity-dialog.client";
 import { CreateCompanyButton } from "@/modules/companies/components/create-company-button.client";
-import { CompanyDistributionDialog } from "@/modules/companies/components/company-distribution-dialog.client";
 import {
   FEMALE_PARTICIPANT_SEX,
   MALE_PARTICIPANT_SEX,
@@ -1017,9 +1018,10 @@ export function CompaniesDirectory({
           />
         ) : null}
       </div>
-      <CompanyUnassignedSidebar>
+      <CompanyUnassignedSidebar
+        actions={<CompanyUnassignedActions capacity={capacity} />}
+      >
         <UnassignedParticipantsPanel
-          capacity={capacity}
           draggedParticipant={draggedParticipant}
           draggedParticipantIds={draggedParticipantIds}
           isDropTarget={isUnassignedDropTarget}
@@ -1089,7 +1091,6 @@ export function CompaniesDirectory({
 }
 
 function UnassignedParticipantsPanel({
-  capacity,
   draggedParticipant,
   draggedParticipantIds,
   isDropTarget,
@@ -1103,7 +1104,6 @@ function UnassignedParticipantsPanel({
   onParticipantSelectionChange,
   onParticipantsSelectionChange,
 }: {
-  capacity: DistributionCapacity;
   draggedParticipant: DraggedCompanyParticipants | null;
   draggedParticipantIds: ReadonlySet<string>;
   isDropTarget: boolean;
@@ -1127,7 +1127,6 @@ function UnassignedParticipantsPanel({
     checked: boolean,
   ) => void;
 }) {
-  const queryClient = useQueryClient();
   const listViewportRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
@@ -1223,31 +1222,43 @@ function UnassignedParticipantsPanel({
               : "Arrastra aquí para quitar de la compañía."}
           </p>
         ) : null}
-        <div className="flex shrink-0 flex-col gap-2 border-b px-3 pb-3">
-          <div className="flex flex-wrap gap-2">
-            <CompanyDistributionDialog
-              capacity={capacity}
-              onDistributed={() =>
-                queryClient.invalidateQueries({
-                  queryKey: ["company-unassigned-participants"],
-                })
-              }
-            />
-            <CompanyCapacityDialog capacity={capacity} />
-          </div>
-          <InputGroup>
+        <div className="flex shrink-0 items-center gap-2 px-4 pb-4 pt-1">
+          <InputGroup className="min-w-0 flex-1">
             <InputGroupAddon>
-              <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
+              <HugeiconsIcon
+                icon={Search01Icon}
+                strokeWidth={1.5}
+                aria-hidden="true"
+              />
             </InputGroupAddon>
             <InputGroupInput
               type="search"
-              placeholder="Buscar participante"
+              placeholder="Buscar"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               aria-label="Buscar participantes sin compañía"
+              className="[&::-webkit-search-cancel-button]:hidden"
             />
+            {search ? (
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  aria-label="Limpiar búsqueda de participantes sin compañía"
+                  onClick={() => setSearch("")}
+                >
+                  <HugeiconsIcon
+                    icon={Cancel01Icon}
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  />
+                </InputGroupButton>
+              </InputGroupAddon>
+            ) : null}
           </InputGroup>
-          <UnassignedStatusFilter value={status} onChange={setStatus} />
+          <UnassignedStatusFilter
+            value={status}
+            onChange={setStatus}
+            appearance="menu"
+          />
         </div>
 
         <div
@@ -1269,12 +1280,23 @@ function UnassignedParticipantsPanel({
               ))}
             </div>
           ) : unassignedParticipantsQuery.isError ? (
-            <p
-              role="alert"
-              className="px-4 py-8 text-center text-muted-foreground"
-            >
-              No pudimos cargar los participantes sin compañía.
-            </p>
+            <Empty className="px-4 py-10" role="alert">
+              <EmptyHeader>
+                <EmptyTitle>No pudimos cargar la lista</EmptyTitle>
+                <EmptyDescription>
+                  Vuelve a intentarlo para ver los participantes sin compañía.
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void unassignedParticipantsQuery.refetch()}
+                >
+                  Reintentar
+                </Button>
+              </EmptyContent>
+            </Empty>
           ) : participants.length > 0 ? (
             <>
               <TableFrame className="rounded-none border-0">
@@ -1408,27 +1430,60 @@ function UnassignedParticipantsPanel({
               ) : null}
             </>
           ) : (
-            <p
-              className="px-4 py-8 text-center text-muted-foreground"
-              role="status"
-            >
-              {deferredSearch || status !== "all"
-                ? "No encontramos participantes sin compañía."
-                : "No hay participantes sin compañía."}
-            </p>
+            <Empty className="px-4 py-10" role="status">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <HugeiconsIcon
+                    icon={
+                      deferredSearch || status !== "all"
+                        ? Search01Icon
+                        : UserCheck01Icon
+                    }
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  />
+                </EmptyMedia>
+                <EmptyTitle>
+                  {deferredSearch || status !== "all"
+                    ? "Sin coincidencias"
+                    : "Sin participantes pendientes"}
+                </EmptyTitle>
+                <EmptyDescription>
+                  {deferredSearch || status !== "all"
+                    ? "Prueba con otro nombre o cambia el filtro de estado."
+                    : "Los participantes sin compañía aparecerán aquí para que puedas asignarlos."}
+                </EmptyDescription>
+              </EmptyHeader>
+              {deferredSearch || status !== "all" ? (
+                <EmptyContent>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSearch("");
+                      setStatus("all");
+                    }}
+                  >
+                    Limpiar búsqueda y filtro
+                  </Button>
+                </EmptyContent>
+              ) : null}
+            </Empty>
           )}
         </div>
 
-        <div className="flex shrink-0 items-center justify-between border-t p-3">
+        <div className="flex shrink-0 items-center justify-between border-t px-4 py-3">
           <span className="text-muted-foreground">
             {deferredSearch || status !== "all"
               ? "Resultados"
-              : "Total de participantes"}
+              : "Sin compañía"}
           </span>
           <Badge variant="secondary">
             {unassignedParticipantsQuery.isPending
               ? "…"
-              : total.toLocaleString("es-EC")}
+              : unassignedParticipantsQuery.isError
+                ? "—"
+                : total.toLocaleString("es-EC")}
           </Badge>
         </div>
       </div>

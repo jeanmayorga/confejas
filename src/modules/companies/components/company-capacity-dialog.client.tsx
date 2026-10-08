@@ -1,8 +1,6 @@
 "use client";
 
-import { type FormEvent, useState, useTransition } from "react";
-import PencilEdit02Icon from "@hugeicons/core-free-icons/PencilEdit02Icon";
-import { HugeiconsIcon } from "@hugeicons/react";
+import { type FormEvent, type RefObject, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -14,9 +12,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -27,6 +29,9 @@ import { updateCompanyCapacityAction } from "@/modules/companies/server/actions"
 
 type CompanyCapacityDialogProps = {
   capacity: DistributionCapacity;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  returnFocus?: RefObject<HTMLElement | null>;
 };
 
 function parseCapacity(value: string) {
@@ -41,9 +46,11 @@ function parseCapacity(value: string) {
 
 export function CompanyCapacityDialog({
   capacity,
+  open,
+  onOpenChange: setOpen,
+  returnFocus,
 }: CompanyCapacityDialogProps) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [female, setFemale] = useState(String(capacity.female));
   const [male, setMale] = useState(String(capacity.male));
   const [error, setError] = useState<string | null>(null);
@@ -97,16 +104,7 @@ export function CompanyCapacityDialog({
         }
       }}
     >
-      <DialogTrigger render={<Button type="button" variant="outline" />}>
-        <HugeiconsIcon
-          icon={PencilEdit02Icon}
-          strokeWidth={2}
-          data-icon="inline-start"
-        />
-        Editar tamaño
-      </DialogTrigger>
-
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" finalFocus={returnFocus}>
         <DialogHeader>
           <DialogTitle>Tamaño de las compañías</DialogTitle>
           <DialogDescription>

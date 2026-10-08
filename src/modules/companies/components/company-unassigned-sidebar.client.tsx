@@ -24,8 +24,10 @@ function getServerSnapshot() {
 
 export function CompanyUnassignedSidebar({
   children,
+  actions,
 }: {
   children: ReactNode;
+  actions: ReactNode;
 }) {
   const desktop = useSyncExternalStore(
     subscribeToDesktop,
@@ -37,9 +39,10 @@ export function CompanyUnassignedSidebar({
   if (desktop) {
     return (
       <div className="sticky top-0 flex h-svh min-h-0 flex-col border-l bg-sidebar text-sidebar-foreground">
-        <h2 className="flex h-12 shrink-0 items-center px-3 text-sm font-semibold">
-          Participantes sin compañía
-        </h2>
+        <div className="flex min-h-14 shrink-0 items-center justify-between gap-2 px-4">
+          <h2 className="text-sm font-semibold">Participantes sin compañía</h2>
+          {actions}
+        </div>
         {children}
       </div>
     );
@@ -49,6 +52,7 @@ export function CompanyUnassignedSidebar({
     <MobileUnassignedSheet
       title="Participantes sin compañía"
       description="Busca participantes para asignarlos a una compañía."
+      headerActions={actions}
       icon={
         <HugeiconsIcon
           icon={UserMultiple02Icon}

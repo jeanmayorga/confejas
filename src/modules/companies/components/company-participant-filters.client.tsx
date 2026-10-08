@@ -23,7 +23,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+import { ParticipantStatusDot as StatusDot } from "@/modules/participants/components/participant-status-dot";
 import {
   isParticipantStatus,
   PARTICIPANT_STATUS_OPTIONS,
@@ -54,26 +54,6 @@ const sexOptions = [
   { value: "female", label: "Mujeres" },
   { value: "other", label: "Otro o sin registrar" },
 ];
-
-const statusDotClassNames = {
-  registered: "bg-participant-registered",
-  confirmed: "bg-participant-confirmed",
-  arrived: "bg-participant-arrived",
-  cancelled: "bg-participant-cancelled",
-  pending: "bg-participant-pending",
-} satisfies Record<ParticipantStatus, string>;
-
-function StatusDot({ status }: { status: ParticipantStatus }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "size-2 shrink-0 rounded-full",
-        statusDotClassNames[status],
-      )}
-    />
-  );
-}
 
 export function CompanyParticipantFilters({
   participants,

@@ -1,8 +1,6 @@
 "use client";
 
-import { type FormEvent, useState, useTransition } from "react";
-import ShuffleSquareIcon from "@hugeicons/core-free-icons/ShuffleSquareIcon";
-import { HugeiconsIcon } from "@hugeicons/react";
+import { type FormEvent, type RefObject, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -16,7 +14,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -137,12 +134,17 @@ function DistributionPreview({ proposal }: { proposal: DistributionPreview }) {
 export function CompanyDistributionDialog({
   capacity,
   onDistributed,
+  open,
+  onOpenChange: setOpen,
+  returnFocus,
 }: {
   capacity: DistributionCapacity;
   onDistributed?: () => Promise<unknown>;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  returnFocus?: RefObject<HTMLElement | null>;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [youngestFirst, setYoungestFirst] = useState(true);
   const [stakeDiversity, setStakeDiversity] = useState(false);
   const [proposal, setProposal] = useState<DistributionPreview | null>(null);
@@ -240,18 +242,10 @@ export function CompanyDistributionDialog({
         }
       }}
     >
-      <DialogTrigger render={<Button type="button" variant="outline" />}>
-        <HugeiconsIcon
-          icon={ShuffleSquareIcon}
-          strokeWidth={2}
-          data-icon="inline-start"
-        />
-        Distribuir en compañías
-      </DialogTrigger>
-
       <DialogContent
         className="max-h-[90dvh] overflow-y-auto sm:max-w-lg"
         showCloseButton={!pending}
+        finalFocus={returnFocus}
       >
         <DialogHeader>
           <DialogTitle>Distribuir participantes</DialogTitle>
