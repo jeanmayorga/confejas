@@ -12,6 +12,12 @@ const companyTwoImage = {
   height: 2561,
 };
 
+const companyFourImage = {
+  src: "/counselors/company-04.png",
+  width: 2047,
+  height: 2561,
+};
+
 // Use the names printed on the supplied posters to map each portrait to its ID.
 // Keep the original images and frame the portraits in their avatars.
 const portraits: Record<
@@ -29,6 +35,12 @@ const portraits: Record<
   },
   "f3c2ba4d-416e-4153-a169-5e2e300e289b": {
     image: companyTwoImage, x: 1240, y: 815, size: 540,
+  },
+  "1a165337-27df-4370-b8a1-cf8107d79f45": {
+    image: companyFourImage, x: 360, y: 845, size: 400,
+  },
+  "ddd93adf-9cbe-4673-8240-62914bc23ae8": {
+    image: companyFourImage, x: 1205, y: 920, size: 600,
   },
 };
 
