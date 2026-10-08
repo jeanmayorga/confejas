@@ -31,6 +31,9 @@ Confejas operations. The group name is not used for routing.
 ## Execution model
 
 The receiver uses WhatsApp CLI `sync --follow --live-only --chat <fixed-jid>`.
+The receiver checks connection and login health every five seconds. If disconnected
+for 30 seconds, it exits so the daemon starts a fresh receiver; merely having a
+running process does not count as being connected.
 A durable message-ID claim prevents the same message from being replayed. The
 service starts `codex exec` in a private per-request workspace, with the shell
 enabled, a `workspace-write` sandbox, and network access. The project source is

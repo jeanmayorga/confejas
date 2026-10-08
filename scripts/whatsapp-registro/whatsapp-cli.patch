@@ -33,7 +33,7 @@ index c654158..cd86dc3 100644
  		var err error
  
 diff --git a/internal/cli/sync.go b/internal/cli/sync.go
-index 72929bb..a6765e2 100644
+index 72929bb..3413496 100644
 --- a/internal/cli/sync.go
 +++ b/internal/cli/sync.go
 @@ -16,6 +16,8 @@ import (
@@ -64,6 +64,91 @@ index 72929bb..a6765e2 100644
  	// Connect
  	if err := client.Connect(); err != nil {
  		return fmt.Errorf("connection failed: %w", err)
+@@ -77,8 +84,12 @@ func runSync(cmd *cobra.Command, args []string) error {
+ 	if syncFollow {
+ 		fmt.Fprintln(os.Stderr, "Connected. Syncing messages continuously. Press Ctrl+C to stop.")
+ 
+-		// Run until interrupted
+-		<-ctx.Done()
++		// A live process is not evidence of a usable WhatsApp connection.
++		// Let the supervisor create a fresh receiver if auto-reconnect stalls.
++		if err := followConnection(ctx, client.IsConnected, client.IsLoggedIn); err != nil {
++			client.Disconnect()
++			return err
++		}
+ 	} else {
+ 		fmt.Fprintln(os.Stderr, "Connected. Performing one-time sync...")
+ 
+@@ -108,3 +119,32 @@ func runSync(cmd *cobra.Command, args []string) error {
+ 		"messages": msgCount,
+ 	}, fmt.Sprintf("Synced %d chats, %d messages", chatCount, msgCount))
+ }
++
++// connectionHealth allows a short reconnect/login grace period, but never waits forever.
++type connectionHealth struct{ unhealthySince time.Time }
++
++func (h *connectionHealth) expired(now time.Time, healthy bool) bool {
++	if healthy {
++		h.unhealthySince = time.Time{}
++		return false
++	}
++	if h.unhealthySince.IsZero() {
++		h.unhealthySince = now
++	}
++	return now.Sub(h.unhealthySince) >= 30*time.Second
++}
++func followConnection(ctx context.Context, connected, loggedIn func() bool) error {
++	ticker := time.NewTicker(5 * time.Second)
++	defer ticker.Stop()
++	health := connectionHealth{}
++	for {
++		select {
++		case <-ctx.Done():
++			return nil
++		case now := <-ticker.C:
++			if health.expired(now, connected() && loggedIn()) {
++				return fmt.Errorf("WhatsApp disconnected or unauthenticated for 30 seconds; restarting receiver")
++			}
++		}
++	}
++}
+diff --git a/internal/cli/sync_health_test.go b/internal/cli/sync_health_test.go
+new file mode 100644
+index 0000000..b83a87f
+--- /dev/null
++++ b/internal/cli/sync_health_test.go
+@@ -0,0 +1,31 @@
++package cli
++
++import (
++	"context"
++	"testing"
++	"time"
++)
++
++func TestConnectionHealthRecovery(t *testing.T) {
++	now := time.Now()
++	h := connectionHealth{}
++	if h.expired(now, false) || h.expired(now.Add(29*time.Second), false) {
++		t.Fatal("reconnect grace missing")
++	}
++	if !h.expired(now.Add(30*time.Second), false) {
++		t.Fatal("stalled receiver never exits")
++	}
++	if h.expired(now.Add(31*time.Second), true) {
++		t.Fatal("healthy receiver stopped")
++	}
++	if h.expired(now.Add(32*time.Second), false) {
++		t.Fatal("grace was not reset")
++	}
++}
++func TestFollowStopsImmediatelyOnCancellation(t *testing.T) {
++	ctx, cancel := context.WithCancel(context.Background())
++	cancel()
++	if err := followConnection(ctx, func() bool { return false }, func() bool { return false }); err != nil {
++		t.Fatal(err)
++	}
++}
 diff --git a/internal/store/store.go b/internal/store/store.go
 index 3504828..0ae83cb 100644
 --- a/internal/store/store.go
