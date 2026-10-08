@@ -171,7 +171,7 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="overscroll-contain bg-sidebar text-sidebar-foreground"
+          className="overscroll-contain border-0 bg-sidebar-rail text-sidebar-rail-foreground [&>[data-slot=drawer-swipe-handle]]:after:bg-sidebar-rail-foreground/25"
           {...props}
         >
           <DrawerHeader className="sr-only">
