@@ -76,6 +76,7 @@ import {
 } from "@/components/ui/sidebar";
 import { CompanyUnassignedSidebar } from "./company-unassigned-sidebar.client";
 import { CompanySidebarActions } from "./company-sidebar-actions.client";
+import { CounselorAvatarImage } from "@/modules/counselors/components/counselor-avatar-image";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -1502,7 +1503,12 @@ function CompanyCard({
                     <TableRow key={counselor.id} className="flex md:table-row">
                       <TableCell className="min-w-0 flex-1 whitespace-normal border-r-0 px-3 py-3 md:table-cell md:whitespace-nowrap md:border-r md:py-[3px]">
                         <div className="flex min-w-0 items-start gap-2 md:items-center">
-                          <Avatar size="sm" aria-hidden="true">
+                          <Avatar
+                            size="sm"
+                            className="overflow-hidden"
+                            aria-hidden="true"
+                          >
+                            <CounselorAvatarImage counselorId={counselor.id} />
                             <AvatarFallback
                               className={cn(
                                 "!text-[9px] font-medium",
