@@ -883,7 +883,7 @@ export function CompaniesDirectory({
                       {getCompanyDisplayName(company.name, index + 1)}
                     </span>
                     <span
-                      className="ml-auto text-xs tabular-nums text-muted-foreground group-hover/menu-item:opacity-0 group-focus-within/menu-item:opacity-0 max-md:hidden"
+                      className="pointer-events-none absolute top-2 right-1 flex size-5 items-center justify-center text-xs tabular-nums text-muted-foreground group-hover/menu-item:opacity-0 group-focus-within/menu-item:opacity-0 max-md:hidden"
                       aria-label={`${company.participantCount} participantes`}
                     >
                       {company.participantCount}
