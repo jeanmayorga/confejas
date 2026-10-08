@@ -182,33 +182,6 @@ function getParticipantName(participant: CompanyParticipant) {
   return `${participant.firstNames} ${participant.lastNames}`.trim();
 }
 
-const surnamePrefixes = new Set(["de", "del", "la", "las", "los", "san", "santa"]);
-
-function getShortParticipantName(participant: CompanyParticipant) {
-  const firstName = participant.firstNames.trim().split(/\s+/)[0];
-  const surnames = participant.lastNames.trim().split(/\s+/).filter(Boolean);
-  let surnameLength = 1;
-  while (
-    surnameLength < surnames.length &&
-    surnamePrefixes.has(surnames[surnameLength - 1].toLocaleLowerCase("es"))
-  ) {
-    surnameLength += 1;
-  }
-
-  return [firstName, ...surnames.slice(0, surnameLength)]
-    .filter(Boolean)
-    .map((part, index) => {
-      const lower = part.toLocaleLowerCase("es");
-      if (index > 0 && surnamePrefixes.has(lower)) return lower;
-      return lower.replace(
-        /(^|[-'])(\p{L})/gu,
-        (_, separator: string, letter: string) =>
-          `${separator}${letter.toLocaleUpperCase("es")}`,
-      );
-    })
-    .join(" ");
-}
-
 function getParticipantAge(age: number | null) {
   return age === null ? "Edad no registrada" : `${age} años`;
 }
@@ -1699,7 +1672,7 @@ function CompanyCard({
                     </TableHead>
                     <TableHead className="text-center">#</TableHead>
                     <TableHead>Estado</TableHead>
-                    <TableHead>Nombre</TableHead>
+                    <TableHead>Participantes</TableHead>
                     <TableHead>Edad</TableHead>
                     <TableHead>Sexo</TableHead>
                     <TableHead className="text-center">
@@ -1793,10 +1766,10 @@ function CompanyCard({
                               </Avatar>
                               <div className="min-w-0">
                                 <span
-                                  className="block truncate font-medium"
+                                  className="block wrap-anywhere font-medium"
                                   title={getParticipantName(participant)}
                                 >
-                                  {getShortParticipantName(participant)}
+                                  {getParticipantName(participant)}
                                 </span>
                                 <div className="mt-1 flex flex-wrap items-center gap-1.5 md:hidden">
                                   <Badge
