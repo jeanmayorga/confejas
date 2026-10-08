@@ -1161,18 +1161,20 @@ export function LodgingBoard({
                                   ) : null}
                                   <TableFrame>
                                     <Table
-                                      className="table-fixed"
+                                      className="min-w-[760px] table-fixed"
                                       aria-label={`Participantes en dormitorio ${room.number} de ${building.name}`}
                                     >
                                       <colgroup>
                                         {canManage ? (
-                                          <col className="w-9 sm:w-11" />
+                                          <col className="w-11" />
                                         ) : null}
-                                        <col className="hidden w-12 sm:table-column" />
-                                        <col className="hidden w-24 sm:table-column" />
                                         <col />
+                                        <col className="w-24" />
+                                        <col className="w-20" />
+                                        <col className="w-32" />
+                                        <col className="w-32" />
                                         {canManage ? (
-                                          <col className="w-10 sm:w-11" />
+                                          <col className="w-11" />
                                         ) : null}
                                       </colgroup>
                                       <TableHeader>
@@ -1184,17 +1186,15 @@ export function LodgingBoard({
                                               </span>
                                             </TableHead>
                                           ) : null}
-                                          <TableHead className="hidden text-center sm:table-cell">
-                                            #
-                                          </TableHead>
-                                          <TableHead className="hidden sm:table-cell">
-                                            Estado
-                                          </TableHead>
-                                          <TableHead className="px-1 sm:px-3">
+                                          <TableHead>
                                             Participante
                                           </TableHead>
+                                          <TableHead>Sexo</TableHead>
+                                          <TableHead>Edad</TableHead>
+                                          <TableHead>Barrio</TableHead>
+                                          <TableHead>Estaca</TableHead>
                                           {canManage ? (
-                                            <TableHead className="px-1 text-center sm:px-3">
+                                            <TableHead className="text-center">
                                               <span className="sr-only">
                                                 Acciones
                                               </span>
@@ -1204,7 +1204,7 @@ export function LodgingBoard({
                                       </TableHeader>
                                       <TableBody>
                                         {room.occupants.map(
-                                          (participant, index) => {
+                                          (participant) => {
                                             const selected =
                                               selectedRoomParticipantIds.has(
                                                 participant.id,
@@ -1264,20 +1264,11 @@ export function LodgingBoard({
                                                     />
                                                   </TableCell>
                                                 ) : null}
-                                                <TableCell className="hidden text-center tabular-nums text-muted-foreground sm:table-cell">
-                                                  {index + 1}
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">
-                                                  <ParticipantStatusBadge
-                                                    status={participant.status}
-                                                  />
-                                                </TableCell>
-                                                <TableCell className="max-w-0 overflow-hidden px-1 whitespace-normal sm:px-3">
+                                                <TableCell className="max-w-0 overflow-hidden">
                                                   <div className="flex min-w-0 items-center gap-2">
                                                     <Avatar
                                                       size="sm"
                                                       aria-hidden="true"
-                                                      className="hidden sm:flex"
                                                     >
                                                       <AvatarFallback>
                                                         {getInitials(
@@ -1286,29 +1277,31 @@ export function LodgingBoard({
                                                       </AvatarFallback>
                                                     </Avatar>
                                                     <div className="min-w-0 py-1">
-                                                      <span className="block break-words font-medium">
+                                                      <span
+                                                        className="block truncate font-medium"
+                                                        title={getDisplayName(participant)}
+                                                      >
                                                         {getDisplayName(
                                                           participant,
                                                         )}
                                                       </span>
-                                                      <span className="block text-xs text-muted-foreground">
-                                                        {participant.wardName} ·{" "}
-                                                        {getAgeLabel(
-                                                          participant.age,
-                                                        )}
-                                                      </span>
-                                                      <span className="mt-1 inline-flex sm:hidden">
-                                                        <ParticipantStatusBadge
-                                                          status={
-                                                            participant.status
-                                                          }
-                                                        />
-                                                      </span>
                                                     </div>
                                                   </div>
                                                 </TableCell>
+                                                <TableCell>
+                                                  {participant.sex ?? "Sin registrar"}
+                                                </TableCell>
+                                                <TableCell className="tabular-nums">
+                                                  {participant.age ?? "—"}
+                                                </TableCell>
+                                                <TableCell className="max-w-0 truncate" title={participant.wardName}>
+                                                  {participant.wardName}
+                                                </TableCell>
+                                                <TableCell className="max-w-0 truncate" title={participant.stakeName}>
+                                                  {participant.stakeName}
+                                                </TableCell>
                                                 {canManage ? (
-                                                  <TableCell className="px-1 text-center sm:px-3">
+                                                  <TableCell className="text-center">
                                                     <LodgingParticipantActionsMenu
                                                       participant={participant}
                                                       rooms={displayedRooms}
