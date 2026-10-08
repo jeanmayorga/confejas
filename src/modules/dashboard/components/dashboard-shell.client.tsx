@@ -32,7 +32,11 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    contentRef.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    if (window.matchMedia("(min-width: 768px)").matches) {
+      contentRef.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    } else {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }
   }, [pathname]);
 
   // Apply each page's default before rendering its sidebar, without a flash.
@@ -45,7 +49,7 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
       <SidebarProvider
         open={Boolean(panel) && sidebarState.open}
         onOpenChange={(open) => setSidebarState({ pathname, open })}
-        className="h-dvh min-h-0 overflow-hidden bg-sidebar-rail p-(--dashboard-frame) [--dashboard-frame:0rem] md:pl-0 md:[--dashboard-frame:0.5rem]"
+        className="min-h-dvh overflow-x-clip bg-sidebar-rail md:h-dvh md:min-h-0 md:overflow-hidden p-(--dashboard-frame) [--dashboard-frame:0rem] md:pl-0 md:[--dashboard-frame:0.5rem]"
         style={
           {
             "--sidebar-width": panel?.width ?? "3rem",
@@ -56,25 +60,24 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
         <AppSidebar user={user} panel={panel} />
         <main
           className={cn(
-            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background md:rounded-sidebar-panel",
+            "flex min-h-0 min-w-0 flex-1 flex-col bg-background md:overflow-hidden md:rounded-sidebar-panel",
             panel && sidebarState.open && "md:rounded-l-none",
           )}
         >
+          <header className="sticky top-0 z-30 flex shrink-0 items-center bg-sidebar-rail px-4 py-1.5 text-sidebar-rail-foreground [--foreground:var(--sidebar-rail-foreground)] [--muted:var(--sidebar-rail-accent)] [--ring:var(--sidebar-rail-foreground)] md:hidden">
+            <SidebarTrigger
+              className="size-11"
+              aria-label="Abrir menú lateral"
+            />
+          </header>
           <div
             ref={contentRef}
             data-dashboard-scroll
             className={cn(
-              "flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain",
-              !panel?.flushContent && "p-4 sm:p-6 lg:p-8",
+              "flex min-h-0 min-w-0 flex-1 flex-col pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:overflow-y-auto md:overscroll-contain md:pb-0 [&>*]:shrink-0",
+              !panel?.flushContent && "px-4 pt-4 sm:px-6 sm:pt-6 md:pb-6 lg:p-8",
             )}
           >
-            <SidebarTrigger
-              className={cn(
-                "mb-3 md:hidden",
-                panel?.flushContent && "m-4 mb-0",
-              )}
-              aria-label="Abrir menú lateral"
-            />
             {children}
           </div>
         </main>
