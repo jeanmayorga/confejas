@@ -87,6 +87,7 @@ import {
   type CompanyParticipantFilterValues,
 } from "./company-participant-filters.client";
 import { CompanyParticipantSortMenu } from "./company-participant-sort.client";
+import { setParticipantDragPreview } from "./participant-drag-preview";
 import { CounselorAvatarImage } from "@/modules/counselors/components/counselor-avatar-image";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -106,6 +107,7 @@ import {
 } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { getParticipantInitials } from "@/modules/participants/components/participant-details.client";
+import { ParticipantStatusDot } from "@/modules/participants/components/participant-status-dot";
 import {
   UnassignedStatusFilter,
   type UnassignedStatusFilterValue,
@@ -376,6 +378,8 @@ export function CompaniesDirectory({
   const queryClient = useQueryClient();
   const [draggedParticipant, setDraggedParticipant] =
     useState<DraggedCompanyParticipants | null>(null);
+  const clearDragPreviewRef = useRef<(() => void) | null>(null);
+  useEffect(() => () => clearDragPreviewRef.current?.(), []);
   const [
     selectedUnassignedParticipantIds,
     setSelectedUnassignedParticipantIds,
@@ -478,6 +482,8 @@ export function CompaniesDirectory({
         : null;
 
   function clearDragState() {
+    clearDragPreviewRef.current?.();
+    clearDragPreviewRef.current = null;
     setDraggedParticipant(null);
     setIsUnassignedDropTarget(false);
     setCompanyDropTargetId(null);
@@ -499,15 +505,14 @@ export function CompaniesDirectory({
       name: getParticipantName(participant),
       participant,
     };
-    const row = event.currentTarget.closest("tr");
-    if (row) {
-      const bounds = row.getBoundingClientRect();
-      event.dataTransfer.setDragImage(
-        row,
-        event.clientX - bounds.left,
-        event.clientY - bounds.top,
-      );
-    }
+    clearDragPreviewRef.current?.();
+    clearDragPreviewRef.current = setParticipantDragPreview(event.dataTransfer, {
+      name: dragged.name,
+      initials: getParticipantInitials(
+        participant.firstNames,
+        participant.lastNames,
+      ),
+    });
 
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", dragged.participantId);
@@ -515,7 +520,7 @@ export function CompaniesDirectory({
   }
 
   function handleUnassignedParticipantDragStart(
-    event: DragEvent<HTMLTableRowElement>,
+    event: DragEvent<HTMLButtonElement>,
     participant: CompanyParticipant,
     availableParticipants: CompanyParticipant[],
   ) {
@@ -547,6 +552,15 @@ export function CompaniesDirectory({
       setSelectedUnassignedParticipantIds(new Set([participant.id]));
     }
 
+    clearDragPreviewRef.current?.();
+    clearDragPreviewRef.current = setParticipantDragPreview(event.dataTransfer, {
+      name: dragged.name,
+      initials: getParticipantInitials(
+        participant.firstNames,
+        participant.lastNames,
+      ),
+      count: participants.length,
+    });
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", dragged.participantId);
     setDraggedParticipant({ source: "unassigned", participants });
@@ -588,10 +602,15 @@ export function CompaniesDirectory({
     });
   }
 
-  function moveDraggedParticipants(
+  async function moveDraggedParticipants(
     dragged: DraggedCompanyParticipants,
     targetCompany: CompanyDirectoryItem | null,
   ) {
+    setMoving(true);
+    // A list request started before the drop must not overwrite its new card.
+    await queryClient.cancelQueries({
+      queryKey: ["company-unassigned-participants"],
+    });
     const targetCompanyId = targetCompany?.id ?? null;
     const pendingMove: PendingCompanyMove = {
       ...dragged,
@@ -679,7 +698,6 @@ export function CompaniesDirectory({
       },
     );
 
-    setMoving(true);
     const operation = moveCompanyParticipantsAction(
       dragged.participants.map(({ participantId, companyId }) => ({
         participantId,
@@ -1113,7 +1131,7 @@ function UnassignedParticipantsPanel({
   onDragLeave: (event: DragEvent<HTMLDivElement>) => void;
   onDrop: (event: DragEvent<HTMLDivElement>) => void;
   onParticipantDragStart: (
-    event: DragEvent<HTMLTableRowElement>,
+    event: DragEvent<HTMLButtonElement>,
     participant: CompanyParticipant,
     availableParticipants: CompanyParticipant[],
   ) => void;
@@ -1134,7 +1152,7 @@ function UnassignedParticipantsPanel({
   const deferredSearch = useDeferredValue(search);
   const unassignedParticipantsQuery = useInfiniteQuery({
     queryKey: ["company-unassigned-participants", deferredSearch, status],
-    queryFn: async ({ pageParam }) => {
+    queryFn: async ({ pageParam, signal }) => {
       const params = new URLSearchParams({ page: String(pageParam) });
 
       if (deferredSearch) {
@@ -1147,7 +1165,7 @@ function UnassignedParticipantsPanel({
 
       const response = await fetch(
         `/api/companies/unassigned-participants?${params}`,
-        { cache: "no-store" },
+        { cache: "no-store", signal },
       );
 
       if (!response.ok) {
@@ -1206,22 +1224,12 @@ function UnassignedParticipantsPanel({
       aria-label="Participantes sin compañía"
     >
       <div
-        className={cn(
-          "flex min-h-0 flex-1 flex-col transition-colors",
-          draggedCompanyParticipants && "bg-primary/5",
-          isDropTarget && "ring-2 ring-inset ring-primary",
-        )}
+        className="flex min-h-0 flex-1 flex-col"
+        onDragEnter={onDragOver}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
       >
-        {draggedCompanyParticipants ? (
-          <p className="px-3 pb-2 text-xs text-primary" aria-live="polite">
-            {isDropTarget
-              ? "Suelta para quitar de la compañía."
-              : "Arrastra aquí para quitar de la compañía."}
-          </p>
-        ) : null}
         <div className="flex shrink-0 items-center gap-2 px-4 pb-4 pt-1">
           <InputGroup className="min-w-0 flex-1">
             <InputGroupAddon>
@@ -1261,222 +1269,252 @@ function UnassignedParticipantsPanel({
           />
         </div>
 
-        <div
-          ref={listViewportRef}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y"
-        >
-          {unassignedParticipantsQuery.isPending ? (
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          {draggedCompanyParticipants ? (
             <div
-              className="flex flex-col gap-5 p-3"
-              aria-label="Cargando participantes"
-              aria-busy="true"
+              className="pointer-events-none absolute inset-x-3 top-0 z-10"
+              role="status"
             >
-              {Array.from({ length: 8 }, (_, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Skeleton className="size-4 rounded-sm" />
-                  <Skeleton className="size-6 rounded-full" />
-                  <Skeleton className="h-3 flex-1" />
-                </div>
-              ))}
+              <Empty
+                className={cn(
+                  "min-h-52 border border-dashed border-primary/30 bg-sidebar px-5 py-8 transition-colors",
+                  isDropTarget && "border-solid border-primary/60 bg-primary/5",
+                )}
+              >
+                <EmptyHeader>
+                  <EmptyMedia
+                    variant="icon"
+                    className="rounded-full bg-primary/10 text-primary"
+                  >
+                    <HugeiconsIcon
+                      icon={DragDropVerticalIcon}
+                      strokeWidth={1.5}
+                      aria-hidden="true"
+                    />
+                  </EmptyMedia>
+                  <EmptyTitle className="text-base">
+                    {isDropTarget ? "Suelta aquí" : "Mover a sin compañía"}
+                  </EmptyTitle>
+                  <EmptyDescription>
+                    {draggedCompanyParticipants.participants.length === 1
+                      ? draggedCompanyParticipants.participants[0].name
+                      : `${draggedCompanyParticipants.participants.length} participantes`}
+                  </EmptyDescription>
+                  <p className="text-xs text-muted-foreground">
+                    Podrás asignar otra compañía después.
+                  </p>
+                </EmptyHeader>
+              </Empty>
             </div>
-          ) : unassignedParticipantsQuery.isError ? (
-            <Empty className="px-4 py-10" role="alert">
-              <EmptyHeader>
-                <EmptyTitle>No pudimos cargar la lista</EmptyTitle>
-                <EmptyDescription>
-                  Vuelve a intentarlo para ver los participantes sin compañía.
-                </EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void unassignedParticipantsQuery.refetch()}
-                >
-                  Reintentar
-                </Button>
-              </EmptyContent>
-            </Empty>
-          ) : participants.length > 0 ? (
-            <>
-              <TableFrame className="rounded-none border-0">
-                <Table className="w-full table-fixed">
-                  <colgroup>
-                    <col className="w-10" />
-                    <col />
-                  </colgroup>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-center">
-                        <Checkbox
-                          checked={areAllParticipantsSelected}
-                          indeterminate={
-                            selectedParticipantCount > 0 &&
-                            !areAllParticipantsSelected
-                          }
-                          onCheckedChange={(checked) =>
-                            onParticipantsSelectionChange(participants, checked)
-                          }
-                          onPointerDown={(event) => event.stopPropagation()}
-                          aria-label="Seleccionar todos los participantes cargados"
-                        />
-                      </TableHead>
-                      <TableHead>
-                        {selectedParticipantCount > 0
-                          ? `${selectedParticipantCount} seleccionados`
-                          : "Participantes"}
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {participants.map((participant) => {
-                      const isSelected = selectedParticipantIds.has(
-                        participant.id,
-                      );
-                      const isDragged =
-                        draggedParticipant?.source === "unassigned" &&
-                        draggedParticipantIds.has(participant.id);
-
-                      return (
-                        <TableRow
-                          key={participant.id}
-                          draggable={!dragDisabled}
-                          aria-grabbed={isDragged}
-                          aria-selected={isSelected}
-                          title="Arrastra a una compañía para asignarlo."
-                          className={cn(
-                            "cursor-grab active:cursor-grabbing",
-                            isSelected && "bg-primary/5 hover:bg-primary/10",
-                            isDragged && "opacity-50",
-                          )}
-                          onDragStart={(event) =>
-                            onParticipantDragStart(
-                              event,
-                              participant,
-                              participants,
-                            )
-                          }
-                          onDragEnd={onParticipantDragEnd}
-                        >
-                          <TableCell className="text-center">
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={(checked) =>
-                                onParticipantSelectionChange(
-                                  participant.id,
-                                  checked,
-                                )
-                              }
-                              onPointerDown={(event) => event.stopPropagation()}
-                              aria-label={`Seleccionar a ${getParticipantName(participant)}`}
-                            />
-                          </TableCell>
-                          <TableCell className="whitespace-normal py-3">
-                            <div className="flex min-w-0 items-start gap-2">
-                              <Avatar size="sm" aria-hidden="true">
-                                <AvatarFallback
-                                  className={cn(
-                                    "!text-[9px] font-medium",
-                                    participantStatusClassNames[
-                                      participant.status
-                                    ],
-                                  )}
-                                >
-                                  {getParticipantInitials(
-                                    participant.firstNames,
-                                    participant.lastNames,
-                                  )}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="min-w-0">
-                                <span className="block break-words font-medium">
-                                  {getParticipantName(participant)}
-                                </span>
-                                <span className="mt-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-                                  <Badge
-                                    variant="outline"
-                                    className={cn(
-                                      "border-transparent",
-                                      participantStatusClassNames[
-                                        participant.status
-                                      ],
-                                    )}
-                                  >
-                                    {getParticipantStatusLabel(
-                                      participant.status,
-                                    )}
-                                  </Badge>
-                                  {getParticipantAge(participant.age)} ·{" "}
-                                  {getParticipantSexLabel(participant.sex)}
-                                </span>
-                              </span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                    {isFetchingNextPage ? (
-                      <TableRow>
-                        <TableCell colSpan={2}>
-                          <Skeleton className="h-3 w-28" />
-                        </TableCell>
-                      </TableRow>
-                    ) : null}
-                  </TableBody>
-                </Table>
-              </TableFrame>
-              {hasNextPage ? (
-                <div ref={loadMoreRef} className="h-px" aria-hidden="true" />
-              ) : null}
-            </>
-          ) : (
-            <Empty className="px-4 py-10" role="status">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <HugeiconsIcon
-                    icon={
-                      deferredSearch || status !== "all"
-                        ? Search01Icon
-                        : UserCheck01Icon
-                    }
-                    strokeWidth={1.5}
-                    aria-hidden="true"
-                  />
-                </EmptyMedia>
-                <EmptyTitle>
-                  {deferredSearch || status !== "all"
-                    ? "Sin coincidencias"
-                    : "Sin participantes pendientes"}
-                </EmptyTitle>
-                <EmptyDescription>
-                  {deferredSearch || status !== "all"
-                    ? "Prueba con otro nombre o cambia el filtro de estado."
-                    : "Los participantes sin compañía aparecerán aquí para que puedas asignarlos."}
-                </EmptyDescription>
-              </EmptyHeader>
-              {deferredSearch || status !== "all" ? (
+          ) : null}
+          <div
+            ref={listViewportRef}
+            className={cn(
+              "min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y transition-opacity",
+              draggedCompanyParticipants && "opacity-0",
+            )}
+          >
+            {unassignedParticipantsQuery.isPending ? (
+              <div
+                className="flex flex-col gap-5 p-3"
+                aria-label="Cargando participantes"
+                aria-busy="true"
+              >
+                {Array.from({ length: 8 }, (_, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Skeleton className="size-4 rounded-sm" />
+                    <Skeleton className="size-6 rounded-full" />
+                    <Skeleton className="h-3 flex-1" />
+                  </div>
+                ))}
+              </div>
+            ) : unassignedParticipantsQuery.isError ? (
+              <Empty className="px-4 py-10" role="alert">
+                <EmptyHeader>
+                  <EmptyTitle>No pudimos cargar la lista</EmptyTitle>
+                  <EmptyDescription>
+                    Vuelve a intentarlo para ver los participantes sin compañía.
+                  </EmptyDescription>
+                </EmptyHeader>
                 <EmptyContent>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      setSearch("");
-                      setStatus("all");
-                    }}
+                    onClick={() => void unassignedParticipantsQuery.refetch()}
                   >
-                    Limpiar búsqueda y filtro
+                    Reintentar
                   </Button>
                 </EmptyContent>
-              ) : null}
-            </Empty>
-          )}
+              </Empty>
+            ) : participants.length > 0 ? (
+              <>
+                <div className="flex items-center justify-between gap-2 px-4 pb-3 text-xs text-muted-foreground">
+                  <span>
+                    {selectedParticipantCount > 0
+                      ? `${selectedParticipantCount} seleccionados`
+                      : "Arrastra a una compañía"}
+                  </span>
+                  <Checkbox
+                    checked={areAllParticipantsSelected}
+                    indeterminate={
+                      selectedParticipantCount > 0 &&
+                      !areAllParticipantsSelected
+                    }
+                    onCheckedChange={(checked) =>
+                      onParticipantsSelectionChange(participants, checked)
+                    }
+                    aria-label="Seleccionar todos los participantes cargados"
+                  />
+                </div>
+                <ul
+                  className="flex flex-col gap-2 px-3 pb-3"
+                  aria-label="Participantes disponibles para asignar"
+                >
+                  {participants.map((participant) => {
+                    const isSelected = selectedParticipantIds.has(
+                      participant.id,
+                    );
+                    const isDragged =
+                      draggedParticipant?.source === "unassigned" &&
+                      draggedParticipantIds.has(participant.id);
+
+                    return (
+                      <li
+                        key={participant.id}
+                        className={cn(
+                          "rounded-2xl border border-border/70 bg-card p-3 transition-[border-color,background-color,opacity] motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-right-2 motion-safe:duration-200",
+                          isSelected && "border-primary/30 bg-primary/5",
+                          isDragged && "opacity-40",
+                        )}
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <Avatar
+                            aria-hidden="true"
+                            className="size-8 shrink-0"
+                          >
+                            <AvatarFallback className="text-xs font-medium">
+                              {getParticipantInitials(
+                                participant.firstNames,
+                                participant.lastNames,
+                              )}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <p className="break-words text-sm leading-5 font-medium">
+                              {getParticipantName(participant)}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {getParticipantAge(participant.age)} ·{" "}
+                              {getParticipantSexLabel(participant.sex)}
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon-md"
+                            className="-mt-0.5 -mr-1 cursor-grab text-muted-foreground active:cursor-grabbing"
+                            disabled={dragDisabled}
+                            draggable={!dragDisabled}
+                            aria-label={`Arrastrar o seleccionar a ${getParticipantName(participant)}`}
+                            aria-pressed={isSelected}
+                            title="Arrastra a una compañía o pulsa para seleccionar"
+                            onClick={() =>
+                              onParticipantSelectionChange(
+                                participant.id,
+                                !isSelected,
+                              )
+                            }
+                            onDragStart={(event) =>
+                              onParticipantDragStart(
+                                event,
+                                participant,
+                                participants,
+                              )
+                            }
+                            onDragEnd={onParticipantDragEnd}
+                          >
+                            <HugeiconsIcon
+                              icon={DragDropVerticalIcon}
+                              strokeWidth={1.5}
+                              aria-hidden="true"
+                            />
+                          </Button>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between gap-2">
+                          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <ParticipantStatusDot status={participant.status} />
+                            {getParticipantStatusLabel(participant.status)}
+                          </span>
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={(checked) =>
+                              onParticipantSelectionChange(
+                                participant.id,
+                                checked,
+                              )
+                            }
+                            aria-label={`Seleccionar a ${getParticipantName(participant)}`}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {isFetchingNextPage ? (
+                  <div className="px-4 pb-3">
+                    <Skeleton className="h-16 rounded-2xl" />
+                  </div>
+                ) : null}
+                {hasNextPage ? (
+                  <div ref={loadMoreRef} className="h-px" aria-hidden="true" />
+                ) : null}
+              </>
+            ) : (
+              <Empty className="px-4 py-10" role="status">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <HugeiconsIcon
+                      icon={
+                        deferredSearch || status !== "all"
+                          ? Search01Icon
+                          : UserCheck01Icon
+                      }
+                      strokeWidth={1.5}
+                      aria-hidden="true"
+                    />
+                  </EmptyMedia>
+                  <EmptyTitle>
+                    {deferredSearch || status !== "all"
+                      ? "Sin coincidencias"
+                      : "Sin participantes pendientes"}
+                  </EmptyTitle>
+                  <EmptyDescription>
+                    {deferredSearch || status !== "all"
+                      ? "Prueba con otro nombre o cambia el filtro de estado."
+                      : "Los participantes sin compañía aparecerán aquí para que puedas asignarlos."}
+                  </EmptyDescription>
+                </EmptyHeader>
+                {deferredSearch || status !== "all" ? (
+                  <EmptyContent>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSearch("");
+                        setStatus("all");
+                      }}
+                    >
+                      Limpiar búsqueda y filtro
+                    </Button>
+                  </EmptyContent>
+                ) : null}
+              </Empty>
+            )}
+          </div>
         </div>
 
         <div className="flex shrink-0 items-center justify-between border-t px-4 py-3">
           <span className="text-muted-foreground">
-            {deferredSearch || status !== "all"
-              ? "Resultados"
-              : "Sin compañía"}
+            {deferredSearch || status !== "all" ? "Resultados" : "Sin compañía"}
           </span>
           <Badge variant="secondary">
             {unassignedParticipantsQuery.isPending
@@ -1594,6 +1632,7 @@ function CompanyCard({
         isDropTarget && "bg-primary/5 ring-2 ring-primary ring-offset-2",
       )}
       aria-labelledby={titleId}
+      onDragEnter={(event) => onDragOver(event, company)}
       onDragOver={(event) => onDragOver(event, company)}
       onDragLeave={onDragLeave}
       onDrop={(event) => onDrop(event, company)}
@@ -1606,11 +1645,6 @@ function CompanyCard({
           >
             {companyLabel}
           </h1>
-          {isDropTarget ? (
-            <span className="text-sm font-medium text-primary">
-              {" · Suelta para asignar"}
-            </span>
-          ) : null}
         </CardTitle>
         <div className="flex w-full items-center gap-3 sm:w-auto sm:shrink-0">
           <InputGroup className="min-w-0 flex-1 sm:w-60 sm:flex-none">
