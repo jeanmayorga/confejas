@@ -107,6 +107,7 @@ import {
 } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { getParticipantInitials } from "@/modules/participants/components/participant-details.client";
+import { ParticipantDetailSheet } from "@/modules/participants/components/participant-detail-sheet.client";
 import { ParticipantStatusDot } from "@/modules/participants/components/participant-status-dot";
 import {
   UnassignedStatusFilter,
@@ -359,6 +360,7 @@ export function CompaniesDirectory({
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
   const [activeCompanyId, setActiveCompanyId] = useState("");
+  const [detailParticipantId, setDetailParticipantId] = useState<string | null>(null);
   const [participantSearch, setParticipantSearch] = useState("");
   const normalizedParticipantSearch = normalizeParticipantName(participantSearch);
   const hasParticipantSearch = normalizedParticipantSearch.length > 0;
@@ -1011,6 +1013,7 @@ export function CompaniesDirectory({
             isDropTarget={companyDropTargetId === activeCompany.id}
             onParticipantDragStart={handleParticipantDragStart}
             onParticipantDragEnd={clearDragState}
+            onParticipantOpen={setDetailParticipantId}
             companies={displayedCompanies}
             onParticipantMoveRequest={(participantId, targetCompanyId) => {
               if (!dragDisabled) {
@@ -1050,6 +1053,7 @@ export function CompaniesDirectory({
           onDrop={handleUnassignedDrop}
           onParticipantDragStart={handleUnassignedParticipantDragStart}
           onParticipantDragEnd={clearDragState}
+          onParticipantOpen={setDetailParticipantId}
           onParticipantSelectionChange={
             handleUnassignedParticipantSelectionChange
           }
@@ -1058,6 +1062,21 @@ export function CompaniesDirectory({
           }
         />
       </CompanyUnassignedSidebar>
+      <ParticipantDetailSheet
+        key={detailParticipantId ?? "closed"}
+        participantId={detailParticipantId}
+        onClose={() => setDetailParticipantId(null)}
+        onDataChanged={() => {
+          void queryClient.invalidateQueries({
+            queryKey: ["company-unassigned-participants"],
+          });
+          router.refresh();
+        }}
+        onCompanyOpen={(companyId) => {
+          setDetailParticipantId(null);
+          selectCompany(companyId);
+        }}
+      />
       <AlertDialog
         open={requestedChange !== null}
         onOpenChange={(open) => {
@@ -1119,6 +1138,7 @@ function UnassignedParticipantsPanel({
   onDrop,
   onParticipantDragStart,
   onParticipantDragEnd,
+  onParticipantOpen,
   onParticipantSelectionChange,
   onParticipantsSelectionChange,
 }: {
@@ -1136,6 +1156,7 @@ function UnassignedParticipantsPanel({
     availableParticipants: CompanyParticipant[],
   ) => void;
   onParticipantDragEnd: () => void;
+  onParticipantOpen: (participantId: string) => void;
   onParticipantSelectionChange: (
     participantId: string,
     checked: boolean,
@@ -1400,9 +1421,15 @@ function UnassignedParticipantsPanel({
                             </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0 flex-1">
-                            <p className="break-words text-sm leading-5 font-medium">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="h-auto max-w-full justify-start rounded-sm p-0 text-left whitespace-normal break-words"
+                              aria-label={`Abrir participante ${getParticipantName(participant)}`}
+                              onClick={() => onParticipantOpen(participant.id)}
+                            >
                               {getParticipantName(participant)}
-                            </p>
+                            </Button>
                             <p className="mt-1 text-xs text-muted-foreground">
                               {getParticipantAge(participant.age)} ·{" "}
                               {getParticipantSexLabel(participant.sex)}
@@ -1543,6 +1570,7 @@ function CompanyCard({
   isDropTarget,
   onParticipantDragStart,
   onParticipantDragEnd,
+  onParticipantOpen,
   onParticipantMoveRequest,
   onParticipantRemoveRequest,
   onDragOver,
@@ -1566,6 +1594,7 @@ function CompanyCard({
     company: CompanyDirectoryItem,
   ) => void;
   onParticipantDragEnd: () => void;
+  onParticipantOpen: (participantId: string) => void;
   onParticipantMoveRequest: (
     participantId: string,
     targetCompanyId: string,
@@ -1881,7 +1910,13 @@ function CompanyCard({
                             </Badge>
                           </TableCell>
                           <TableCell className="min-w-0 flex-1 overflow-hidden whitespace-normal border-r-0 p-0 md:table-cell md:max-w-0 md:border-r md:px-3 md:py-[3px]">
-                            <div className="flex min-w-0 items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="h-auto w-full min-w-0 justify-start gap-2 rounded-sm p-0 text-left whitespace-normal"
+                              aria-label={`Abrir participante ${getParticipantName(participant)}`}
+                              onClick={() => onParticipantOpen(participant.id)}
+                            >
                               <Avatar
                                 size="sm"
                                 aria-hidden="true"
@@ -1901,14 +1936,14 @@ function CompanyCard({
                                   )}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="min-w-0">
+                              <span className="min-w-0">
                                 <span
                                   className="block wrap-anywhere font-medium"
                                   title={getParticipantName(participant)}
                                 >
                                   {getParticipantName(participant)}
                                 </span>
-                                <div className="mt-1 flex flex-wrap items-center gap-1.5 md:hidden">
+                                <span className="mt-1 flex flex-wrap items-center gap-1.5 md:hidden">
                                   <Badge
                                     variant="outline"
                                     className={cn(
@@ -1926,9 +1961,9 @@ function CompanyCard({
                                     {getParticipantAge(participant.age)} ·{" "}
                                     {getParticipantSexLabel(participant.sex)}
                                   </span>
-                                </div>
-                              </div>
-                            </div>
+                                </span>
+                              </span>
+                            </Button>
                           </TableCell>
                           <TableCell className="hidden whitespace-normal md:table-cell">
                             {getParticipantAge(participant.age)}
