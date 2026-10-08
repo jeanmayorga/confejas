@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import CheckmarkCircle02Icon from "@hugeicons/core-free-icons/CheckmarkCircle02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -9,7 +10,7 @@ import { useFormStatus } from "react-dom";
 import { completeParticipantCheckInFromSheet } from "@/app/(dashboard)/dashboard/check-in/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
+import { CounselorAvatarImage } from "@/modules/counselors/components/counselor-avatar-image";
 import {
   getParticipantStatusLabel,
   type ParticipantStatus,
@@ -35,11 +37,16 @@ export type CheckInSheetParticipant = {
   shirtSize: string | null;
   companyName: string | null;
   roomName: string | null;
+  arrived: boolean;
+  counselors: { id: string; name: string }[];
 };
 
 type ParticipantCheckInSheetProps = {
   participant: CheckInSheetParticipant;
-  returnPath: "/dashboard/check-in/scan" | "/dashboard/check-in/code";
+  returnPath:
+    | "/dashboard/check-in/scan"
+    | "/dashboard/check-in/code"
+    | "/dashboard/check-in/name";
   saved?: boolean;
 };
 
@@ -51,28 +58,32 @@ function DetailItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-      <dd className="truncate text-sm font-medium">{value}</dd>
+      <dd className="break-words text-sm font-medium">{value}</dd>
     </div>
   );
 }
 
-function CheckInSubmitButton() {
+function CheckInSubmitButton({ arrived }: { arrived: boolean }) {
   const { pending } = useFormStatus();
 
   return (
     <Button
       type="submit"
-      variant="success"
+      variant="default"
       size="xl"
       className="w-full"
-      disabled={pending}
+      disabled={pending || arrived}
     >
       {pending ? (
         <Spinner data-icon="inline-start" />
       ) : (
         <HugeiconsIcon icon={CheckmarkCircle02Icon} data-icon="inline-start" />
       )}
-      {pending ? "Registrando llegada…" : "Ya llegó"}
+      {pending
+        ? "Registrando llegada…"
+        : arrived
+          ? "Llegada confirmada"
+          : "Confirmar que llegó"}
     </Button>
   );
 }
@@ -83,12 +94,12 @@ export function ParticipantCheckInSheet({
   saved = false,
 }: ParticipantCheckInSheetProps) {
   const router = useRouter();
-  const [open, setOpen] = useState(!saved);
+  const [open, setOpen] = useState(true);
   const action = completeParticipantCheckInFromSheet.bind(null, returnPath);
   const preferredName = participant.preferredName?.trim();
 
   useEffect(() => {
-    if (!saved) {
+    if (saved || !open) {
       return;
     }
 
@@ -120,23 +131,11 @@ export function ParticipantCheckInSheet({
       },
       prefersReducedMotion ? 0 : 150,
     );
-    const resetTimer = window.setTimeout(
-      () => {
-        if (canceled) {
-          return;
-        }
-
-        router.replace(returnPath, { scroll: false });
-      },
-      prefersReducedMotion ? 350 : 1300,
-    );
-
     return () => {
       canceled = true;
       window.clearTimeout(celebrationTimer);
-      window.clearTimeout(resetTimer);
     };
-  }, [returnPath, router, saved]);
+  }, [open, saved]);
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
@@ -148,23 +147,23 @@ export function ParticipantCheckInSheet({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
+      <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden sm:max-w-xl">
         <DialogHeader className="pr-12">
-          <DialogTitle>Participante</DialogTitle>
+          <DialogTitle>¡Bienvenido a Confejas!</DialogTitle>
           <DialogDescription className="sr-only">
             Revisa los datos del participante antes de confirmar su llegada.
           </DialogDescription>
         </DialogHeader>
 
-        <form action={action} className="flex flex-col gap-5">
+        <form action={action} className="flex min-h-0 flex-col gap-5">
           <input type="hidden" name="participantId" value={participant.id} />
           {saved ? (
-            <p className="sr-only" role="status">
+            <p className="text-sm font-medium text-primary" role="status">
               La llegada del participante fue confirmada.
             </p>
           ) : null}
 
-          <div className="flex flex-col gap-4">
+          <div className="flex min-h-0 flex-col gap-4 overflow-y-auto">
             <section className="rounded-3xl bg-muted p-5">
               <div className="flex items-start justify-between gap-4">
                 <Avatar size="lg" className="size-20">
@@ -216,24 +215,59 @@ export function ParticipantCheckInSheet({
                   value={participant.companyName ?? "Sin compañía"}
                 />
                 <DetailItem
-                  label="Alojamiento"
+                  label="Edificio y habitación"
                   value={participant.roomName ?? "Sin alojamiento"}
                 />
               </dl>
             </section>
+
+            <section
+              aria-labelledby="check-in-counselors-heading"
+              className="flex flex-col gap-3"
+            >
+              <h2 id="check-in-counselors-heading" className="font-medium">
+                Consejeros
+              </h2>
+              {participant.counselors.length ? (
+                <ul className="grid gap-3 sm:grid-cols-2">
+                  {participant.counselors.map((counselor) => (
+                    <li key={counselor.id} className="flex items-center gap-3">
+                      <Avatar className="size-14 shrink-0">
+                        <CounselorAvatarImage counselorId={counselor.id} />
+                        <AvatarFallback>
+                          {counselor.name
+                            .split(/\s+/)
+                            .slice(0, 2)
+                            .map((name) => name[0])
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium">
+                        {counselor.name}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Sin consejeros asignados
+                </p>
+              )}
+            </section>
           </div>
 
-          <DialogFooter className="flex-col gap-2 sm:flex-col">
-            <CheckInSubmitButton />
-            <Button
-              type="button"
-              variant="outline"
-              size="xl"
-              className="w-full"
-              onClick={() => handleOpenChange(false)}
+          <DialogFooter className="shrink-0 flex-col gap-2 sm:flex-col">
+            <CheckInSubmitButton arrived={participant.arrived || saved} />
+            <Link
+              href={`/dashboard/participants/${participant.id}`}
+              className={buttonVariants({
+                variant: "outline",
+                size: "xl",
+                className: "w-full",
+              })}
             >
-              Cancelar
-            </Button>
+              Ver Participante
+            </Link>
           </DialogFooter>
         </form>
       </DialogContent>

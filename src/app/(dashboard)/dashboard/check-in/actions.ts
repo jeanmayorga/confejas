@@ -10,6 +10,7 @@ import { markParticipantArrival } from "@/modules/participants/server/mutations"
 const allowedReturnPaths = new Set([
   "/dashboard/check-in/scan",
   "/dashboard/check-in/code",
+  "/dashboard/check-in/name",
 ]);
 
 function getTrimmedValue(formData: FormData, name: string) {

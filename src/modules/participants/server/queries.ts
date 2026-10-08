@@ -3,6 +3,7 @@ import "server-only";
 import { and, asc, count, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
 import { stakes, wards } from "@/modules/church-units/server/schema";
+import { counselors } from "@/modules/counselors/server/schema";
 import { companies } from "@/modules/companies/server/schema";
 import { db } from "@/server/db";
 
@@ -341,6 +342,8 @@ export async function getParticipantForCheckIn(participantId: string) {
       stakeName: stakes.name,
       shirtSize: participants.shirtSize,
       companyName: companies.name,
+      companyId: participants.companyId,
+      checkedInAt: participants.checkedInAt,
       roomName: participants.roomName,
     })
     .from(participants)
@@ -350,7 +353,17 @@ export async function getParticipantForCheckIn(participantId: string) {
     .where(eq(participants.id, participantId))
     .limit(1);
 
-  return participant ?? null;
+  if (!participant) return null;
+
+  const assignedCounselors = participant.companyId
+    ? await db
+        .select({ id: counselors.id, name: counselors.name })
+        .from(counselors)
+        .where(eq(counselors.companyId, participant.companyId))
+        .orderBy(asc(counselors.name))
+    : [];
+
+  return { ...participant, counselors: assignedCounselors };
 }
 
 export async function getParticipantById(
@@ -529,4 +542,47 @@ export async function findParticipantForQrCheckIn(value: string) {
     roomName: participant.roomName,
     checkedInAt: participant.checkedInAt,
   };
+}
+
+export async function searchParticipantsByNameForCheckIn(value: string) {
+  const search = value.trim().slice(0, 100);
+  if (search.length < 2) return [];
+  // Match each word independently, ignoring accents and the order of surnames.
+  const normalize = (column: ReturnType<typeof sql>) =>
+    sql`lower(translate(${column}, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN'))`;
+  const name = normalize(
+    sql`concat_ws(' ', ${participants.firstNames}, ${participants.lastNames}, ${participants.preferredName})`,
+  );
+  const words = search
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/\s+/);
+  return db
+    .select({
+      id: participants.id,
+      firstNames: participants.firstNames,
+      lastNames: participants.lastNames,
+      sourceRecordId: participants.sourceRecordId,
+      wardName: wards.name,
+      stakeName: stakes.name,
+      companyName: companies.name,
+    })
+    .from(participants)
+    .innerJoin(wards, eq(participants.wardId, wards.id))
+    .innerJoin(stakes, eq(wards.stakeId, stakes.id))
+    .leftJoin(companies, eq(participants.companyId, companies.id))
+    .where(
+      and(
+        ...words.map((word) =>
+          ilike(name, `%${word.replace(/[\\%_]/g, "\\$&")}%`),
+        ),
+      ),
+    )
+    .orderBy(
+      asc(participants.firstNames),
+      asc(participants.lastNames),
+      asc(participants.id),
+    )
+    .limit(31);
 }
