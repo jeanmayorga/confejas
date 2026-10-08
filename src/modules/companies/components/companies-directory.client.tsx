@@ -15,6 +15,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
+import Cancel01Icon from "@hugeicons/core-free-icons/Cancel01Icon";
 import DragDropVerticalIcon from "@hugeicons/core-free-icons/DragDropVerticalIcon";
 import MoreHorizontalIcon from "@hugeicons/core-free-icons/MoreHorizontalIcon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
@@ -66,6 +67,7 @@ import {
 import {
   InputGroup,
   InputGroupAddon,
+  InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { Separator } from "@/components/ui/separator";
@@ -352,6 +354,14 @@ function matchesParticipantSearch(
   );
 }
 
+function normalizeParticipantName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es")
+    .trim();
+}
+
 export function CompaniesDirectory({
   companies,
   canDelete,
@@ -360,6 +370,9 @@ export function CompaniesDirectory({
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
   const [activeCompanyId, setActiveCompanyId] = useState("");
+  const [participantSearch, setParticipantSearch] = useState("");
+  const normalizedParticipantSearch = normalizeParticipantName(participantSearch);
+  const hasParticipantSearch = normalizedParticipantSearch.length > 0;
 
   // Each visit starts at the first company, including old bookmarked selections.
   useEffect(() => {
@@ -413,9 +426,28 @@ export function CompaniesDirectory({
       ),
     [capacity, companies, pendingCompanyMoves],
   );
-  const activeCompany =
-    displayedCompanies.find((company) => company.id === activeCompanyId) ??
-    displayedCompanies[0];
+  const companySearchResults = useMemo(() => {
+    const terms = normalizedParticipantSearch.split(/\s+/).filter(Boolean);
+
+    return displayedCompanies
+      .map((company, index) => ({
+        company,
+        position: index + 1,
+        participants: terms.length
+          ? company.participants.filter((participant) => {
+              const name = normalizeParticipantName(
+                getParticipantName(participant),
+              );
+              return terms.every((term) => name.includes(term));
+            })
+          : company.participants,
+      }))
+      .filter((result) => !terms.length || result.participants.length > 0);
+  }, [displayedCompanies, normalizedParticipantSearch]);
+  const activeResult =
+    companySearchResults.find(({ company }) => company.id === activeCompanyId) ??
+    companySearchResults[0];
+  const activeCompany = activeResult?.company;
 
   function selectCompany(companyId: string) {
     setActiveCompanyId(companyId);
@@ -823,15 +855,56 @@ export function CompaniesDirectory({
             <SidebarMenuItem>
               <CreateCompanyButton
                 appearance="sidebar"
-                onCreated={selectCompany}
+                onCreated={(companyId) => {
+                  setParticipantSearch("");
+                  selectCompany(companyId);
+                }}
               />
             </SidebarMenuItem>
           </SidebarMenu>
         </div>
+        <div className="shrink-0 px-3 pb-3">
+          <InputGroup>
+            <InputGroupInput
+              type="search"
+              placeholder="Buscar participante"
+              aria-label="Buscar participante en las compañías"
+              value={participantSearch}
+              onChange={(event) => setParticipantSearch(event.target.value)}
+              className="[&::-webkit-search-cancel-button]:hidden"
+            />
+            <InputGroupAddon>
+              <HugeiconsIcon
+                icon={Search01Icon}
+                strokeWidth={1.5}
+                aria-hidden="true"
+              />
+            </InputGroupAddon>
+            {participantSearch ? (
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  aria-label="Limpiar búsqueda de participantes"
+                  onClick={() => setParticipantSearch("")}
+                >
+                  <HugeiconsIcon
+                    icon={Cancel01Icon}
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  />
+                </InputGroupButton>
+              </InputGroupAddon>
+            ) : null}
+          </InputGroup>
+          <p className="sr-only" role="status">
+            {hasParticipantSearch
+              ? `${companySearchResults.length} compañías con coincidencias`
+              : ""}
+          </p>
+        </div>
         <SidebarContent className="gap-0 px-2 pb-3">
           <nav aria-label="Compañías">
             <SidebarMenu className="gap-0">
-              {displayedCompanies.map((company, index) => (
+              {companySearchResults.map(({ company, position, participants }) => (
                 <SidebarMenuItem key={company.id}>
                   <SidebarMenuButton
                     isActive={company.id === activeCompany?.id}
@@ -847,18 +920,24 @@ export function CompaniesDirectory({
                       aria-hidden="true"
                     />
                     <span className="min-w-0 flex-1 truncate">
-                      {getCompanyDisplayName(company.name, index + 1)}
+                      {getCompanyDisplayName(company.name, position)}
                     </span>
                     <span
                       className="pointer-events-none absolute top-2 right-2 flex size-5 items-center justify-center text-xs tabular-nums text-muted-foreground group-hover/menu-item:opacity-0 group-focus-within/menu-item:opacity-0 group-has-[[aria-expanded=true]]/menu-item:opacity-0 max-md:hidden"
-                      aria-label={`${company.participantCount} participantes`}
+                      aria-label={
+                        hasParticipantSearch
+                          ? `${participants.length} coincidencias`
+                          : `${company.participantCount} participantes`
+                      }
                     >
-                      {company.participantCount}
+                      {hasParticipantSearch
+                        ? participants.length
+                        : company.participantCount}
                     </span>
                   </SidebarMenuButton>
                   <CompanySidebarActions
                     company={company}
-                    label={getCompanyDisplayName(company.name, index + 1)}
+                    label={getCompanyDisplayName(company.name, position)}
                     canDelete={canDelete}
                     onUpdated={() => selectCompany(company.id)}
                   />
@@ -869,6 +948,10 @@ export function CompaniesDirectory({
           {displayedCompanies.length === 0 ? (
             <p className="px-3 py-4 text-sm text-muted-foreground">
               Aún no hay compañías.
+            </p>
+          ) : companySearchResults.length === 0 ? (
+            <p className="px-3 py-4 text-sm text-muted-foreground">
+              Ninguna compañía tiene participantes con ese nombre.
             </p>
           ) : null}
         </SidebarContent>
@@ -890,11 +973,31 @@ export function CompaniesDirectory({
             </EmptyContent>
           </Empty>
         ) : null}
-        {activeCompany ? (
+        {hasParticipantSearch && displayedCompanies.length > 0 && !activeCompany ? (
+          <Empty className="min-h-80">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <HugeiconsIcon icon={Search01Icon} strokeWidth={1.5} />
+              </EmptyMedia>
+              <EmptyTitle>No encontramos participantes</EmptyTitle>
+              <p className="text-sm text-muted-foreground">
+                Prueba con otro nombre o apellido.
+              </p>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button variant="outline" onClick={() => setParticipantSearch("")}>
+                Limpiar búsqueda
+              </Button>
+            </EmptyContent>
+          </Empty>
+        ) : null}
+        {activeCompany && activeResult ? (
           <CompanyCard
             key={activeCompany.id}
             company={activeCompany}
-            position={displayedCompanies.indexOf(activeCompany) + 1}
+            position={activeResult.position}
+            visibleParticipants={activeResult.participants}
+            hasParticipantSearch={hasParticipantSearch}
             canDelete={canDelete}
             capacity={capacity}
             draggedParticipantIds={draggedParticipantIds}
@@ -1348,6 +1451,8 @@ function UnassignedParticipantsPanel({
 
 function CompanyCard({
   company,
+  visibleParticipants,
+  hasParticipantSearch,
   companies,
   position,
   canDelete,
@@ -1364,6 +1469,8 @@ function CompanyCard({
   onDrop,
 }: {
   company: CompanyDirectoryItem;
+  visibleParticipants: CompanyParticipant[];
+  hasParticipantSearch: boolean;
   companies: CompanyDirectoryItem[];
   position: number;
   canDelete: boolean;
@@ -1484,8 +1591,14 @@ function CompanyCard({
           <h3 id={`${titleId}-participants`} className="text-sm font-semibold">
             Participantes
           </h3>
+          {hasParticipantSearch ? (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Mostrando {visibleParticipants.length} de {company.participantCount}{" "}
+              participantes.
+            </p>
+          ) : null}
 
-          {company.participants.length > 0 ? (
+          {visibleParticipants.length > 0 ? (
             <TableFrame className="mt-3">
               <Table className="block w-full md:table md:min-w-[620px] md:table-fixed">
                 <colgroup className="hidden md:table-column-group">
@@ -1513,7 +1626,7 @@ function CompanyCard({
                   </TableRow>
                 </TableHeader>
                 <TableBody className="block md:table-row-group">
-                  {company.participants.map((participant, index) =>
+                  {visibleParticipants.map((participant, index) =>
                     (() => {
                       const isDragged = draggedParticipantIds.has(
                         participant.id,
