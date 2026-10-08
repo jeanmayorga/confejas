@@ -82,11 +82,18 @@ export function CompanyParticipantFilters({
     { key: "age", label: "Edad", icon: Calendar03Icon, options: ageOptions },
   ] as const;
   const activeFilters = filters.filter(({ key }) => value[key] !== "all");
+  const activeFilterSummary = activeFilters
+    .map(
+      (filter) =>
+        filter.options.find((option) => option.value === value[filter.key])
+          ?.label ?? `${value[filter.key]} años`,
+    )
+    .join(" · ");
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
-        <h3 id={titleId} className="text-sm font-semibold">
+        <h3 id={titleId} className="shrink-0 text-sm font-semibold">
           Participantes
         </h3>
         <DropdownMenu>
@@ -96,18 +103,24 @@ export function CompanyParticipantFilters({
                 type="button"
                 variant={activeFilters.length ? "secondary" : "ghost"}
                 size={activeFilters.length ? "sm" : "icon-sm"}
+                className="min-w-0 shrink"
                 aria-label="Filtrar participantes de esta compañía"
-                title="Filtrar participantes"
+                aria-description={activeFilterSummary || undefined}
+                title={activeFilterSummary || "Filtrar participantes"}
               />
             }
           >
             <HugeiconsIcon
               icon={FilterHorizontalIcon}
               strokeWidth={1.5}
+              data-icon="inline-start"
               aria-hidden="true"
             />
             {activeFilters.length ? (
-              <Badge variant="secondary">{activeFilters.length}</Badge>
+              <>
+                <span className="truncate">{activeFilterSummary}</span>
+                <Badge variant="secondary">{activeFilters.length}</Badge>
+              </>
             ) : null}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64 rounded-xl">
@@ -177,39 +190,6 @@ export function CompanyParticipantFilters({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      {activeFilters.length ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {activeFilters.map((filter) => {
-            const label = filter.options.find(
-              (option) => option.value === value[filter.key],
-            )?.label ?? `${value[filter.key]} años`;
-            return (
-              <Button
-                key={filter.key}
-                variant="outline"
-                size="xs"
-                aria-label={`Quitar filtro de ${filter.label.toLocaleLowerCase("es")}: ${label}`}
-                onClick={() => onChange({ ...value, [filter.key]: "all" })}
-              >
-                {label}
-                <HugeiconsIcon
-                  icon={Cancel01Icon}
-                  strokeWidth={1.5}
-                  data-icon="inline-end"
-                  aria-hidden="true"
-                />
-              </Button>
-            );
-          })}
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={() => onChange(DEFAULT_COMPANY_PARTICIPANT_FILTERS)}
-          >
-            Limpiar filtros
-          </Button>
-        </div>
-      ) : null}
     </div>
   );
 }
