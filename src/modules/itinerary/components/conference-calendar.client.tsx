@@ -95,7 +95,7 @@ export function ConferenceCalendar({ initialNow }: { initialNow: string }) {
         </time>
       </header>
 
-      <div className="sticky top-0 z-30 bg-background/95 py-3 backdrop-blur">
+      <div className="sticky top-[var(--app-sticky-offset,0px)] z-20 bg-background/95 py-3 backdrop-blur">
         <div
           role="group"
           aria-label="Seleccionar día"
@@ -193,7 +193,7 @@ export function ConferenceCalendar({ initialNow }: { initialNow: string }) {
             <div
               role="note"
               aria-label={`Hora actual: ${clockFormatter.format(now)}`}
-              className="pointer-events-none absolute inset-x-0 z-20 flex items-center gap-1"
+              className="pointer-events-none absolute inset-x-0 z-10 flex items-center gap-1"
               style={{ top: currentLineTop }}
             >
               <span className="w-12 shrink-0 rounded-full bg-red-600 px-1 py-0.5 text-center font-mono text-[10px] font-bold text-white">
