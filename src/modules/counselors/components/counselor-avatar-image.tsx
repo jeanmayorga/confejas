@@ -12,6 +12,12 @@ const companyTwoImage = {
   height: 2561,
 };
 
+const companyThreeImage = {
+  src: "/counselors/company-03.png",
+  width: 2047,
+  height: 2561,
+};
+
 const companyFourImage = {
   src: "/counselors/company-04.png",
   width: 2047,
@@ -20,6 +26,18 @@ const companyFourImage = {
 
 const companyFiveImage = {
   src: "/counselors/company-05.png",
+  width: 2047,
+  height: 2561,
+};
+
+const companySixImage = {
+  src: "/counselors/company-06.png",
+  width: 2047,
+  height: 2561,
+};
+
+const companyEightImage = {
+  src: "/counselors/company-08.png",
   width: 2047,
   height: 2561,
 };
@@ -42,6 +60,12 @@ const portraits: Record<
   "f3c2ba4d-416e-4153-a169-5e2e300e289b": {
     image: companyTwoImage, x: 1240, y: 815, size: 540,
   },
+  "2b58d125-7e55-4422-91c7-cc7205867d9c": {
+    image: companyThreeImage, x: 592, y: 850, size: 440,
+  },
+  "a1c97de5-38f4-4fcd-bdf9-ce246fbe327f": {
+    image: companyThreeImage, x: 1027, y: 847, size: 400,
+  },
   "1a165337-27df-4370-b8a1-cf8107d79f45": {
     image: companyFourImage, x: 360, y: 845, size: 400,
   },
@@ -53,6 +77,18 @@ const portraits: Record<
   },
   "f93c83ff-29f6-4743-bb2f-d5d504f2a590": {
     image: companyFiveImage, x: 535, y: 1080, size: 430,
+  },
+  "d4463bb2-61e7-4a85-af2c-623b171b4ab5": {
+    image: companySixImage, x: 637, y: 955, size: 400,
+  },
+  "bd14f774-1632-4a74-9f6c-cfb2e9bede88": {
+    image: companySixImage, x: 1046, y: 840, size: 400,
+  },
+  "9013dc50-59d2-4086-92f4-d971de4a8b76": {
+    image: companyEightImage, x: 317, y: 838, size: 430,
+  },
+  "b534fb39-499d-4a40-886a-d63f07273c41": {
+    image: companyEightImage, x: 1360, y: 840, size: 310,
   },
 };
 
