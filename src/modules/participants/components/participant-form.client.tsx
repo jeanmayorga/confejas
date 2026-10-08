@@ -134,7 +134,7 @@ function FormSection({
   if (presentation === "sheet") {
     return (
       <section className={cn("flex flex-col gap-4", className)}>
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-col gap-1.5">
             <h2 className="font-heading text-base font-medium">{title}</h2>
             {description ? (

@@ -128,7 +128,7 @@ export function StakeEditSheet({ stake, stakes }: StakeEditSheetProps) {
 
       <SheetContent
         side="right"
-        className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl"
+        className="data-[side=right]:w-[calc(100%-2rem)] data-[side=right]:sm:max-w-xl"
       >
         <SheetHeader className="border-b pr-16">
           <SheetTitle className="text-xl">Editar estaca</SheetTitle>
