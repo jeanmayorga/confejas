@@ -33,6 +33,7 @@ export async function getCounselorLodgingOverview() {
       .select({
         id: counselors.id,
         name: counselors.name,
+        arrivedAt: counselors.arrivedAt,
         sex: counselors.sex,
         roomId: counselors.lodgingRoomId,
         companyName: companies.name,

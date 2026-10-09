@@ -6,6 +6,11 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { CounselorAvatarImage } from "@/modules/counselors/components/counselor-avatar-image";
 import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  CounselorArrivals,
+  CounselorArrivalControl,
+} from "./counselor-arrivals.client";
 import {
   Progress,
   ProgressLabel,
@@ -477,6 +482,7 @@ export function CounselorLodgingBoard({
             </p>
           </div>
         </div>
+        <CounselorArrivalControl person={person} canManage={canManage} />
         {canManage ? (
           <details>
             <summary className="cursor-pointer text-sm">
@@ -511,128 +517,148 @@ export function CounselorLodgingBoard({
           Habitaciones de participantes
         </Button>
       </header>
-      {people.some((person) => person.roomId === null) ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Consejeros sin habitación</CardTitle>
-            <CardDescription>
-              Confirma su sexo y elige una habitación con cupo.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="grid gap-x-6 md:grid-cols-2 xl:grid-cols-3">
-              {people.filter((person) => person.roomId === null).map(personRow)}
-            </ul>
-          </CardContent>
-        </Card>
-      ) : null}
-      {["female", "male"].map((sex) => (
-        <section key={sex} className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold">
-            {sex === "female"
-              ? "Mujeres · Abish y Esther"
-              : "Varones · Ammon y Moroni"}
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {rooms
-              .filter((room) => room.sex === sex)
-              .map((room) => {
-                const occupants = people.filter(
-                  (person) => person.roomId === room.id,
-                );
-                const roomGuests = guests.filter(
-                  (guest) => guest.roomId === room.id,
-                );
-                const roomParticipants = participantRows.filter(
-                  (person) =>
-                    person.roomName ===
-                    getStaffRoomName(room.buildingName, room.number),
-                );
-                const occupied =
-                  occupants.length +
-                  roomGuests.length +
-                  roomParticipants.length;
-                return (
-                  <Card key={room.id} id={`room-${room.id}`}>
-                    <CardHeader>
-                      <CardTitle>{staffRoomName(room)}</CardTitle>
-                      <CardDescription>
-                        {room.buildingName} · Interior del dormitorio{" "}
-                        {room.number}
-                      </CardDescription>
-                      <Badge variant="secondary">
-                        {occupied >= room.capacity
-                          ? "Completa"
-                          : occupied === 0
-                            ? "Libre"
-                            : "Con cupos"}
-                      </Badge>
-                      <Progress
-                        value={
-                          room.capacity > 0
-                            ? Math.min(100, (occupied / room.capacity) * 100)
-                            : 0
-                        }
-                        aria-label={`Ocupación de ${room.buildingName}, ${staffRoomName(room)}`}
-                        aria-valuetext={`${occupied} de ${room.capacity} camas ocupadas`}
-                      >
-                        <ProgressLabel>Camas ocupadas</ProgressLabel>
-                        <ProgressValue>
-                          {() => `${occupied} / ${room.capacity}`}
-                        </ProgressValue>
-                      </Progress>
-                      <p
-                        className="text-sm text-muted-foreground"
-                        role="status"
-                      >
-                        {Math.max(0, room.capacity - occupied)}{" "}
-                        {room.capacity - occupied === 1
-                          ? "cama libre"
-                          : "camas libres"}
-                      </p>
-                    </CardHeader>
-                    <CardContent>
-                      <ul>
-                        {occupants.map(personRow)}
-                        {roomParticipants.map((person) => (
-                          <StaffParticipantRow
-                            key={person.id}
-                            person={person}
-                            canManage={canManage}
-                          />
-                        ))}
-                        {roomGuests.map((guest) => (
-                          <StaffGuestRow
-                            key={`${guest.id}-${guest.name}`}
-                            guest={guest}
-                            canManage={canManage}
-                          />
-                        ))}
-                      </ul>
-                      {occupied === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          Sin ocupantes asignados
-                        </p>
-                      ) : null}
-                      {canManage && occupied < room.capacity ? (
-                        <AddStaffOccupant
-                          room={room}
-                          people={people}
-                          participantRows={participantRows}
-                        />
-                      ) : null}
-                      {occupied >= room.capacity ? (
-                        <p className="text-sm text-muted-foreground">
-                          Habitación completa
-                        </p>
-                      ) : null}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-          </div>
-        </section>
-      ))}
+      <Tabs defaultValue="rooms" className="gap-6">
+        <TabsList aria-label="Alojamiento de staff">
+          <TabsTrigger value="rooms">Habitaciones</TabsTrigger>
+          <TabsTrigger value="arrivals">Llegadas</TabsTrigger>
+        </TabsList>
+        <TabsContent value="arrivals">
+          <CounselorArrivals
+            people={people}
+            rooms={rooms}
+            canManage={canManage}
+          />
+        </TabsContent>
+        <TabsContent value="rooms" className="flex flex-col gap-6">
+          {people.some((person) => person.roomId === null) ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Consejeros sin habitación</CardTitle>
+                <CardDescription>
+                  Confirma su sexo y elige una habitación con cupo.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="grid gap-x-6 md:grid-cols-2 xl:grid-cols-3">
+                  {people
+                    .filter((person) => person.roomId === null)
+                    .map(personRow)}
+                </ul>
+              </CardContent>
+            </Card>
+          ) : null}
+          {["female", "male"].map((sex) => (
+            <section key={sex} className="flex flex-col gap-3">
+              <h2 className="text-lg font-semibold">
+                {sex === "female"
+                  ? "Mujeres · Abish y Esther"
+                  : "Varones · Ammon y Moroni"}
+              </h2>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {rooms
+                  .filter((room) => room.sex === sex)
+                  .map((room) => {
+                    const occupants = people.filter(
+                      (person) => person.roomId === room.id,
+                    );
+                    const roomGuests = guests.filter(
+                      (guest) => guest.roomId === room.id,
+                    );
+                    const roomParticipants = participantRows.filter(
+                      (person) =>
+                        person.roomName ===
+                        getStaffRoomName(room.buildingName, room.number),
+                    );
+                    const occupied =
+                      occupants.length +
+                      roomGuests.length +
+                      roomParticipants.length;
+                    return (
+                      <Card key={room.id} id={`room-${room.id}`}>
+                        <CardHeader>
+                          <CardTitle>{staffRoomName(room)}</CardTitle>
+                          <CardDescription>
+                            {room.buildingName} · Interior del dormitorio{" "}
+                            {room.number}
+                          </CardDescription>
+                          <Badge variant="secondary">
+                            {occupied >= room.capacity
+                              ? "Completa"
+                              : occupied === 0
+                                ? "Libre"
+                                : "Con cupos"}
+                          </Badge>
+                          <Progress
+                            value={
+                              room.capacity > 0
+                                ? Math.min(
+                                    100,
+                                    (occupied / room.capacity) * 100,
+                                  )
+                                : 0
+                            }
+                            aria-label={`Ocupación de ${room.buildingName}, ${staffRoomName(room)}`}
+                            aria-valuetext={`${occupied} de ${room.capacity} camas ocupadas`}
+                          >
+                            <ProgressLabel>Camas ocupadas</ProgressLabel>
+                            <ProgressValue>
+                              {() => `${occupied} / ${room.capacity}`}
+                            </ProgressValue>
+                          </Progress>
+                          <p
+                            className="text-sm text-muted-foreground"
+                            role="status"
+                          >
+                            {Math.max(0, room.capacity - occupied)}{" "}
+                            {room.capacity - occupied === 1
+                              ? "cama libre"
+                              : "camas libres"}
+                          </p>
+                        </CardHeader>
+                        <CardContent>
+                          <ul>
+                            {occupants.map(personRow)}
+                            {roomParticipants.map((person) => (
+                              <StaffParticipantRow
+                                key={person.id}
+                                person={person}
+                                canManage={canManage}
+                              />
+                            ))}
+                            {roomGuests.map((guest) => (
+                              <StaffGuestRow
+                                key={`${guest.id}-${guest.name}`}
+                                guest={guest}
+                                canManage={canManage}
+                              />
+                            ))}
+                          </ul>
+                          {occupied === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                              Sin ocupantes asignados
+                            </p>
+                          ) : null}
+                          {canManage && occupied < room.capacity ? (
+                            <AddStaffOccupant
+                              room={room}
+                              people={people}
+                              participantRows={participantRows}
+                            />
+                          ) : null}
+                          {occupied >= room.capacity ? (
+                            <p className="text-sm text-muted-foreground">
+                              Habitación completa
+                            </p>
+                          ) : null}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+              </div>
+            </section>
+          ))}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

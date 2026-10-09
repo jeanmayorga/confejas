@@ -6,6 +6,56 @@ import { revalidatePath } from "next/cache";
 import { canManageParticipants } from "@/modules/auth/roles";
 import { requireSession } from "@/modules/auth/server/session";
 import { db } from "@/server/db";
+import { counselorArrivalQuery } from "../counselor-arrival";
+
+export async function setCounselorArrivalAction(input: {
+  counselorId: string;
+  arrived: boolean;
+}) {
+  const session = await requireSession();
+  if (!canManageParticipants(session.user.role)) {
+    return {
+      success: false,
+      message: "No tienes permiso para registrar llegadas.",
+    };
+  }
+  if (
+    !input ||
+    typeof input.counselorId !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      input.counselorId,
+    ) ||
+    typeof input.arrived !== "boolean"
+  ) {
+    return {
+      success: false,
+      message: "Selecciona un consejero y un estado válidos.",
+    };
+  }
+  try {
+    const result = await db.execute(
+      counselorArrivalQuery(input.counselorId, input.arrived),
+    );
+    if (!result.rows.length) {
+      return {
+        success: false,
+        message: "El consejero ya no existe. Actualiza la página.",
+      };
+    }
+    revalidatePath("/dashboard/lodging/counselors");
+    return {
+      success: true,
+      message: input.arrived
+        ? "Llegada registrada."
+        : "Consejero marcado como no ha llegado.",
+    };
+  } catch {
+    return {
+      success: false,
+      message: "No se pudo guardar la llegada. Inténtalo nuevamente.",
+    };
+  }
+}
 
 export async function assignCounselorRoomAction(input: {
   counselorId: string;
