@@ -25,6 +25,8 @@ import {
   availableRooms,
   participantAge,
   suggestCompany,
+  suggestCompanyByAvailability,
+  resolveAssignmentSelection,
 } from "../assignment-suggestions";
 import {
   createParticipantAction,
@@ -99,8 +101,8 @@ export function CreateParticipantForm({
   const [sex, setSex] = useState("");
   const [stakeId, setStakeId] = useState("");
   const [wardId, setWardId] = useState("");
-  const [roomName, setRoomName] = useState("");
-  const [companyId, setCompanyId] = useState("");
+  const [roomName, setRoomName] = useState<string | null>(null);
+  const [companyId, setCompanyId] = useState<string | null>(null);
   const options = useQuery({
     queryKey: ["participant-assignment-options"],
     queryFn: () => getParticipantAssignmentOptionsAction(),
@@ -111,18 +113,23 @@ export function CreateParticipantForm({
   const companies = availableCompanies(options.data?.companies ?? [], sex);
   const age = participantAge(birthDate);
   const suggestedRoom = rooms[0];
-  const suggestedCompany = suggestCompany(companies, age);
-  // Never submit a selection that disappeared after a capacity refresh.
-  const selectedRoom = rooms.some((room) => room.name === roomName)
-    ? roomName
-    : "";
-  const selectedCompany = companies.some((company) => company.id === companyId)
-    ? companyId
-    : "";
+  const ageSuggestion = suggestCompany(companies, age);
+  const suggestedCompany =
+    ageSuggestion ?? suggestCompanyByAvailability(companies, sex);
+  const selectedRoom = resolveAssignmentSelection(
+    roomName,
+    suggestedRoom?.name,
+    rooms.map((room) => room.name),
+  );
+  const selectedCompany = resolveAssignmentSelection(
+    companyId,
+    suggestedCompany?.id,
+    companies.map((company) => company.id),
+  );
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending) return;
+    if (pending || options.isFetching) return;
     const data = new FormData(event.currentTarget);
     data.set("sex", sex);
     data.set("wardId", wardId);
@@ -193,8 +200,8 @@ export function CreateParticipantForm({
             placeholder="Selecciona el sexo"
             onChange={(value) => {
               setSex(value);
-              setRoomName("");
-              setCompanyId("");
+              setRoomName(null);
+              setCompanyId(null);
             }}
           />
           <FormSelect
@@ -271,9 +278,12 @@ export function CreateParticipantForm({
               disabled={options.isPending || !companies.length}
             />
             <FieldDescription>
-              {options.isPending || options.isError ? null : suggestedCompany ? (
+              {options.isPending ||
+              options.isError ? null : suggestedCompany ? (
                 <>
-                  Para {age} años:{" "}
+                  {ageSuggestion
+                    ? `Para ${age} años: `
+                    : "Sugerida por disponibilidad: "}
                   <Button
                     type="button"
                     variant="link"
@@ -282,8 +292,9 @@ export function CreateParticipantForm({
                   >
                     {suggestedCompany.name}
                   </Button>{" "}
-                  (edad promedio: {Math.round(suggestedCompany.averageAge!)}{" "}
-                  años).
+                  {ageSuggestion
+                    ? `(edad promedio: ${Math.round(ageSuggestion.averageAge!)} años).`
+                    : null}
                 </>
               ) : !sex || sex === "Otro" ? (
                 "Selecciona Masculino o Femenino para consultar los cupos."
@@ -313,7 +324,8 @@ export function CreateParticipantForm({
             </p>
           ) : null}
           <FieldDescription>
-            Puedes dejar las asignaciones pendientes. Los cupos se verifican al
+            Seleccionamos automáticamente las opciones sugeridas. Puedes
+            cambiarlas o elegir «Sin asignar». Los cupos se verifican al
             guardar.
           </FieldDescription>
         </FieldGroup>
@@ -327,7 +339,10 @@ export function CreateParticipantForm({
         >
           Cancelar
         </Button>
-        <Button type="submit" disabled={pending || !wardId}>
+        <Button
+          type="submit"
+          disabled={pending || options.isFetching || !wardId}
+        >
           {pending ? "Guardando…" : "Crear participante"}
         </Button>
       </div>

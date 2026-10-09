@@ -4,6 +4,8 @@ import {
   availableRooms,
   participantAge,
   suggestCompany,
+  suggestCompanyByAvailability,
+  resolveAssignmentSelection,
   type CompanyOption,
 } from "./assignment-suggestions";
 
@@ -81,5 +83,34 @@ describe("participant assignment suggestions", () => {
     expect(suggestCompany(companies, null)).toBeUndefined();
     expect(suggestCompany([companies[2]], 18)).toBeUndefined();
     expect(suggestCompany([], 18)).toBeUndefined();
+  });
+});
+
+describe("automatic assignment selection", () => {
+  test("follows suggestions as availability or age changes", () => {
+    expect(resolveAssignmentSelection(null, undefined, [])).toBe("");
+    expect(resolveAssignmentSelection(null, "A", ["A", "B"])).toBe("A");
+    expect(resolveAssignmentSelection(null, "B", ["B"])).toBe("B");
+  });
+  test("preserves manual choices and explicitly unassigned selections", () => {
+    expect(resolveAssignmentSelection("A", "B", ["A", "B"])).toBe("A");
+    expect(resolveAssignmentSelection("", "B", ["A", "B"])).toBe("");
+    expect(resolveAssignmentSelection("A", "B", ["B"])).toBe("");
+  });
+  test("falls back to available capacity without needing age data", () => {
+    expect(suggestCompanyByAvailability(companies, "Femenino")?.id).toBe(
+      "empty",
+    );
+    expect(suggestCompanyByAvailability(companies, "Otro")).toBeUndefined();
+    expect(suggestCompanyByAvailability([], "Masculino")).toBeUndefined();
+    expect(
+      suggestCompanyByAvailability(
+        [
+          { ...companies[0], id: "limited", available: 20, maleAvailable: 1 },
+          { ...companies[1], id: "open", available: 5, maleAvailable: 5 },
+        ],
+        "Masculino",
+      )?.id,
+    ).toBe("open");
   });
 });

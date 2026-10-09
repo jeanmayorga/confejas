@@ -66,3 +66,29 @@ export function suggestCompany(companies: CompanyOption[], age: number | null) {
         a.name.localeCompare(b.name, "es", { numeric: true }),
     )[0];
 }
+
+// Null follows the current suggestion; an empty string explicitly opts out.
+export function resolveAssignmentSelection(
+  choice: string | null,
+  suggested: string | undefined,
+  available: string[],
+) {
+  const selection = choice ?? suggested ?? "";
+  return available.includes(selection) ? selection : "";
+}
+
+export function suggestCompanyByAvailability(
+  companies: CompanyOption[],
+  sex: string,
+) {
+  const capacity = (company: CompanyOption) =>
+    Math.min(
+      company.available,
+      sex === "Femenino" ? company.femaleAvailable : company.maleAvailable,
+    );
+  return availableCompanies(companies, sex).sort(
+    (a, b) =>
+      capacity(b) - capacity(a) ||
+      a.name.localeCompare(b.name, "es", { numeric: true }),
+  )[0];
+}
