@@ -390,8 +390,15 @@ export async function getParticipantForCheckIn(participantId: string) {
       companyId: participants.companyId,
       checkedInAt: participants.checkedInAt,
       roomName: participants.roomName,
+      chronicCondition: participantMedicalProfiles.chronicCondition,
+      medicalTreatment: participantMedicalProfiles.medicalTreatment,
+      medicalNotes: participantMedicalProfiles.medicalNotes,
     })
     .from(participants)
+    .leftJoin(
+      participantMedicalProfiles,
+      eq(participants.id, participantMedicalProfiles.participantId),
+    )
     .innerJoin(wards, eq(participants.wardId, wards.id))
     .innerJoin(stakes, eq(wards.stakeId, stakes.id))
     .leftJoin(companies, eq(participants.companyId, companies.id))
