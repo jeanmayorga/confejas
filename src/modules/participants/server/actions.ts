@@ -171,6 +171,20 @@ function optionalBoolean(formData: FormData, field: string) {
   return value === "true";
 }
 
+function participantAlreadyArrived(formData: FormData) {
+  const value = formData.get("arrived");
+
+  if (value === null || value === "false") {
+    return false;
+  }
+
+  if (value === "true") {
+    return true;
+  }
+
+  throw new Error("El estado de llegada no es válido.");
+}
+
 function optionalCompanyId(formData: FormData) {
   const value = String(formData.get("companyId") ?? "");
 
@@ -502,6 +516,7 @@ export async function createParticipantAction(
     }
 
     const data = parseParticipantForm(formData);
+    const arrived = participantAlreadyArrived(formData);
     if (data.participant.companyId) {
       const companyValidation = await validateCompanyParticipantAssignment({
         companyId: data.participant.companyId,
@@ -526,7 +541,13 @@ export async function createParticipantAction(
 
     const participantInsert = db
       .insert(participants)
-      .values({ id: participantId, ...data.participant });
+      .values({
+        id: participantId,
+        ...data.participant,
+        status: arrived ? "arrived" : "registered",
+        checkedInAt: arrived ? new Date() : null,
+        checkedInById: arrived ? session.user.id : null,
+      });
     const medicalProfileInsert = db
       .insert(participantMedicalProfiles)
       .values({ participantId, ...data.medical });
