@@ -547,6 +547,7 @@ export async function createParticipantAction(
     revalidatePath("/dashboard/participants");
     revalidatePath("/dashboard/companies");
     revalidatePath("/dashboard/lodging");
+    revalidatePath("/dashboard/lodging/counselors");
     return {
       success: true,
       message: "Participante creado correctamente.",
@@ -627,6 +628,7 @@ export async function updateParticipantAction(
     revalidatePath("/dashboard/companies");
     revalidatePath(`/dashboard/participants/${participantId}/edit`);
     revalidatePath("/dashboard/lodging");
+    revalidatePath("/dashboard/lodging/counselors");
     return { success: true, message: "Participante actualizado correctamente." };
   } catch (error) {
     return { success: false, message: safeError(error) };
@@ -766,6 +768,7 @@ export async function deleteParticipantAction(
     revalidatePath("/dashboard/participants");
     revalidatePath("/dashboard/companies");
     revalidatePath("/dashboard/lodging");
+    revalidatePath("/dashboard/lodging/counselors");
     return { success: true, message: "Participante eliminado correctamente." };
   } catch (error) {
     return { success: false, message: safeError(error) };

@@ -2,6 +2,7 @@ import "server-only";
 
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/server/db";
+import { participants } from "@/modules/participants/server/schema";
 import { counselors } from "@/modules/counselors/server/schema";
 import { companies } from "@/modules/companies/server/schema";
 import {
@@ -12,7 +13,7 @@ import {
 } from "./schema";
 
 export async function getCounselorLodgingOverview() {
-  const [rooms, people, guests] = await Promise.all([
+  const [rooms, people, guests, participantRows] = await Promise.all([
     db
       .select({
         id: lodgingCounselorRooms.id,
@@ -40,8 +41,18 @@ export async function getCounselorLodgingOverview() {
       .leftJoin(companies, eq(counselors.companyId, companies.id))
       .orderBy(asc(companies.name), asc(counselors.name)),
     db.select().from(lodgingStaffGuests).orderBy(asc(lodgingStaffGuests.name)),
+    db
+      .select({
+        id: participants.id,
+        firstNames: participants.firstNames,
+        lastNames: participants.lastNames,
+        sex: participants.sex,
+        roomName: participants.roomName,
+      })
+      .from(participants)
+      .orderBy(asc(participants.firstNames), asc(participants.lastNames)),
   ]);
-  return { rooms, people, guests };
+  return { rooms, people, guests, participantRows };
 }
 
 export type CounselorLodgingOverview = Awaited<

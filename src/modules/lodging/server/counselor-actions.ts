@@ -1,5 +1,6 @@
 "use server";
 
+import { staffParticipantMoveQuery } from "../staff-participant-move";
 import { sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { canManageParticipants } from "@/modules/auth/roles";
@@ -33,7 +34,7 @@ export async function assignCounselorRoomAction(input: {
   try {
     const [, result] = await db.batch([
       db.execute(
-        sql`lock table lodging_staff_guests, counselors, lodging_counselor_rooms, lodging_rooms, lodging_buildings in share row exclusive mode`,
+        sql`lock table participants, lodging_staff_guests, counselors, lodging_counselor_rooms, lodging_rooms, lodging_buildings in share row exclusive mode`,
       ),
       db.execute(sql`
         update counselors set sex = ${input.sex}, lodging_room_id = ${input.roomId}, updated_at = now()
@@ -44,7 +45,7 @@ export async function assignCounselorRoomAction(input: {
             join lodging_buildings b on b.id = r.building_id
             where cr.id = ${input.roomId} and b.sex = ${input.sex}
               and (select count(*) from counselors c
-                   where c.lodging_room_id = cr.id and c.id <> ${input.counselorId}::uuid) + (select count(*) from lodging_staff_guests g where g.room_id = cr.id) < r.coordinator_capacity
+                   where c.lodging_room_id = cr.id and c.id <> ${input.counselorId}::uuid) + (select count(*) from lodging_staff_guests g where g.room_id = cr.id) + (select count(*) from participants p join lodging_rooms pr on pr.id=cr.id join lodging_buildings pb on pb.id=pr.building_id where p.room_name=concat(pb.name, ' · Habitación ', pr.number, ' staff')) < r.coordinator_capacity
           )
         ) returning id
       `),
@@ -96,11 +97,11 @@ export async function saveStaffGuestAction(
           select cr.id,${name} from lodging_counselor_rooms cr join lodging_rooms r on r.id=cr.id
           where cr.id=${roomId} and
           (select count(*) from counselors c where c.lodging_room_id=cr.id) +
-          (select count(*) from lodging_staff_guests g where g.room_id=cr.id) < r.coordinator_capacity
+          (select count(*) from lodging_staff_guests g where g.room_id=cr.id) + (select count(*) from participants p join lodging_rooms pr on pr.id=cr.id join lodging_buildings pb on pb.id=pr.building_id where p.room_name=concat(pb.name, ' · Habitación ', pr.number, ' staff')) < r.coordinator_capacity
           returning id`;
     const [, result] = await db.batch([
       db.execute(
-        sql`lock table lodging_staff_guests, counselors, lodging_counselor_rooms, lodging_rooms, lodging_buildings in share row exclusive mode`,
+        sql`lock table participants, lodging_staff_guests, counselors, lodging_counselor_rooms, lodging_rooms, lodging_buildings in share row exclusive mode`,
       ),
       db.execute(mutation),
     ]);
@@ -131,5 +132,57 @@ export async function removeStaffGuestAction(guestId: string) {
     return { success: true, message: "Ocupante retirado de la habitación." };
   } catch {
     return { success: false, message: "No se pudo quitar el ocupante." };
+  }
+}
+
+export async function moveParticipantToStaffAction(input: {
+  participantId: string;
+  roomId: number;
+  previousRoomName: string | null;
+}) {
+  const session = await requireSession();
+  if (!canManageParticipants(session.user.role))
+    return {
+      success: false,
+      message: "No tienes permiso para mover participantes.",
+    };
+  if (
+    !input ||
+    typeof input.participantId !== "string" ||
+    !/^[0-9a-f-]{36}$/i.test(input.participantId) ||
+    !Number.isSafeInteger(input.roomId) ||
+    input.roomId <= 0 ||
+    (input.previousRoomName !== null &&
+      (typeof input.previousRoomName !== "string" ||
+        input.previousRoomName.length > 120))
+  ) {
+    return {
+      success: false,
+      message: "Selecciona un participante y una habitación válidos.",
+    };
+  }
+  try {
+    const [, result] = await db.batch([
+      db.execute(
+        sql`lock table participants, lodging_staff_guests, counselors, lodging_counselor_rooms, lodging_rooms, lodging_buildings in share row exclusive mode`,
+      ),
+      db.execute(staffParticipantMoveQuery(input)),
+    ]);
+    if (!result.rows.length)
+      return {
+        success: false,
+        message:
+          "No se pudo trasladar: revisa el sexo, los cupos o si cambió su habitación. Actualiza la página.",
+      };
+    revalidatePath("/dashboard/lodging/counselors");
+    revalidatePath("/dashboard/lodging");
+    revalidatePath("/dashboard/participants", "layout");
+    revalidatePath("/consejero", "layout");
+    return {
+      success: true,
+      message: "Participante trasladado. Su cama anterior quedó libre.",
+    };
+  } catch {
+    return { success: false, message: "No se pudo trasladar al participante." };
   }
 }

@@ -26,7 +26,7 @@ const sexes = new Map<string, "female" | "male">(
 if (sexes.size !== input.length) throw new Error("Consejeros duplicados.");
 const q = neon(process.env.DATABASE_URL!);
 const [roomRows, peopleRows] = await Promise.all([
-  q`select cr.id, b.sex, r.coordinator_capacity - (select count(*)::integer from lodging_staff_guests g where g.room_id=cr.id) as capacity from lodging_counselor_rooms cr join lodging_rooms r on r.id=cr.id join lodging_buildings b on b.id=r.building_id order by b.position,r.number`,
+  q`select cr.id, b.sex, r.coordinator_capacity - (select count(*)::integer from lodging_staff_guests g where g.room_id=cr.id) - (select count(*)::integer from participants p where p.room_name=concat(b.name, ' · Habitación ', r.number, ' staff')) as capacity from lodging_counselor_rooms cr join lodging_rooms r on r.id=cr.id join lodging_buildings b on b.id=r.building_id order by b.position,r.number`,
   q`select c.id,c.sex,c.lodging_room_id as "roomId",co.name company,c.name from counselors c left join companies co on co.id=c.company_id`,
 ]);
 const rooms = roomRows as {
@@ -77,14 +77,14 @@ console.log(
 );
 if (!process.argv.includes("--apply") || !changes.length) process.exit(0);
 const result = await q.transaction([
-  q`lock table lodging_staff_guests,counselors,lodging_counselor_rooms,lodging_rooms,lodging_buildings in share row exclusive mode`,
+  q`lock table participants,lodging_staff_guests,counselors,lodging_counselor_rooms,lodging_rooms,lodging_buildings in share row exclusive mode`,
   q`with requested as (
     select * from jsonb_to_recordset(${JSON.stringify(changes)}::jsonb) as x(id uuid, "roomId" integer, sex varchar)
   ), valid as (
     select count(*) = ${changes.length} and not exists (
       select 1 from requested x join lodging_rooms r on r.id=x."roomId"
       where (select count(*) from counselors c where c.lodging_room_id=r.id) +
-        (select count(*) from requested y where y."roomId"=r.id) + (select count(*) from lodging_staff_guests g where g.room_id=r.id) > r.coordinator_capacity
+        (select count(*) from requested y where y."roomId"=r.id) + (select count(*) from lodging_staff_guests g where g.room_id=r.id) + (select count(*) from participants p join lodging_buildings b on b.id=r.building_id where p.room_name=concat(b.name, ' · Habitación ', r.number, ' staff')) > r.coordinator_capacity
     ) as ok
     from requested x join counselors c on c.id=x.id
     join lodging_counselor_rooms cr on cr.id=x."roomId"
