@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -33,6 +34,8 @@ import {
 } from "@/components/ui/dialog";
 import {
   Field,
+  FieldContent,
+  FieldDescription,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
@@ -203,6 +206,7 @@ export function ParticipantForm({
   const [shirtSize, setShirtSize] = useState(
     participant?.shirtSize ?? SELECT_NONE_VALUE,
   );
+  const [arrived, setArrived] = useState(true);
   const companyId = participant?.companyId ?? "";
   const roomName = participant?.roomName ?? "";
   const editing = Boolean(participant);
@@ -332,6 +336,9 @@ export function ParticipantForm({
   return (
     <>
       <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-6">
+        {!editing ? (
+          <input type="hidden" name="arrived" value={String(arrived)} />
+        ) : null}
         <input type="hidden" name="governmentId" value={governmentId} />
         <input
           type="hidden"
@@ -624,6 +631,25 @@ export function ParticipantForm({
                 </SelectContent>
               </Select>
             </Field>
+            {!editing ? (
+              <Field
+                orientation="horizontal"
+                className="rounded-xl border bg-background p-4 md:col-span-2"
+              >
+                <Checkbox
+                  id="participant-arrived"
+                  checked={arrived}
+                  onCheckedChange={setArrived}
+                  disabled={pending}
+                />
+                <FieldContent>
+                  <FieldLabel htmlFor="participant-arrived">Ya llegó</FieldLabel>
+                  <FieldDescription>
+                    Registra su llegada al crear el participante.
+                  </FieldDescription>
+                </FieldContent>
+              </Field>
+            ) : null}
           </FieldGroup>
         </FormSection>
 

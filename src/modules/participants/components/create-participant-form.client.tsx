@@ -5,8 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldGroup,
   FieldLabel,
@@ -103,6 +105,7 @@ export function CreateParticipantForm({
   const [wardId, setWardId] = useState("");
   const [roomName, setRoomName] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [arrived, setArrived] = useState(true);
   const options = useQuery({
     queryKey: ["participant-assignment-options"],
     queryFn: () => getParticipantAssignmentOptionsAction(),
@@ -154,6 +157,7 @@ export function CreateParticipantForm({
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-6">
+      <input type="hidden" name="arrived" value={String(arrived)} />
       <fieldset disabled={pending} className="flex min-w-0 flex-col gap-6">
         <FieldGroup className="grid gap-4 sm:grid-cols-2">
           <Field>
@@ -328,6 +332,23 @@ export function CreateParticipantForm({
             cambiarlas o elegir «Sin asignar». Los cupos se verifican al
             guardar.
           </FieldDescription>
+          <Field
+            orientation="horizontal"
+            className="rounded-xl border bg-muted/40 p-4"
+          >
+            <Checkbox
+              id="create-arrived"
+              checked={arrived}
+              onCheckedChange={setArrived}
+              disabled={pending}
+            />
+            <FieldContent>
+              <FieldLabel htmlFor="create-arrived">Ya llegó</FieldLabel>
+              <FieldDescription>
+                Registra su llegada al crear el participante.
+              </FieldDescription>
+            </FieldContent>
+          </Field>
         </FieldGroup>
       </fieldset>
       <div className="flex justify-end gap-3">
