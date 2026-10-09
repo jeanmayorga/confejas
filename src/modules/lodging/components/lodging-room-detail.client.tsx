@@ -254,7 +254,7 @@ export function LodgingRoomDetail({
           </Progress>
           <p className="text-xs text-muted-foreground">
             <Link className="underline" href={`/dashboard/lodging/counselors#room-${room.id}`}>
-              Habitación {room.number} consejeros · {room.coordinatorCapacity} camas
+              {room.staffRoomName ?? `Habitación ${room.number} staff`} · {room.coordinatorCapacity} camas
               </Link>
           </p>
         </CardContent>

@@ -15,6 +15,7 @@ export async function getCounselorLodgingOverview() {
     db
       .select({
         id: lodgingCounselorRooms.id,
+        name: lodgingCounselorRooms.name,
         number: lodgingRooms.number,
         buildingName: lodgingBuildings.name,
         sex: lodgingBuildings.sex,

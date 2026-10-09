@@ -1,10 +1,11 @@
 "use server";
 
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { canManageParticipants } from "@/modules/auth/roles";
 import { requireSession } from "@/modules/auth/server/session";
 import { db } from "@/server/db";
+import { lodgingCounselorRooms } from "./schema";
 
 export async function assignCounselorRoomAction(input: {
   counselorId: string;
@@ -63,6 +64,50 @@ export async function assignCounselorRoomAction(input: {
     return {
       success: false,
       message: "No se pudo guardar. Inténtalo nuevamente.",
+    };
+  }
+}
+
+export async function renameStaffRoomAction(roomId: number, value: string) {
+  const session = await requireSession();
+  if (!canManageParticipants(session.user.role)) {
+    return {
+      success: false,
+      message: "No tienes permiso para editar habitaciones.",
+    };
+  }
+  if (
+    !Number.isSafeInteger(roomId) ||
+    roomId <= 0 ||
+    typeof value !== "string"
+  ) {
+    return {
+      success: false,
+      message: "La habitación o el nombre no son válidos.",
+    };
+  }
+  const name = value.trim().replace(/\s+/g, " ");
+  if (name.length > 120) {
+    return {
+      success: false,
+      message: "El nombre no puede superar 120 caracteres.",
+    };
+  }
+  try {
+    const [room] = await db
+      .update(lodgingCounselorRooms)
+      .set({ name: name || null })
+      .where(eq(lodgingCounselorRooms.id, roomId))
+      .returning({ id: lodgingCounselorRooms.id });
+    if (!room)
+      return { success: false, message: "La habitación ya no existe." };
+    revalidatePath("/dashboard/lodging/counselors");
+    revalidatePath("/dashboard/lodging");
+    return { success: true, message: "Nombre de la habitación guardado." };
+  } catch {
+    return {
+      success: false,
+      message: "No se pudo guardar el nombre. Inténtalo nuevamente.",
     };
   }
 }
