@@ -1,0 +1,1 @@
+ALTER TABLE "counselors" ADD COLUMN "arrived_at" timestamp with time zone;

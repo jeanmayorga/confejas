@@ -27,6 +27,7 @@ export const counselors = pgTable(
       onDelete: "set null",
     }),
     name: varchar({ length: 160 }).notNull(),
+    arrivedAt: timestamp({ withTimezone: true }),
     whatsapp: varchar({ length: 32 }),
     email: varchar({ length: 254 }),
     companyId: uuid().references(() => companies.id, {
