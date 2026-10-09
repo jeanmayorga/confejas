@@ -11,6 +11,14 @@ import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   InputGroup,
@@ -18,10 +26,6 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
 import {
   Sheet,
   SheetClose,
@@ -83,6 +87,60 @@ export type ParticipantDirectoryQueryUpdate = Partial<{
 }>;
 
 type ParticipantStatusCounts = Record<ParticipantStatus, number>;
+
+type FilterOption = { value: string; label: string };
+
+function SearchableFilter({
+  id,
+  label,
+  options,
+  value,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  options: FilterOption[];
+  value: string;
+  disabled: boolean;
+  onChange: (value: string) => void;
+}) {
+  const optionLabels = new Map(
+    options.map((option) => [option.value, option.label]),
+  );
+
+  return (
+    <Field data-disabled={disabled || undefined}>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <Combobox
+        items={options.map((option) => option.value)}
+        itemToStringLabel={(optionValue) =>
+          optionLabels.get(optionValue) ?? optionValue
+        }
+        value={value || null}
+        onValueChange={(nextValue) => onChange(nextValue ?? "")}
+        disabled={disabled}
+      >
+        <ComboboxInput
+          id={id}
+          className="w-full"
+          placeholder={`Buscar ${label.toLocaleLowerCase("es")}...`}
+          showClear
+        />
+        <ComboboxContent>
+          <ComboboxEmpty>No hay coincidencias</ComboboxEmpty>
+          <ComboboxList>
+            {(optionValue) => (
+              <ComboboxItem key={optionValue} value={optionValue}>
+                {optionLabels.get(optionValue)}
+              </ComboboxItem>
+            )}
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
+    </Field>
+  );
+}
 
 type ParticipantDirectoryFiltersProps = {
   canExport: boolean;
@@ -257,7 +315,8 @@ export function ParticipantDirectoryFilters({
     ? `/api/participants/export?${exportQuery}`
     : "/api/participants/export";
   const exportDisabled = pending || isRefreshing || !canExport;
-  const actionClassName = "h-11 w-full rounded-xl sm:h-9 sm:w-auto sm:rounded-4xl";
+  const actionClassName =
+    "h-11 w-full rounded-xl sm:h-9 sm:w-auto sm:rounded-4xl";
 
   return (
     <form onSubmit={submitSearch}>
@@ -410,83 +469,44 @@ export function ParticipantDirectoryFilters({
                 </SheetHeader>
 
                 <FieldGroup className="gap-5 px-6">
-                  <Field data-disabled={pending || undefined}>
-                    <FieldLabel htmlFor="participant-company-filter">
-                      Compañía
-                    </FieldLabel>
-                    <NativeSelect
-                      id="participant-company-filter"
-                      value={selectedFilters.companyId}
-                      disabled={pending}
-                      className="w-full"
-                      onChange={(event) =>
-                        updateFilter("companyId", event.currentTarget.value)
-                      }
-                    >
-                      <NativeSelectOption value="">
-                        Todas las compañías
-                      </NativeSelectOption>
-                      <NativeSelectOption value="unassigned">
-                        Sin asignar
-                      </NativeSelectOption>
-                      {companies.map((company) => (
-                        <NativeSelectOption key={company.id} value={company.id}>
-                          {company.name}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
-                  </Field>
+                  <SearchableFilter
+                    id="participant-company-filter"
+                    label="Compañía"
+                    options={[
+                      { value: "unassigned", label: "Sin asignar" },
+                      ...companies.map((company) => ({
+                        value: company.id,
+                        label: company.name,
+                      })),
+                    ]}
+                    value={selectedFilters.companyId}
+                    disabled={pending}
+                    onChange={(value) => updateFilter("companyId", value)}
+                  />
 
-                  <Field data-disabled={pending || undefined}>
-                    <FieldLabel htmlFor="participant-ward-filter">
-                      Barrio
-                    </FieldLabel>
-                    <NativeSelect
-                      id="participant-ward-filter"
-                      value={selectedFilters.wardId}
-                      disabled={pending}
-                      className="w-full"
-                      onChange={(event) =>
-                        updateFilter("wardId", event.currentTarget.value)
-                      }
-                    >
-                      <NativeSelectOption value="">
-                        Todos los barrios
-                      </NativeSelectOption>
-                      {wards.map((ward) => (
-                        <NativeSelectOption key={ward.id} value={String(ward.id)}>
-                          {ward.name}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
-                  </Field>
+                  <SearchableFilter
+                    id="participant-ward-filter"
+                    label="Barrio"
+                    options={wards.map((ward) => ({
+                      value: String(ward.id),
+                      label: ward.name,
+                    }))}
+                    value={selectedFilters.wardId}
+                    disabled={pending}
+                    onChange={(value) => updateFilter("wardId", value)}
+                  />
 
-                  <Field data-disabled={pending || undefined}>
-                    <FieldLabel htmlFor="participant-stake-filter">
-                      Estaca
-                    </FieldLabel>
-                    <NativeSelect
-                      id="participant-stake-filter"
-                      value={selectedFilters.stakeId}
-                      disabled={pending}
-                      className="w-full"
-                      onChange={(event) =>
-                        updateFilter("stakeId", event.currentTarget.value)
-                      }
-                    >
-                      <NativeSelectOption value="">
-                        Todas las estacas
-                      </NativeSelectOption>
-                      {stakes.map((stake) => (
-                        <NativeSelectOption
-                          key={stake.id}
-                          value={String(stake.id)}
-                        >
-                          {stake.name}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
-                  </Field>
+                  <SearchableFilter
+                    id="participant-stake-filter"
+                    label="Estaca"
+                    options={stakes.map((stake) => ({
+                      value: String(stake.id),
+                      label: stake.name,
+                    }))}
+                    value={selectedFilters.stakeId}
+                    disabled={pending}
+                    onChange={(value) => updateFilter("stakeId", value)}
+                  />
                 </FieldGroup>
 
                 <SheetFooter>
