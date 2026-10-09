@@ -28,6 +28,8 @@ import {
 
 export type CounselorFormValues = {
   id?: string;
+  name?: string;
+  sex?: "female" | "male" | null;
   governmentId: string | null;
   firstNames: string | null;
   lastNames: string | null;
@@ -65,6 +67,7 @@ export function CounselorForm({
   const [wardId, setWardId] = useState(
     counselor?.wardId ? String(counselor.wardId) : "",
   );
+  const [sex, setSex] = useState(counselor?.sex ?? "");
   const isEditing = Boolean(counselor?.id);
   const availableWards = stakeId
     ? wards.filter((ward) => ward.stakeId === Number(stakeId))
@@ -98,6 +101,10 @@ export function CounselorForm({
         lastNames: result.data.lastNames,
       };
       let filledFields = 0;
+      if (result.data.sex) {
+        setSex(result.data.sex === "Femenino" ? "female" : "male");
+        filledFields += 1;
+      }
 
       for (const [name, value] of Object.entries(fieldValues)) {
         const field = currentForm.elements.namedItem(name);
@@ -199,7 +206,7 @@ export function CounselorForm({
             id="counselor-first-names"
             name="firstNames"
             maxLength={160}
-            defaultValue={counselor?.firstNames ?? ""}
+            defaultValue={counselor?.firstNames ?? counselor?.name ?? ""}
             required
           />
         </Field>
@@ -211,6 +218,21 @@ export function CounselorForm({
             maxLength={160}
             defaultValue={counselor?.lastNames ?? ""}
           />
+        </Field>
+        <Field className="sm:col-span-2">
+          <FieldLabel htmlFor="counselor-sex">Sexo</FieldLabel>
+          <NativeSelect id="counselor-sex" name="sex" value={sex}
+            onChange={(event) => setSex(event.currentTarget.value)}
+            disabled={pending || lookupPending} className="w-full">
+            <NativeSelectOption value="">Sin registrar</NativeSelectOption>
+            <NativeSelectOption value="female">Mujer</NativeSelectOption>
+            <NativeSelectOption value="male">Hombre</NativeSelectOption>
+          </NativeSelect>
+          {isEditing && sex !== (counselor?.sex ?? "") ? (
+            <FieldDescription>
+              Si tiene una habitación asignada, quedará sin habitación para poder reasignarlo según el sexo actualizado.
+            </FieldDescription>
+          ) : null}
         </Field>
         <Field>
           <FieldLabel htmlFor="counselor-whatsapp">WhatsApp</FieldLabel>

@@ -2,7 +2,7 @@
 
 import { randomInt } from "node:crypto";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
@@ -88,6 +88,11 @@ function getOptionalEmail(formData: FormData) {
 }
 
 function getCounselorData(formData: FormData) {
+  const sexValue = formData.has("sex") ? formData.get("sex") : undefined;
+  if (sexValue !== undefined && sexValue !== "" && sexValue !== "female" && sexValue !== "male") {
+    throw new Error("Selecciona un sexo válido.");
+  }
+  const sex = sexValue === "" ? null : sexValue;
   const rawGovernmentId = optionalText(formData, "governmentId", 32);
   const governmentId = rawGovernmentId
     ? normalizeGovernmentId(rawGovernmentId)
@@ -109,6 +114,7 @@ function getCounselorData(formData: FormData) {
   }
 
   return {
+    sex: sex as "female" | "male" | null | undefined,
     governmentId,
     firstNames,
     lastNames,
@@ -239,6 +245,7 @@ function revalidateCounselorPaths() {
   revalidatePath("/dashboard/counselors");
   revalidatePath("/dashboard/companies");
   revalidatePath("/dashboard/users");
+  revalidatePath("/dashboard/lodging/counselors");
 }
 
 function getPasswordSurname(lastNames: string | null, name: string) {
@@ -496,6 +503,11 @@ export async function updateCounselorAction(
       .update(counselors)
       .set({
         ...counselorData,
+        // The row update serializes with lodging assignments. Preserve the room
+        // only when the recorded sex is unchanged (including legacy clients).
+        ...(counselorData.sex !== undefined ? {
+          lodgingRoomId: sql`case when ${counselors.sex} is not distinct from ${counselorData.sex}::varchar then ${counselors.lodgingRoomId} else null end`,
+        } : {}),
         companyId,
         stakeId,
         wardId,

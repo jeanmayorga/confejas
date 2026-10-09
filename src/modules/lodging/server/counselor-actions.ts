@@ -57,6 +57,7 @@ export async function assignCounselorRoomAction(input: {
       };
     }
     revalidatePath("/dashboard/lodging/counselors");
+    revalidatePath("/dashboard/counselors");
     return { success: true, message: "Alojamiento del consejero actualizado." };
   } catch {
     return {
