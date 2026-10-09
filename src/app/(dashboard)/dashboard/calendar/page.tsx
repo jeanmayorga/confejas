@@ -4,7 +4,7 @@ import { requireParticipantDirectoryAccess } from "@/modules/auth/server/session
 import { ConferenceCalendar } from "@/modules/itinerary/components/conference-calendar.client";
 
 export const metadata: Metadata = {
-  title: "Calendario del staff",
+  title: "Calendario del staff | Confejas",
 };
 
 export default async function StaffCalendarPage() {

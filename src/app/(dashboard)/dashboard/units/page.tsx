@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import { PageHeader } from "@/components/page-header";
 import { requireParticipantManagementAccess } from "@/modules/auth/server/session";
 import { StakeFormDialog } from "@/modules/church-units/components/stake-form-dialog.client";
 import { UnitsDirectory } from "@/modules/church-units/components/units-directory.client";
 import { listUnitConfiguration } from "@/modules/church-units/server/queries";
+
+export const metadata: Metadata = {
+  title: "Unidades | Confejas",
+};
 
 export default async function UnitsPage() {
   await requireParticipantManagementAccess();

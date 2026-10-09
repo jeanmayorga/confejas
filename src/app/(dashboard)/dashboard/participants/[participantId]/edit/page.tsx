@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { requireParticipantManagementAccess } from "@/modules/auth/server/session";
@@ -9,6 +10,10 @@ import { getParticipantById } from "@/modules/participants/server/queries";
 
 type EditParticipantPageProps = {
   params: Promise<{ participantId: string }>;
+};
+
+export const metadata: Metadata = {
+  title: "Editar participante | Confejas",
 };
 
 export default async function EditParticipantPage({ params }: EditParticipantPageProps) {

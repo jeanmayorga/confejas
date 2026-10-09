@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { listStakes, listWards } from "@/modules/church-units/server/queries";
 import { listCompanyOptions } from "@/modules/companies/server/queries";
 import { requireParticipantDirectoryAccess } from "@/modules/auth/server/session";
@@ -6,6 +7,10 @@ import {
   canManageParticipants,
 } from "@/modules/auth/roles";
 import { ParticipantDirectory } from "@/modules/participants/components/participant-directory.client";
+
+export const metadata: Metadata = {
+  title: "Participantes | Confejas",
+};
 
 export default async function ParticipantsPage() {
   const session = await requireParticipantDirectoryAccess();
