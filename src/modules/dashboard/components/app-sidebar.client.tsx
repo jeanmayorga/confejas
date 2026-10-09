@@ -174,7 +174,7 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
         },
         {
           title: "Asistencia",
-          href: "/dashboard/attendance",
+          href: "/asistencia",
           icon: UserGroupIcon,
         },
       ]
@@ -291,6 +291,8 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
     setIsSigningOut(true);
 
     try {
+      const { lockOfflineAccount } = await import("@/modules/attendance/offline/store");
+      await lockOfflineAccount();
       await authClient.signOut();
       router.replace("/login");
       router.refresh();

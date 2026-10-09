@@ -48,6 +48,7 @@ const results = await q.transaction([
     .split("--> statement-breakpoint")
     .filter((part) => part.trim())
     .map((part) => q.query(part)),
+  q`alter table participant_attendance add column revision uuid not null default gen_random_uuid()`,
   save("2026-10-09", "present"),
   save("2026-10-09", "present"),
   save("2026-10-10", "absent"),
@@ -64,20 +65,20 @@ const results = await q.transaction([
   q`select count(*)::int as total from participant_attendance`,
   q`drop table participant_attendance`,
 ]);
-// Four setup statements and four migration statements precede the assertions.
-assert.equal(results[8].length, 1);
+// Four setup statements, four original migration statements and the revision column precede the assertions.
 assert.equal(results[9].length, 1);
-assert.deepEqual(results[11], [
+assert.equal(results[10].length, 1);
+assert.deepEqual(results[12], [
   { day: "2026-10-09", present: true, recorded_by_id: "test-staff" },
   { day: "2026-10-10", present: false, recorded_by_id: "test-staff" },
 ]);
-assert.equal(results[13][0].present, false);
-assert.equal(results[15][0].present, null);
-assert.equal(results[16].length, 0);
+assert.equal(results[14][0].present, false);
+assert.equal(results[16][0].present, null);
 assert.equal(results[17].length, 0);
-assert.equal(results[18][0].total, 2);
-assert.ok(results[19].every((row) => row.checked_in_at === null));
-assert.equal(results[21][0].total, 0);
+assert.equal(results[18].length, 0);
+assert.equal(results[19][0].total, 2);
+assert.ok(results[20].every((row) => row.checked_in_at === null));
+assert.equal(results[22][0].total, 0);
 console.log(
   "PASS: migration, daily persistence, idempotent writes, corrections, unrecorded reset, company guard, audit user, independent check-in, participant deletion.",
 );

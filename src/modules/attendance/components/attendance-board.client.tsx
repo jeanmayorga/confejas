@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,6 @@ import {
   type AttendanceParticipant,
   type AttendanceStatus,
 } from "../attendance";
-import { saveAttendanceAction } from "../server/actions";
 
 function normalize(value: string) {
   return value
@@ -41,13 +39,18 @@ export function AttendanceBoard({
   companies,
   companyId,
   participants,
+  onNavigate,
+  onSave,
+  onRefresh,
 }: {
   date: string;
   companies: AttendanceCompany[];
   companyId: string;
   participants: AttendanceParticipant[];
+  onNavigate: (date: string, companyId: string) => void;
+  onSave: (participantId: string, status: AttendanceStatus) => Promise<void>;
+  onRefresh: () => Promise<void>;
 }) {
-  const router = useRouter();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [error, setError] = useState("");
@@ -78,10 +81,7 @@ export function AttendanceBoard({
 
   function navigate(nextDate: string, nextCompany: string) {
     startNavigation(() => {
-      router.replace(
-        `/dashboard/attendance?${new URLSearchParams({ date: nextDate, company: nextCompany })}`,
-        { scroll: false },
-      );
+      onNavigate(nextDate, nextCompany);
     });
   }
 
@@ -91,21 +91,13 @@ export function AttendanceBoard({
     setMessage("");
     startSave(async () => {
       try {
-        const result = await saveAttendanceAction({
-          participantId,
-          companyId,
-          date,
-          status,
-        });
-        if (!result.success) {
-          setError(result.message);
-          toast.error(result.message);
-          return;
-        }
-        setMessage("Asistencia guardada.");
-      } catch {
+        await onSave(participantId, status);
+        setMessage("Guardado en este dispositivo.");
+      } catch (cause) {
         const text =
-          "No se pudo confirmar el guardado. Revisa tu conexión y actualiza la lista antes de reintentar.";
+          cause instanceof Error
+            ? cause.message
+            : "No se pudo guardar en este dispositivo. No cierres la app e inténtalo de nuevo.";
         setError(text);
         toast.error(text);
       }
@@ -118,7 +110,7 @@ export function AttendanceBoard({
         <h1 className="text-2xl font-semibold tracking-tight">Asistencia</h1>
         <p className="text-sm text-muted-foreground">
           Toma la asistencia del día, compañía por compañía. Cada cambio se
-          guarda automáticamente.
+          guarda en este dispositivo y se sincroniza cuando hay conexión.
         </p>
       </header>
 
@@ -237,7 +229,7 @@ export function AttendanceBoard({
             <Button
               variant="ghost"
               disabled={busy}
-              onClick={() => startNavigation(() => router.refresh())}
+              onClick={() => startNavigation(() => onRefresh())}
             >
               Actualizar lista
             </Button>

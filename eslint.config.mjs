@@ -12,6 +12,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "public/attendance-sw.js", // Generated production bundle; lint the TypeScript source.
   ]),
 ]);
 
