@@ -79,6 +79,7 @@ type ParticipantDirectoryResponse = {
 
 type ParticipantDirectoryProps = {
   canManage: boolean;
+  canEditAssignments: boolean;
   canDelete: boolean;
   companies: { id: string; name: string }[];
   wards: { id: number; name: string; stakeId: number }[];
@@ -195,6 +196,7 @@ function ParticipantDirectoryLoading() {
 
 export function ParticipantDirectory({
   canManage,
+  canEditAssignments,
   canDelete,
   companies,
   wards,
@@ -420,6 +422,7 @@ export function ParticipantDirectory({
               <ParticipantsTable
                 participants={participants}
                 canManage={canManage}
+                canEditAssignments={canEditAssignments}
                 canDelete={canDelete}
                 isLoadingMore={isFetchingNextPage}
                 sort={normalizeParticipantSort(queryState.sort)}

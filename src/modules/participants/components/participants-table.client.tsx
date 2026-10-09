@@ -9,6 +9,8 @@ import {
   type MouseEvent,
 } from "react";
 import Link from "next/link";
+import { ParticipantAssignmentDialog } from "./participant-assignment-dialog.client";
+import type { InlineAssignmentKind } from "../server/inline-assignment-actions";
 import ArrowDown02Icon from "@hugeicons/core-free-icons/ArrowDown02Icon";
 import ArrowUpDownIcon from "@hugeicons/core-free-icons/ArrowUpDownIcon";
 import ArrowUp02Icon from "@hugeicons/core-free-icons/ArrowUp02Icon";
@@ -115,6 +117,7 @@ export type ParticipantTableRow = {
 type ParticipantsTableProps = {
   participants: ParticipantTableRow[];
   canManage: boolean;
+  canEditAssignments: boolean;
   canDelete: boolean;
   isLoadingMore?: boolean;
   sort: ParticipantSort;
@@ -340,12 +343,17 @@ function ParticipantStatusControl({
 export function ParticipantsTable({
   participants,
   canManage,
+  canEditAssignments,
   canDelete,
   isLoadingMore = false,
   sort,
   onSortChange,
   onDataChanged,
 }: ParticipantsTableProps) {
+  const [assignmentTarget, setAssignmentTarget] = useState<{
+    participant: ParticipantTableRow;
+    kind: InlineAssignmentKind;
+  } | null>(null);
   const [selectedParticipant, setSelectedParticipant] =
     useState<ParticipantTableRow | null>(null);
   const [selectedCompany, setSelectedCompany] =
@@ -656,7 +664,21 @@ export function ParticipantsTable({
                     : `${participant.age} años`}
                 </TableCell>
                 <TableCell className="max-w-0 overflow-hidden">
-                  {participant.companyName && participant.companyId ? (
+                  {canEditAssignments ? (
+                    <Button
+                      variant="link"
+                      className="h-auto max-w-full justify-start p-0"
+                      aria-label={`Cambiar compañía de ${participantName}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setAssignmentTarget({ participant, kind: "company" });
+                      }}
+                      onKeyDown={(event) => event.stopPropagation()}
+                    >
+                      <HugeiconsIcon icon={UserGroupIcon} data-icon="inline-start" />
+                      <span className="truncate">{participant.companyName || "Sin asignar"}</span>
+                    </Button>
+                  ) : participant.companyName && participant.companyId ? (
                     <button
                       type="button"
                       className="inline-flex max-w-full items-center gap-1.5 truncate text-primary underline-offset-4 outline-none hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring [&>svg]:size-3.5 [&>svg]:shrink-0"
@@ -691,7 +713,20 @@ export function ParticipantsTable({
                   className="max-w-0 truncate overflow-hidden"
                   title={hasAssignedRoom ? bedroomName ?? undefined : undefined}
                 >
-                  {hasAssignedRoom ? (
+                  {canEditAssignments ? (
+                    <Button
+                      variant="link"
+                      className="h-auto max-w-full justify-start p-0"
+                      aria-label={`Cambiar dormitorio de ${participantName}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setAssignmentTarget({ participant, kind: "room" });
+                      }}
+                      onKeyDown={(event) => event.stopPropagation()}
+                    >
+                      <span className="truncate">{hasAssignedRoom ? bedroomName : "Sin asignar"}</span>
+                    </Button>
+                  ) : hasAssignedRoom ? (
                     bedroomName
                   ) : (
                     <span className="text-muted-foreground">Sin asignar</span>
@@ -749,6 +784,20 @@ export function ParticipantsTable({
         {isLoadingMore ? <ParticipantTableLoadingRows /> : null}
         </TableBody>
       </Table>
+
+      {canEditAssignments && assignmentTarget ? (
+        <ParticipantAssignmentDialog
+          key={`${assignmentTarget.participant.id}-${assignmentTarget.kind}`}
+          participantId={assignmentTarget.participant.id}
+          participantName={`${assignmentTarget.participant.firstNames} ${assignmentTarget.participant.lastNames}`}
+          kind={assignmentTarget.kind}
+          onClose={() => setAssignmentTarget(null)}
+          onDataChanged={() => {
+            onDataChanged?.();
+            setSelectedParticipant(null);
+          }}
+        />
+      ) : null}
 
       <Sheet
         open={selectedParticipant !== null}
