@@ -6,6 +6,7 @@ const execute = mock(async () => ({ rows: [{ participant_id: "saved" }] }));
 const revalidatePath = mock(() => {});
 mock.module("@/modules/auth/server/session", () => ({
   requireSession: async () => ({ user: { id: "staff-id", role } }),
+  getSession: async () => ({ user: { id: "staff-id", role } }),
 }));
 mock.module("@/server/db", () => ({ db: { execute } }));
 mock.module("next/cache", () => ({ revalidatePath }));

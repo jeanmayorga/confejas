@@ -18,7 +18,7 @@ export function attendanceUpsertQuery(
     insert into participant_attendance (participant_id, attendance_date, present, recorded_by_id, updated_at)
     select id, ${input.date}::date, ${present}::boolean, ${staffUserId}, now() from eligible
     on conflict (participant_id, attendance_date) do update
-    set present = excluded.present, recorded_by_id = excluded.recorded_by_id, updated_at = excluded.updated_at
+    set revision = gen_random_uuid(), present = excluded.present, recorded_by_id = excluded.recorded_by_id, updated_at = excluded.updated_at
     returning participant_id
   `;
 }

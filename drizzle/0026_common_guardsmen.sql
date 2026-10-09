@@ -1,0 +1,1 @@
+ALTER TABLE "participant_attendance" ADD COLUMN "revision" uuid DEFAULT gen_random_uuid() NOT NULL;

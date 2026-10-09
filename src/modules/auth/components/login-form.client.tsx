@@ -53,6 +53,8 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
         return;
       }
 
+      const { unlockOfflineAccountAfterLogin } = await import("@/modules/attendance/offline/store");
+      await unlockOfflineAccountAfterLogin();
       router.replace(callbackUrl);
       router.refresh();
     } catch {

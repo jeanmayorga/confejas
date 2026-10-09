@@ -20,6 +20,7 @@ export const participantAttendance = pgTable(
     attendanceDate: date().notNull(),
     // Null distinguishes a cleared/unrecorded entry from an explicit absence.
     present: boolean(),
+    revision: uuid().defaultRandom().notNull(),
     recordedById: text().references(() => user.id, { onDelete: "set null" }),
     updatedAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
   },
