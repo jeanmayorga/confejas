@@ -430,6 +430,12 @@ export function LodgingRoomDetail({
                           <span className="block break-words">
                             {getDisplayName(participant)}
                           </span>
+                          <span className="mt-1 block break-words text-xs text-muted-foreground">
+                            Estaca: {participant.stakeName}
+                          </span>
+                          <span className="block break-words text-xs text-muted-foreground">
+                            Barrio: {participant.wardName}
+                          </span>
                           <span className="mt-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground md:hidden">
                             <ParticipantStatusBadge
                               status={participant.status}
