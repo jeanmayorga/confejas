@@ -23,6 +23,7 @@ export async function listCounselors(sort: CounselorSort = "company") {
     .select({
       id: counselors.id,
       name: counselors.name,
+      sex: counselors.sex,
       governmentId: counselors.governmentId,
       firstNames: counselors.firstNames,
       lastNames: counselors.lastNames,
