@@ -222,10 +222,7 @@ export function ParticipantDirectoryFilters({
   return (
     <form onSubmit={submitSearch}>
       <div className="flex flex-col gap-3">
-        <InputGroup
-          className="w-full rounded-full sm:max-w-80"
-          data-disabled={pending || undefined}
-        >
+        <InputGroup className="w-full rounded-full sm:max-w-80">
           <InputGroupAddon>
             <HugeiconsIcon icon={Search01Icon} strokeWidth={2} aria-hidden />
           </InputGroupAddon>
@@ -233,7 +230,6 @@ export function ParticipantDirectoryFilters({
             id="participant-search"
             name="query"
             value={searchDraft}
-            disabled={pending}
             placeholder="Buscar participantes"
             aria-label="Buscar participantes"
             onChange={(event) => setSearchDraft(event.currentTarget.value)}
