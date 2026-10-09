@@ -58,6 +58,7 @@ type CounselorSortField = "company";
 type CounselorSort = "company_asc" | "company_desc";
 
 type CounselorDirectoryItem = {
+  sex: "female" | "male" | null;
   id: string;
   name: string;
   governmentId: string | null;
@@ -525,6 +526,18 @@ export function CounselorDirectory({
                   <h2 className="mt-4 font-heading text-xl font-medium text-foreground">
                     {selectedCounselor.name}
                   </h2>
+                  <dl className="mt-4 text-sm">
+                    <div className="flex flex-col gap-1">
+                      <dt className="text-muted-foreground">Sexo</dt>
+                      <dd className="font-medium">
+                        {selectedCounselor.sex === "female"
+                          ? "Mujer"
+                          : selectedCounselor.sex === "male"
+                            ? "Hombre"
+                            : "Sin registrar"}
+                      </dd>
+                    </div>
+                  </dl>
                   {canManage || canDelete ? (
                     <div className="mt-4 flex flex-wrap gap-2">
                       {canManage ? (
