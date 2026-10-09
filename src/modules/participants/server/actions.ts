@@ -752,6 +752,7 @@ export async function updateParticipantStatusAction(
     }
 
     revalidatePath("/dashboard/participants");
+    revalidatePath(`/dashboard/participants/${participantId}`);
 
     return {
       success: true,

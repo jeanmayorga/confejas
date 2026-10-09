@@ -6,8 +6,9 @@ import { notFound } from "next/navigation";
 
 import { PageHeader } from "@/components/page-header";
 import { buttonVariants } from "@/components/ui/button";
-import { ParticipantDetails } from "@/modules/participants/components/participant-details.client";
+import { canManageParticipants } from "@/modules/auth/roles";
 import { requireParticipantDirectoryAccess } from "@/modules/auth/server/session";
+import { ParticipantDetails } from "@/modules/participants/components/participant-details.client";
 import { getParticipantById } from "@/modules/participants/server/queries";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ParticipantPage({ params }: ParticipantPageProps) {
-  await requireParticipantDirectoryAccess();
+  const session = await requireParticipantDirectoryAccess();
   const { participantId } = await params;
   const participant = await getParticipantById(participantId);
 
@@ -52,7 +53,11 @@ export default async function ParticipantPage({ params }: ParticipantPageProps) 
       />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border bg-card">
-        <ParticipantDetails participant={detailParticipant} canViewWelcome />
+        <ParticipantDetails
+          participant={detailParticipant}
+          canViewWelcome
+          canMarkArrival={canManageParticipants(session.user.role)}
+        />
       </div>
     </div>
   );
