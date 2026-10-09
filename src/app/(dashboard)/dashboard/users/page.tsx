@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { DataPagination } from "@/components/data-pagination";
@@ -25,6 +26,10 @@ import { listUsers } from "@/modules/users/server/queries";
 
 type UsersPageProps = {
   searchParams: Promise<{ page?: string | string[]; query?: string | string[] }>;
+};
+
+export const metadata: Metadata = {
+  title: "Usuarios | Confejas",
 };
 
 export default async function UsersPage({ searchParams }: UsersPageProps) {

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import ArrowLeft01Icon from "@hugeicons/core-free-icons/ArrowLeft01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -12,6 +13,10 @@ import { cn } from "@/lib/utils";
 
 type ParticipantPageProps = {
   params: Promise<{ participantId: string }>;
+};
+
+export const metadata: Metadata = {
+  title: "Detalle del participante | Confejas",
 };
 
 export default async function ParticipantPage({ params }: ParticipantPageProps) {

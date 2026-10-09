@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -7,6 +8,10 @@ import {
   getCounselorAppContext,
   getCounselorCompanySummary,
 } from "@/modules/counselor-app/server/queries";
+
+export const metadata: Metadata = {
+  title: "Inicio",
+};
 
 export default async function CounselorHomePage() {
   const [{ company, user }, summary] = await Promise.all([

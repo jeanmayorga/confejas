@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import ArrowLeft01Icon from "@hugeicons/core-free-icons/ArrowLeft01Icon";
 import Pdf02Icon from "@hugeicons/core-free-icons/Pdf02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -14,6 +15,10 @@ import { getParticipantForWelcome } from "@/modules/participants/server/queries"
 
 type WelcomePageProps = {
   params: Promise<{ participantId: string }>;
+};
+
+export const metadata: Metadata = {
+  title: "Carta de invitación | Confejas",
 };
 
 export default async function WelcomePage({ params }: WelcomePageProps) {

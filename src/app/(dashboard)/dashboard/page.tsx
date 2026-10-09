@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { HomeReports } from "@/modules/dashboard/components/home-reports";
 
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,10 @@ import {
   canViewParticipantDirectory,
   getRoleLabel,
 } from "@/modules/auth/roles";
+
+export const metadata: Metadata = {
+  title: "Inicio | Confejas",
+};
 
 export default async function DashboardPage() {
   const session = await requireSession();

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
   canDeleteParticipants,
   canManageParticipants,
@@ -7,6 +8,10 @@ import { listStakes, listWards } from "@/modules/church-units/server/queries";
 import { listCompanyOptions } from "@/modules/companies/server/queries";
 import { CounselorDirectory } from "@/modules/counselors/components/counselor-directory.client";
 import { listCounselors } from "@/modules/counselors/server/queries";
+
+export const metadata: Metadata = {
+  title: "Consejeros | Confejas",
+};
 
 export default async function CounselorsPage() {
   const session = await requireParticipantManagementAccess();
