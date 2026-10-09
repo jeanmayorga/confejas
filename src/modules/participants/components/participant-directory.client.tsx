@@ -72,6 +72,8 @@ type ParticipantDirectoryResponse = {
   wardId: number | null;
   stakeId: number | null;
   status: ParticipantStatus | "";
+  sex: string;
+  age: string;
   statusCounts: ParticipantStatusCounts;
 };
 
@@ -81,6 +83,7 @@ type ParticipantDirectoryProps = {
   companies: { id: string; name: string }[];
   wards: { id: number; name: string; stakeId: number }[];
   stakes: { id: number; name: string }[];
+  ages: number[];
 };
 
 const emptyStatusCounts: ParticipantStatusCounts = {
@@ -98,6 +101,8 @@ function getDirectoryQueryString(queryState: {
   ward: string;
   stake: string;
   status: string;
+  sex: string;
+  age: string;
 }) {
   const params = new URLSearchParams();
   const status =
@@ -117,6 +122,8 @@ function getDirectoryQueryString(queryState: {
   if (queryState.company) params.set("company", queryState.company);
   if (queryState.ward) params.set("ward", queryState.ward);
   if (queryState.stake) params.set("stake", queryState.stake);
+  if (queryState.sex !== "all") params.set("sex", queryState.sex);
+  if (queryState.age !== "all") params.set("age", queryState.age);
 
   return params.toString();
 }
@@ -188,6 +195,7 @@ export function ParticipantDirectory({
   companies,
   wards,
   stakes,
+  ages,
 }: ParticipantDirectoryProps) {
   const queryClient = useQueryClient();
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -201,6 +209,8 @@ export function ParticipantDirectory({
       ward: parseAsString.withDefault(""),
       stake: parseAsString.withDefault(""),
       status: parseAsString.withDefault("registered"),
+      sex: parseAsString.withDefault("all"),
+      age: parseAsString.withDefault("all"),
       newParticipant: parseAsString.withDefault(""),
     },
     {
@@ -254,6 +264,8 @@ export function ParticipantDirectory({
       queryState.company ||
       queryState.ward ||
       queryState.stake ||
+      queryState.sex !== "all" ||
+      queryState.age !== "all" ||
       (isParticipantStatus(queryState.status) &&
         queryState.status !== "registered"),
   );
@@ -320,6 +332,7 @@ export function ParticipantDirectory({
         companies={companies}
         wards={wards}
         stakes={stakes}
+        ages={ages}
         statusCounts={statusCounts}
         isRefreshing={participantsQuery.isFetching}
         isLive={isLive}
@@ -380,6 +393,8 @@ export function ParticipantDirectory({
                         ward: null,
                         stake: null,
                         status: null,
+                        sex: null,
+                        age: null,
                       })
                     }
                   >

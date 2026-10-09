@@ -29,6 +29,8 @@ export async function GET(request: Request) {
     wardId: getPositiveInteger(url.searchParams.get("ward"), 0) || undefined,
     stakeId: getPositiveInteger(url.searchParams.get("stake"), 0) || undefined,
     status,
+    sex: url.searchParams.get("sex") ?? "all",
+    age: url.searchParams.get("age") ?? "all",
   });
 
   return NextResponse.json({

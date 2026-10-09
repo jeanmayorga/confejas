@@ -5,6 +5,10 @@ import { listStakes, listWards } from "@/modules/church-units/server/queries";
 import { listCompanyOptions } from "@/modules/companies/server/queries";
 import { createParticipantsPdf } from "@/modules/participants/server/pdf";
 import { listParticipantsForExport } from "@/modules/participants/server/queries";
+import {
+  getParticipantStatusLabel,
+  isParticipantStatus,
+} from "@/modules/participants/status";
 
 export const runtime = "nodejs";
 
@@ -24,11 +28,14 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const [result, companies, wards, stakes] = await Promise.all([
     listParticipantsForExport({
-      search: searchParams.get("q") ?? "",
+      search: searchParams.get("query") ?? "",
       sort: searchParams.get("sort") ?? "name",
       companyId: searchParams.get("company") ?? "",
       wardId: getOptionalNumber(searchParams.get("ward")),
       stakeId: getOptionalNumber(searchParams.get("stake")),
+      status: searchParams.get("status") ?? "",
+      sex: searchParams.get("sex") ?? "all",
+      age: searchParams.get("age") ?? "all",
     }),
     listCompanyOptions(),
     listWards(),
@@ -55,6 +62,25 @@ export async function GET(request: NextRequest) {
   if (result.stakeId) {
     const stake = stakes.find((item) => item.id === result.stakeId);
     filters.push(`Estaca: ${stake?.name ?? "Seleccionada"}`);
+  }
+
+  if (isParticipantStatus(result.status)) {
+    filters.push(`Estado: ${getParticipantStatusLabel(result.status)}`);
+  }
+
+  if (result.sex !== "all") {
+    const sexLabel = result.sex === "male"
+      ? "Hombres"
+      : result.sex === "female"
+        ? "Mujeres"
+        : "Otro o sin registrar";
+    filters.push(`Sexo: ${sexLabel}`);
+  }
+
+  if (result.age !== "all") {
+    filters.push(
+      `Edad: ${result.age === "unknown" ? "Sin edad registrada" : `${result.age} años`}`,
+    );
   }
 
   const sortLabel =

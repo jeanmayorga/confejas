@@ -55,22 +55,24 @@ const sexOptions = [
 ];
 
 export function CompanyParticipantFilters({
-  participants,
+  participants = [],
+  ages,
   value,
   onChange,
   label = "Filtrar participantes de esta compañía",
 }: {
-  participants: readonly { age: number | null }[];
+  participants?: readonly { age: number | null }[];
+  ages?: readonly number[];
   value: CompanyParticipantFilterValues;
   onChange: (value: CompanyParticipantFilterValues) => void;
   label?: string;
 }) {
-  const ages = [
+  const availableAges = ages ?? [
     ...new Set(participants.flatMap(({ age }) => (age === null ? [] : [age]))),
   ].sort((a, b) => a - b);
   const ageOptions = [
     { value: "all", label: "Todas las edades" },
-    ...ages.map((age) => ({ value: String(age), label: `${age} años` })),
+    ...availableAges.map((age) => ({ value: String(age), label: `${age} años` })),
     { value: "unknown", label: "Sin edad registrada" },
   ];
   const filters = [

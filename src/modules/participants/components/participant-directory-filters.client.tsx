@@ -35,6 +35,10 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
+  CompanyParticipantFilters,
+  type CompanyParticipantFilterValues,
+} from "@/modules/companies/components/company-participant-filters.client";
+import {
   isParticipantStatus,
   PARTICIPANT_STATUS_OPTIONS,
   type ParticipantStatus,
@@ -52,6 +56,8 @@ type ParticipantDirectoryFilterValues = {
   wardId: string;
   stakeId: string;
   status: ParticipantStatus | "";
+  sex: CompanyParticipantFilterValues["sex"];
+  age: string;
 };
 
 export type ParticipantDirectoryQueryState = {
@@ -61,6 +67,8 @@ export type ParticipantDirectoryQueryState = {
   ward: string;
   stake: string;
   status: string;
+  sex: string;
+  age: string;
 };
 
 export type ParticipantDirectoryQueryUpdate = Partial<{
@@ -70,6 +78,8 @@ export type ParticipantDirectoryQueryUpdate = Partial<{
   ward: string | null;
   stake: string | null;
   status: string | null;
+  sex: string | null;
+  age: string | null;
 }>;
 
 type ParticipantStatusCounts = Record<ParticipantStatus, number>;
@@ -79,6 +89,7 @@ type ParticipantDirectoryFiltersProps = {
   companies: { id: string; name: string }[];
   wards: { id: number; name: string }[];
   stakes: { id: number; name: string }[];
+  ages: number[];
   statusCounts: ParticipantStatusCounts;
   isRefreshing: boolean;
   isLive: boolean;
@@ -116,6 +127,14 @@ function getDirectoryParams(filters: ParticipantDirectoryFilterValues) {
     params.set("status", filters.status);
   }
 
+  if (filters.sex !== "all") {
+    params.set("sex", filters.sex);
+  }
+
+  if (filters.age !== "all") {
+    params.set("age", filters.age);
+  }
+
   return params;
 }
 
@@ -124,6 +143,7 @@ export function ParticipantDirectoryFilters({
   companies,
   wards,
   stakes,
+  ages,
   statusCounts,
   isRefreshing,
   isLive,
@@ -156,7 +176,23 @@ export function ParticipantDirectoryFilters({
     companyId: queryState.company,
     wardId: queryState.ward,
     stakeId: queryState.stake,
-    status: isParticipantStatus(queryState.status) ? queryState.status : "",
+    status:
+      queryState.status === "all"
+        ? ""
+        : isParticipantStatus(queryState.status)
+          ? queryState.status
+          : "registered",
+    sex:
+      queryState.sex === "male" ||
+      queryState.sex === "female" ||
+      queryState.sex === "other"
+        ? queryState.sex
+        : "all",
+    age:
+      queryState.age === "unknown" ||
+      (/^\d+$/.test(queryState.age) && ages.includes(Number(queryState.age)))
+        ? queryState.age
+        : "all",
   };
   const selectedStatusTab =
     queryState.status === "all"
@@ -166,6 +202,11 @@ export function ParticipantDirectoryFilters({
     (total, count) => total + count,
     0,
   );
+  const quickFilters: CompanyParticipantFilterValues = {
+    status: selectedStatusTab,
+    sex: selectedFilters.sex,
+    age: selectedFilters.age,
+  };
 
   function updateFilter(
     field: Exclude<keyof ParticipantDirectoryFilterValues, "search">,
@@ -203,7 +244,6 @@ export function ParticipantDirectoryFilters({
       company: null,
       ward: null,
       stake: null,
-      status: null,
     });
   }
 
@@ -222,32 +262,46 @@ export function ParticipantDirectoryFilters({
   return (
     <form onSubmit={submitSearch}>
       <div className="flex flex-col gap-3">
-        <InputGroup className="w-full rounded-full sm:max-w-80">
-          <InputGroupAddon>
-            <HugeiconsIcon icon={Search01Icon} strokeWidth={2} aria-hidden />
-          </InputGroupAddon>
-          <InputGroupInput
-            id="participant-search"
-            name="query"
-            value={searchDraft}
-            placeholder="Buscar participantes"
-            aria-label="Buscar participantes"
-            onChange={(event) => setSearchDraft(event.currentTarget.value)}
-          />
-          {searchDraft ? (
-            <InputGroupAddon align="inline-end">
-              <InputGroupButton
-                variant="secondary"
-                size="icon-xs"
-                className="text-muted-foreground hover:text-foreground"
-                aria-label="Limpiar búsqueda"
-                onClick={clearSearch}
-              >
-                <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-              </InputGroupButton>
+        <div className="flex min-w-0 items-center gap-2 sm:max-w-lg">
+          <InputGroup className="min-w-0 flex-1 rounded-full">
+            <InputGroupAddon>
+              <HugeiconsIcon icon={Search01Icon} strokeWidth={2} aria-hidden />
             </InputGroupAddon>
-          ) : null}
-        </InputGroup>
+            <InputGroupInput
+              id="participant-search"
+              name="query"
+              value={searchDraft}
+              placeholder="Buscar participantes"
+              aria-label="Buscar participantes"
+              onChange={(event) => setSearchDraft(event.currentTarget.value)}
+            />
+            {searchDraft ? (
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  variant="secondary"
+                  size="icon-xs"
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label="Limpiar búsqueda"
+                  onClick={clearSearch}
+                >
+                  <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
+                </InputGroupButton>
+              </InputGroupAddon>
+            ) : null}
+          </InputGroup>
+          <CompanyParticipantFilters
+            ages={ages}
+            value={quickFilters}
+            label="Filtrar participantes por estado, sexo y edad"
+            onChange={(next) =>
+              onQueryStateChange({
+                status: next.status,
+                sex: next.sex,
+                age: next.age,
+              })
+            }
+          />
+        </div>
 
         <div className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-center">
           <div className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain pb-1 xl:flex-1">
@@ -349,8 +403,9 @@ export function ParticipantDirectoryFilters({
                 <SheetHeader>
                   <SheetTitle>Filtros</SheetTitle>
                   <SheetDescription>
-                    Filtra los participantes por su asignación o unidad de la
-                    Iglesia.
+                    Filtra los participantes por su compañía o unidad de la
+                    Iglesia. Para estado, sexo y edad usa el menú junto al
+                    buscador.
                   </SheetDescription>
                 </SheetHeader>
 

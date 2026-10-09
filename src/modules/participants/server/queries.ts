@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, count, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, isNotNull, isNull, or, sql } from "drizzle-orm";
 
 import { stakes, wards } from "@/modules/church-units/server/schema";
 import { counselors } from "@/modules/counselors/server/schema";
@@ -30,9 +30,23 @@ type ParticipantDirectoryOptions = {
   wardId?: number;
   stakeId?: number;
   status?: string;
+  sex?: string;
+  age?: string;
 };
 
 export type ParticipantStatusCounts = Record<ParticipantStatus, number>;
+
+const participantAge = sql<number | null>`extract(year from age(current_date, ${participants.birthDate}))::integer`;
+
+export async function listParticipantAgeOptions() {
+  const rows = await db
+    .selectDistinct({ age: participantAge })
+    .from(participants)
+    .where(isNotNull(participants.birthDate))
+    .orderBy(asc(participantAge));
+
+  return rows.flatMap(({ age }) => age === null ? [] : [age]);
+}
 
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -51,6 +65,8 @@ function getParticipantDirectoryState({
   wardId,
   stakeId,
   status = "",
+  sex = "all",
+  age = "all",
 }: ParticipantDirectoryOptions) {
   const safeSearch = search.trim().slice(0, 100);
   const safeSort: ParticipantSort = normalizeParticipantSort(sort);
@@ -61,6 +77,15 @@ function getParticipantDirectoryState({
   const safeStatus: ParticipantStatus | "" = isParticipantStatus(status)
     ? status
     : "";
+  const safeSex = ["male", "female", "other"].includes(sex) ? sex : "all";
+  const parsedAge = Number(age);
+  const safeAge = age === "unknown"
+    ? "unknown"
+    : /^\d+$/.test(age) &&
+        Number.isSafeInteger(parsedAge) &&
+        parsedAge >= 0
+      ? String(parsedAge)
+      : "all";
   const searchPattern = `%${safeSearch}%`;
   const searchFilter = safeSearch
     ? or(
@@ -89,12 +114,26 @@ function getParticipantDirectoryState({
   const statusFilter = safeStatus
     ? eq(participants.status, safeStatus)
     : undefined;
+  const sexFilter = safeSex === "male"
+    ? eq(participants.sex, "Masculino")
+    : safeSex === "female"
+      ? eq(participants.sex, "Femenino")
+      : safeSex === "other"
+        ? sql`coalesce(${participants.sex}, '') not in ('Masculino', 'Femenino')`
+        : undefined;
+  const ageFilter = safeAge === "unknown"
+    ? isNull(participants.birthDate)
+    : safeAge !== "all"
+      ? eq(participantAge, Number(safeAge))
+      : undefined;
   const filters = and(
     searchFilter,
     companyFilter,
     wardFilter,
     stakeFilter,
     statusFilter,
+    sexFilter,
+    ageFilter,
   );
   const participantFirstNamesSort = sql`lower(translate(${participants.firstNames}, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN'))`;
   const participantLastNamesSort = sql`lower(translate(${participants.lastNames}, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN'))`;
@@ -184,6 +223,8 @@ function getParticipantDirectoryState({
     wardId: safeWardId,
     stakeId: safeStakeId,
     status: safeStatus,
+    sex: safeSex,
+    age: safeAge,
   };
 }
 
@@ -210,7 +251,7 @@ export async function listParticipants({
         preferredName: participants.preferredName,
         governmentId: participants.governmentId,
         birthDate: participants.birthDate,
-        age: sql<number | null>`extract(year from age(current_date, ${participants.birthDate}))::integer`,
+        age: participantAge,
         sex: participants.sex,
         email: participants.email,
         welcomeEmailSentAt: participants.welcomeEmailSentAt,
@@ -289,6 +330,8 @@ export async function listParticipants({
     wardId: directory.wardId,
     stakeId: directory.stakeId,
     status: directory.status,
+    sex: directory.sex,
+    age: directory.age,
     statusCounts,
   };
 }
@@ -303,7 +346,7 @@ export async function listParticipantsForExport(
       firstNames: participants.firstNames,
       lastNames: participants.lastNames,
       status: participants.status,
-      age: sql<number | null>`extract(year from age(current_date, ${participants.birthDate}))::integer`,
+      age: participantAge,
       companyName: companies.name,
       wardName: wards.name,
       stakeName: stakes.name,
@@ -323,6 +366,8 @@ export async function listParticipantsForExport(
     wardId: directory.wardId,
     stakeId: directory.stakeId,
     status: directory.status,
+    sex: directory.sex,
+    age: directory.age,
   };
 }
 
