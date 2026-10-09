@@ -2,6 +2,14 @@
 
 import { type DragEvent, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import {
+  parseAsInteger,
+  parseAsString,
+  parseAsStringLiteral,
+  useQueryState,
+  useQueryStates,
+} from "nuqs";
+import { PARTICIPANT_STATUS_VALUES } from "@/modules/participants/status";
 import { useQuery } from "@tanstack/react-query";
 import type { LodgingListInput } from "../board-pagination";
 import {
@@ -128,10 +136,20 @@ export function LodgingBoard({
   const { setOpenMobile } = useSidebar();
   const directoryRef = useRef<HTMLDivElement>(null);
   const dragPreviewCleanup = useRef<(() => void) | null>(null);
-  const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
+  const [selectedRoomId, setSelectedRoomId] = useQueryState(
+    "room",
+    parseAsInteger.withOptions({
+      history: "push",
+      shallow: true,
+      scroll: false,
+    }),
+  );
   const [activeRoom, setActiveRoom] = useState<ActiveRoom | null>(null);
   const [search, setSearch] = useState("");
-  const [participantSearch, setParticipantSearch] = useState("");
+  const [participantSearch, setParticipantSearch] = useQueryState(
+    "search",
+    parseAsString.withDefault(""),
+  );
   const [selectedParticipantId, setSelectedParticipantId] = useState<
     string | null
   >(null);
@@ -162,17 +180,53 @@ export function LodgingBoard({
   const [refreshing, startTransition] = useTransition();
 
   const isDesktop = useLodgingDesktop();
-  const [unassignedInput, setUnassignedInput] = useState<LodgingListInput>({
-    page: 1,
-    search: "",
-    filters: DEFAULT_COMPANY_PARTICIPANT_FILTERS,
-  });
+  const [unassignedState, setUnassignedState] = useQueryStates(
+    {
+      unassignedPage: parseAsInteger.withDefault(1),
+      unassignedSearch: parseAsString.withDefault(""),
+      unassignedStatus: parseAsStringLiteral([
+        "all",
+        ...PARTICIPANT_STATUS_VALUES,
+      ]).withDefault("all"),
+      unassignedSex: parseAsStringLiteral([
+        "all",
+        "female",
+        "male",
+        "other",
+      ]).withDefault("all"),
+      unassignedAge: parseAsString.withDefault("all"),
+    },
+    { history: "replace", shallow: true, scroll: false },
+  );
+  const unassignedInput: LodgingListInput = {
+    page: Math.max(1, unassignedState.unassignedPage),
+    search: unassignedState.unassignedSearch,
+    filters: {
+      status: unassignedState.unassignedStatus,
+      sex: unassignedState.unassignedSex,
+      age: unassignedState.unassignedAge,
+    },
+  };
+  function setUnassignedInput(input: LodgingListInput) {
+    void setUnassignedState({
+      unassignedPage: input.page,
+      unassignedSearch: input.search,
+      unassignedStatus: input.filters.status,
+      unassignedSex: input.filters.sex,
+      unassignedAge: input.filters.age,
+    });
+  }
   const unassignedQuery = useUnassignedLodgingPage(
     unassignedInput,
     revision,
     isDesktop || mobilePanelOpen,
   );
-  const roomId = selectedRoomId ?? buildings[0]?.rooms[0]?.id;
+  // A deleted or invalid bookmarked room falls back to the first available room.
+  const roomId =
+    buildings
+      .flatMap((building) => building.rooms)
+      .find((room) => room.id === selectedRoomId)?.id ??
+    buildings.flatMap((building) => building.rooms)[0]?.id;
   const roomQuery = useQuery({
     queryKey: ["lodging-room", revision, roomId],
     queryFn: () => getLodgingRoomOccupantsAction(roomId!),
