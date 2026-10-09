@@ -3,6 +3,14 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { CounselorAvatarImage } from "@/modules/counselors/components/counselor-avatar-image";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  Progress,
+  ProgressLabel,
+  ProgressValue,
+} from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +36,26 @@ import {
 import { moveLodgingParticipantsAction } from "../server/actions";
 import { getStaffRoomName } from "../staff-room";
 import type { CounselorLodgingOverview } from "../server/counselor-queries";
+
+function OccupantAvatar({
+  name,
+  counselorId,
+}: {
+  name: string;
+  counselorId?: string;
+}) {
+  const parts = name.trim().split(/\s+/);
+  const initials =
+    `${parts[0]?.[0] ?? ""}${parts.length > 1 ? (parts.at(-1)?.[0] ?? "") : ""}`.toLocaleUpperCase(
+      "es",
+    );
+  return (
+    <Avatar className="overflow-hidden" aria-hidden="true">
+      {counselorId ? <CounselorAvatarImage counselorId={counselorId} /> : null}
+      <AvatarFallback>{initials || "?"}</AvatarFallback>
+    </Avatar>
+  );
+}
 
 type StaffRoom = CounselorLodgingOverview["rooms"][number];
 
@@ -190,6 +218,7 @@ function AddStaffOccupant({
           size="sm"
           disabled={pending || !choice || (choice === "manual" && !name.trim())}
         >
+          {pending ? <Spinner data-icon="inline-start" /> : null}
           {pending ? "Guardando…" : "Agregar a la habitación"}
         </Button>
       </FieldGroup>
@@ -207,12 +236,15 @@ function StaffParticipantRow({
   const [pending, startTransition] = useTransition();
   return (
     <li className="flex flex-col gap-2 border-t py-3">
-      <Link
-        className="font-medium hover:underline"
-        href={`/dashboard/participants/${person.id}`}
-      >
-        {person.firstNames} {person.lastNames}
-      </Link>
+      <div className="flex min-w-0 items-center gap-2">
+        <OccupantAvatar name={`${person.firstNames} ${person.lastNames}`} />
+        <Link
+          className="min-w-0 break-words font-medium hover:underline"
+          href={`/dashboard/participants/${person.id}`}
+        >
+          {person.firstNames} {person.lastNames}
+        </Link>
+      </div>
       <p className="text-xs text-muted-foreground">Participante</p>
       {canManage ? (
         <Button
@@ -230,6 +262,7 @@ function StaffParticipantRow({
             })
           }
         >
+          {pending ? <Spinner data-icon="inline-start" /> : null}
           {pending ? "Quitando…" : "Quitar de la habitación"}
         </Button>
       ) : null}
@@ -257,6 +290,10 @@ function StaffGuestRow({
   }
   return (
     <li className="flex flex-col gap-2 border-t py-3">
+      <div className="flex min-w-0 items-center gap-2">
+        <OccupantAvatar name={guest.name} />
+        <p className="min-w-0 break-words font-medium">{guest.name}</p>
+      </div>
       {canManage ? (
         <form
           onSubmit={(event) => {
@@ -285,6 +322,7 @@ function StaffGuestRow({
                 size="sm"
                 disabled={pending || !name.trim() || name === guest.name}
               >
+                {pending ? <Spinner data-icon="inline-start" /> : null}
                 Guardar
               </Button>
               <Button
@@ -294,14 +332,13 @@ function StaffGuestRow({
                 disabled={pending}
                 onClick={() => save(true)}
               >
+                {pending ? <Spinner data-icon="inline-start" /> : null}
                 Quitar
               </Button>
             </div>
           </FieldGroup>
         </form>
-      ) : (
-        <p className="font-medium">{guest.name}</p>
-      )}
+      ) : null}
       <p className="text-xs text-muted-foreground">Staff</p>
     </li>
   );
@@ -400,6 +437,7 @@ function CounselorAssignment({
           size="sm"
           disabled={pending || !sex}
         >
+          {pending ? <Spinner data-icon="inline-start" /> : null}
           {pending ? "Guardando…" : "Guardar asignación"}
         </Button>
       </FieldGroup>
@@ -415,8 +453,14 @@ export function CounselorLodgingBoard({
   canManage,
 }: CounselorLodgingOverview & { canManage: boolean }) {
   const assigned =
-    people.filter((person) => person.roomId !== null).length + guests.length +
-    participantRows.filter((person) => rooms.some((room) => person.roomName === getStaffRoomName(room.buildingName, room.number))).length;
+    people.filter((person) => person.roomId !== null).length +
+    guests.length +
+    participantRows.filter((person) =>
+      rooms.some(
+        (room) =>
+          person.roomName === getStaffRoomName(room.buildingName, room.number),
+      ),
+    ).length;
   const capacity = rooms.reduce((total, room) => total + room.capacity, 0);
   function personRow(person: Person) {
     return (
@@ -424,11 +468,14 @@ export function CounselorLodgingBoard({
         key={person.id}
         className="flex flex-col gap-2 border-t py-3 first:border-t-0"
       >
-        <div>
-          <p className="font-medium">{person.name}</p>
-          <p className="text-sm text-muted-foreground">
-            {person.companyName ?? "Sin compañía"}
-          </p>
+        <div className="flex min-w-0 items-center gap-2">
+          <OccupantAvatar name={person.name} counselorId={person.id} />
+          <div className="min-w-0">
+            <p className="break-words font-medium">{person.name}</p>
+            <p className="text-sm text-muted-foreground">
+              {person.companyName ?? "Sin compañía"}
+            </p>
+          </div>
         </div>
         {canManage ? (
           <details>
@@ -514,8 +561,35 @@ export function CounselorLodgingBoard({
                         {room.number}
                       </CardDescription>
                       <Badge variant="secondary">
-                        {occupied} / {room.capacity} camas
+                        {occupied >= room.capacity
+                          ? "Completa"
+                          : occupied === 0
+                            ? "Libre"
+                            : "Con cupos"}
                       </Badge>
+                      <Progress
+                        value={
+                          room.capacity > 0
+                            ? Math.min(100, (occupied / room.capacity) * 100)
+                            : 0
+                        }
+                        aria-label={`Ocupación de ${room.buildingName}, ${staffRoomName(room)}`}
+                        aria-valuetext={`${occupied} de ${room.capacity} camas ocupadas`}
+                      >
+                        <ProgressLabel>Camas ocupadas</ProgressLabel>
+                        <ProgressValue>
+                          {() => `${occupied} / ${room.capacity}`}
+                        </ProgressValue>
+                      </Progress>
+                      <p
+                        className="text-sm text-muted-foreground"
+                        role="status"
+                      >
+                        {Math.max(0, room.capacity - occupied)}{" "}
+                        {room.capacity - occupied === 1
+                          ? "cama libre"
+                          : "camas libres"}
+                      </p>
                     </CardHeader>
                     <CardContent>
                       <ul>
