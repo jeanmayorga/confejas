@@ -737,7 +737,7 @@ export function LodgingBoard({
                           aria-current={
                             currentRoom?.id === room.id ? "page" : undefined
                           }
-                          aria-label={`Edificio ${building.name}, Dormitorio ${room.number}, ${room.assignedParticipants} participantes`}
+                          aria-label={`Edificio ${building.name}, Dormitorio ${room.number}, ${room.assignedParticipants} de ${room.participantCapacity} participantes`}
                           className={cn(
                             "h-9 rounded-sidebar-item! px-3 data-active:font-normal",
                             isTarget &&
@@ -757,7 +757,7 @@ export function LodgingBoard({
                             Dormitorio {room.number}
                           </span>
                           <span className="text-xs tabular-nums text-muted-foreground">
-                            {room.assignedParticipants}
+                            {room.assignedParticipants}/{room.participantCapacity}
                           </span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
