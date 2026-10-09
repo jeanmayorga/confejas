@@ -6,6 +6,7 @@ import {
   pgTable,
   uniqueIndex,
   varchar,
+  uuid,
 } from "drizzle-orm/pg-core";
 
 export const LODGING_SEXES = ["female", "male"] as const;
@@ -83,3 +84,15 @@ export const lodgingCounselorRooms = pgTable("lodging_counselor_rooms", {
     .primaryKey()
     .references(() => lodgingRooms.id, { onDelete: "cascade" }),
 });
+
+export const lodgingStaffGuests = pgTable(
+  "lodging_staff_guests",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    roomId: integer()
+      .notNull()
+      .references(() => lodgingCounselorRooms.id, { onDelete: "cascade" }),
+    name: varchar({ length: 160 }).notNull(),
+  },
+  (table) => [index("lodging_staff_guests_room_idx").on(table.roomId)],
+);

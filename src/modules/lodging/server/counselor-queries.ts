@@ -5,17 +5,17 @@ import { db } from "@/server/db";
 import { counselors } from "@/modules/counselors/server/schema";
 import { companies } from "@/modules/companies/server/schema";
 import {
+  lodgingStaffGuests,
   lodgingBuildings,
   lodgingCounselorRooms,
   lodgingRooms,
 } from "./schema";
 
 export async function getCounselorLodgingOverview() {
-  const [rooms, people] = await Promise.all([
+  const [rooms, people, guests] = await Promise.all([
     db
       .select({
         id: lodgingCounselorRooms.id,
-        name: lodgingCounselorRooms.name,
         number: lodgingRooms.number,
         buildingName: lodgingBuildings.name,
         sex: lodgingBuildings.sex,
@@ -39,8 +39,9 @@ export async function getCounselorLodgingOverview() {
       .from(counselors)
       .leftJoin(companies, eq(counselors.companyId, companies.id))
       .orderBy(asc(companies.name), asc(counselors.name)),
+    db.select().from(lodgingStaffGuests).orderBy(asc(lodgingStaffGuests.name)),
   ]);
-  return { rooms, people };
+  return { rooms, people, guests };
 }
 
 export type CounselorLodgingOverview = Awaited<
