@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Calendar03Icon from "@hugeicons/core-free-icons/Calendar03Icon";
+import BedDoubleIcon from "@hugeicons/core-free-icons/BedDoubleIcon";
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
 import Building06Icon from "@hugeicons/core-free-icons/Building06Icon";
 import Logout01Icon from "@hugeicons/core-free-icons/Logout01Icon";
@@ -164,8 +165,6 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
   const [query, setQuery] = useState("");
   const searchButtonRef = useRef<HTMLButtonElement>(null);
   const homeHref = "/dashboard";
-  const isNavigationActive = (href: string) =>
-    href === "/dashboard" ? pathname === href : pathname.startsWith(href);
   const actionNavigation = canCheckInParticipants(user.role)
     ? [
         {
@@ -201,6 +200,11 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
             title: "Alojamiento",
             href: "/dashboard/lodging",
             icon: Building06Icon,
+          },
+          {
+            title: "Alojamiento de staff",
+            href: "/dashboard/lodging/counselors",
+            icon: BedDoubleIcon,
           },
         ]
       : []),
@@ -245,6 +249,15 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
     { label: "Gestión", items: managementNavigation },
     { label: "Configuración", items: configurationNavigation },
   ].filter((section) => section.items.length > 0);
+  const activeNavigationHref = navigationSections
+    .flatMap((section) => section.items)
+    .filter(
+      ({ href }) =>
+        pathname === href ||
+        (href !== homeHref && pathname.startsWith(`${href}/`)),
+    )
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+  const isNavigationActive = (href: string) => href === activeNavigationHref;
   const normalizedQuery = query
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
