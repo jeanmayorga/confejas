@@ -51,7 +51,7 @@ import {
   ParticipantsTable,
   type ParticipantTableRow,
 } from "@/modules/participants/components/participants-table.client";
-import { ParticipantForm } from "@/modules/participants/components/participant-form.client";
+import { CreateParticipantForm } from "@/modules/participants/components/create-participant-form.client";
 import { isParticipantStatus, type ParticipantStatus } from "@/modules/participants/status";
 import {
   DEFAULT_PARTICIPANT_SORT,
@@ -430,16 +430,13 @@ export function ParticipantDirectory({
           <SheetHeader className="pr-16">
             <SheetTitle>Nuevo participante</SheetTitle>
             <SheetDescription>
-              Registra su información personal, de la conferencia y de salud.
+              Ingresa sus datos y asigna alojamiento y compañía.
             </SheetDescription>
           </SheetHeader>
           <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-6 pb-6">
-            <ParticipantForm
-              companies={companies}
+            <CreateParticipantForm
               wards={wards}
               stakes={stakes}
-              lodgingBuildings={[]}
-              presentation="sheet"
               onCancel={() => void setQueryState({ newParticipant: null })}
               onSuccess={() => {
                 void setQueryState({ newParticipant: null });

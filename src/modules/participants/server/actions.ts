@@ -20,6 +20,7 @@ import {
 } from "@/modules/companies/server/capacity";
 import {
   listCompanyOptions,
+  listCompanies,
   validateCompanyParticipantAssignment,
 } from "@/modules/companies/server/queries";
 import {
@@ -770,4 +771,34 @@ export async function deleteParticipantAction(
   } catch (error) {
     return { success: false, message: safeError(error) };
   }
+}
+
+export async function getParticipantAssignmentOptionsAction() {
+  const session = await requireSession();
+  if (!canManageParticipants(session.user.role)) {
+    throw new Error("No tienes permiso para crear participantes.");
+  }
+  const [lodging, companyRows] = await Promise.all([
+    getLodgingOverview(),
+    listCompanies(),
+  ]);
+  return {
+    rooms: lodging.buildings.flatMap((building) => building.rooms.map((room) => ({
+      name: room.name,
+      sex: building.sex,
+      available: room.availableParticipantCapacity,
+    }))),
+    companies: companyRows.map((company) => {
+      const ages = company.participants.flatMap((participant) =>
+        participant.age === null ? [] : [participant.age]);
+      return {
+        id: company.id,
+        name: company.name,
+        available: company.remainingCapacity,
+        femaleAvailable: company.remainingFemaleCapacity,
+        maleAvailable: company.remainingMaleCapacity,
+        averageAge: ages.length ? ages.reduce((sum, age) => sum + age, 0) / ages.length : null,
+      };
+    }),
+  };
 }
