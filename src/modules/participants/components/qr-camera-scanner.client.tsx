@@ -35,6 +35,31 @@ type CameraTrackConstraints = MediaTrackConstraints & {
 };
 
 const RETRY_DELAY_MS = 1_500;
+const SCAN_BEEP_DURATION_SECONDS = 0.14;
+
+function playScanBeep(audioContext: AudioContext) {
+  const oscillator = audioContext.createOscillator();
+  const volume = audioContext.createGain();
+  const startTime = audioContext.currentTime;
+
+  oscillator.type = "sine";
+  oscillator.frequency.setValueAtTime(880, startTime);
+  volume.gain.setValueAtTime(0.0001, startTime);
+  volume.gain.exponentialRampToValueAtTime(0.15, startTime + 0.015);
+  volume.gain.exponentialRampToValueAtTime(
+    0.0001,
+    startTime + SCAN_BEEP_DURATION_SECONDS,
+  );
+
+  oscillator.connect(volume);
+  volume.connect(audioContext.destination);
+  oscillator.onended = () => {
+    oscillator.disconnect();
+    volume.disconnect();
+  };
+  oscillator.start(startTime);
+  oscillator.stop(startTime + SCAN_BEEP_DURATION_SECONDS);
+}
 
 function safelyStopScanner(controls: IScannerControls | null) {
   if (!controls) {
@@ -81,6 +106,7 @@ export function QrCameraScanner({
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const retryTimerRef = useRef<number | null>(null);
   const hasScannedRef = useRef(false);
   const lastQrValueRef = useRef<string | null>(null);
@@ -96,7 +122,83 @@ export function QrCameraScanner({
   const [torchPending, setTorchPending] = useState(false);
   const [isLookingUp, startLookupTransition] = useTransition();
 
+  const getAudioContext = useCallback(() => {
+    if (typeof window.AudioContext === "undefined") {
+      return null;
+    }
+
+    try {
+      audioContextRef.current ??= new window.AudioContext();
+      return audioContextRef.current;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const unlockAudio = useCallback(() => {
+    const audioContext = getAudioContext();
+
+    if (audioContext?.state === "suspended") {
+      void audioContext.resume().catch(() => undefined);
+    }
+  }, [getAudioContext]);
+
+  const playSuccessFeedback = useCallback(() => {
+    try {
+      navigator.vibrate?.(80);
+    } catch {
+      // Feedback support varies by browser and must not interrupt check-in.
+    }
+
+    const audioContext = getAudioContext();
+
+    if (!audioContext) {
+      return;
+    }
+
+    const scannedAt = performance.now();
+    const playIfReady = () => {
+      if (
+        audioContext.state === "running" &&
+        performance.now() - scannedAt < 400
+      ) {
+        try {
+          playScanBeep(audioContext);
+        } catch {
+          // The participant lookup still succeeds when sound is unavailable.
+        }
+      }
+    };
+
+    if (audioContext.state === "running") {
+      playIfReady();
+    } else if (audioContext.state === "suspended") {
+      void audioContext.resume().then(playIfReady).catch(() => undefined);
+    }
+  }, [getAudioContext]);
+
+  useEffect(() => {
+    unlockAudio();
+    window.addEventListener("pointerdown", unlockAudio, { passive: true });
+    window.addEventListener("keydown", unlockAudio);
+
+    return () => {
+      window.removeEventListener("pointerdown", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
+
+      const audioContext = audioContextRef.current;
+      audioContextRef.current = null;
+
+      if (audioContext) {
+        window.setTimeout(() => {
+          void audioContext.close().catch(() => undefined);
+        }, 300);
+      }
+    };
+  }, [unlockAudio]);
+
   const activateScanner = useCallback(() => {
+    unlockAudio();
     if (retryTimerRef.current !== null) {
       window.clearTimeout(retryTimerRef.current);
       retryTimerRef.current = null;
@@ -120,7 +222,7 @@ export function QrCameraScanner({
     setStatus("starting");
     setCameraEnabled(true);
     setScannerRun((currentRun) => currentRun + 1);
-  }, []);
+  }, [unlockAudio]);
 
   const resumeScannerAfterMessage = useCallback(
     (nextMessage: string) => {
@@ -173,7 +275,7 @@ export function QrCameraScanner({
             return;
           }
 
-          navigator.vibrate?.(80);
+          playSuccessFeedback();
           safelyStopScanner(controlsRef.current);
           controlsRef.current = null;
           setCameraEnabled(false);
@@ -192,7 +294,7 @@ export function QrCameraScanner({
         }
       });
     },
-    [resumeScannerAfterMessage, router],
+    [playSuccessFeedback, resumeScannerAfterMessage, router],
   );
 
   useEffect(() => {
