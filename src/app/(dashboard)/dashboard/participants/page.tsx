@@ -7,6 +7,7 @@ import {
   canManageParticipants,
 } from "@/modules/auth/roles";
 import { ParticipantDirectory } from "@/modules/participants/components/participant-directory.client";
+import { listParticipantAgeOptions } from "@/modules/participants/server/queries";
 
 export const metadata: Metadata = {
   title: "Participantes | Confejas",
@@ -14,10 +15,11 @@ export const metadata: Metadata = {
 
 export default async function ParticipantsPage() {
   const session = await requireParticipantDirectoryAccess();
-  const [companies, wards, stakes] = await Promise.all([
+  const [companies, wards, stakes, ages] = await Promise.all([
     listCompanyOptions(),
     listWards(),
     listStakes(),
+    listParticipantAgeOptions(),
   ]);
 
   return (
@@ -28,6 +30,7 @@ export default async function ParticipantsPage() {
         companies={companies}
         wards={wards}
         stakes={stakes}
+        ages={ages}
       />
     </div>
   );
