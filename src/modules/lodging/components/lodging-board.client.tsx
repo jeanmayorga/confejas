@@ -997,8 +997,11 @@ export function LodgingBoard({
                         <span className="block truncate font-medium">
                           {getDisplayName(participant)}
                         </span>
-                        <span className="block truncate text-xs text-muted-foreground">
-                          {participant.wardName}
+                        <span className="block break-words text-xs text-muted-foreground">
+                          Estaca: {participant.stakeName}
+                        </span>
+                        <span className="block break-words text-xs text-muted-foreground">
+                          Barrio: {participant.wardName}
                         </span>
                         <ParticipantStatusBadge status={participant.status} />
                       </span>
