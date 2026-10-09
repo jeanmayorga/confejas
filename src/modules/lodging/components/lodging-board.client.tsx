@@ -601,7 +601,7 @@ export function LodgingBoard({
       <DashboardPageSidebar path="/dashboard/lodging">
         <div className="px-3 pb-3">
           <Button variant="outline" className="w-full" render={<Link href="/dashboard/lodging/counselors" />}>
-            Habitaciones de consejeros
+            Habitaciones de staff
           </Button>
         </div>
         {canManage ? (

@@ -1,0 +1,1 @@
+ALTER TABLE "lodging_counselor_rooms" ADD COLUMN "name" varchar(120);

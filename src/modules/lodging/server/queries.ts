@@ -7,9 +7,15 @@ import { participants } from "@/modules/participants/server/schema";
 import type { ParticipantStatus } from "@/modules/participants/status";
 import { db } from "@/server/db";
 
-import { lodgingBuildings, lodgingRooms, type LodgingSex } from "./schema";
+import {
+  lodgingCounselorRooms,
+  lodgingBuildings,
+  lodgingRooms,
+  type LodgingSex,
+} from "./schema";
 
 export type LodgingRoomOverview = {
+  staffRoomName?: string | null;
   id: number;
   name: string;
   number: number;
@@ -58,12 +64,17 @@ export async function getLodgingOverview() {
         buildingName: lodgingBuildings.name,
         buildingSex: lodgingBuildings.sex,
         roomId: lodgingRooms.id,
+        staffRoomName: lodgingCounselorRooms.name,
         roomNumber: lodgingRooms.number,
         participantCapacity: lodgingRooms.participantCapacity,
         coordinatorCapacity: lodgingRooms.coordinatorCapacity,
       })
       .from(lodgingBuildings)
       .leftJoin(lodgingRooms, eq(lodgingRooms.buildingId, lodgingBuildings.id))
+      .leftJoin(
+        lodgingCounselorRooms,
+        eq(lodgingCounselorRooms.id, lodgingRooms.id),
+      )
       .orderBy(asc(lodgingBuildings.position), asc(lodgingRooms.number)),
     db
       .select({
@@ -141,6 +152,7 @@ export async function getLodgingOverview() {
 
     building.rooms.push({
       id: row.roomId,
+      staffRoomName: row.staffRoomName,
       name,
       number: row.roomNumber,
       participantCapacity: row.participantCapacity,

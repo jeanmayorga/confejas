@@ -78,6 +78,7 @@ export const lodgingRoomsRelations = relations(lodgingRooms, ({ one }) => ({
 
 // Each internal room uses the four coordinator beds of its parent dormitory.
 export const lodgingCounselorRooms = pgTable("lodging_counselor_rooms", {
+  name: varchar({ length: 120 }),
   id: integer()
     .primaryKey()
     .references(() => lodgingRooms.id, { onDelete: "cascade" }),

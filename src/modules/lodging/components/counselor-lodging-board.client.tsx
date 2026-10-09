@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,8 +18,59 @@ import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
-import { assignCounselorRoomAction } from "../server/counselor-actions";
+import {
+  assignCounselorRoomAction,
+  renameStaffRoomAction,
+} from "../server/counselor-actions";
 import type { CounselorLodgingOverview } from "../server/counselor-queries";
+
+type StaffRoom = CounselorLodgingOverview["rooms"][number];
+
+function staffRoomName(room: StaffRoom) {
+  return room.name ?? `Habitación ${room.number} staff`;
+}
+
+function StaffRoomNameInput({ room }: { room: StaffRoom }) {
+  const [name, setName] = useState(room.name ?? "");
+  const [pending, startTransition] = useTransition();
+  return (
+    <form
+      className="mb-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        startTransition(async () => {
+          const result = await renameStaffRoomAction(room.id, name);
+          if (result.success) toast.success(result.message);
+          else toast.error(result.message);
+        });
+      }}
+    >
+      <FieldGroup className="gap-2">
+        <Field>
+          <FieldLabel htmlFor={`staff-room-name-${room.id}`}>
+            Nombre de la habitación
+          </FieldLabel>
+          <Input
+            id={`staff-room-name-${room.id}`}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            maxLength={120}
+            placeholder={`Habitación ${room.number} staff`}
+            disabled={pending}
+          />
+        </Field>
+        <Button
+          type="submit"
+          variant="outline"
+          size="sm"
+          disabled={pending || name === (room.name ?? "")}
+        >
+          {pending ? "Guardando…" : "Guardar nombre"}
+        </Button>
+      </FieldGroup>
+    </form>
+  );
+}
 
 type Person = CounselorLodgingOverview["people"][number];
 
@@ -90,7 +142,7 @@ function CounselorAssignment({
                     value={room.id}
                     disabled={count >= room.capacity}
                   >
-                    {room.buildingName} · Habitación {room.number} consejeros (
+                    {room.buildingName} · {staffRoomName(room)} (
                     {room.capacity - count} cupos)
                   </NativeSelectOption>
                 );
@@ -151,7 +203,7 @@ export function CounselorLodgingBoard({
     <div className="flex min-w-0 flex-col gap-6 p-4 sm:p-6 xl:p-8">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Habitaciones de consejeros</h1>
+          <h1 className="text-2xl font-semibold">Habitaciones de staff</h1>
           <p className="text-sm text-muted-foreground">
             {rooms.length} habitaciones internas · {assigned} consejeros
             alojados · {capacity - assigned} de {capacity} camas disponibles
@@ -193,7 +245,7 @@ export function CounselorLodgingBoard({
                 return (
                   <Card key={room.id} id={`room-${room.id}`}>
                     <CardHeader>
-                      <CardTitle>Habitación {room.number} consejeros</CardTitle>
+                      <CardTitle>{staffRoomName(room)}</CardTitle>
                       <CardDescription>
                         {room.buildingName} · Interior del dormitorio{" "}
                         {room.number}
@@ -203,6 +255,12 @@ export function CounselorLodgingBoard({
                       </Badge>
                     </CardHeader>
                     <CardContent>
+                      {canManage ? (
+                        <StaffRoomNameInput
+                          key={`${room.id}-${room.name}`}
+                          room={room}
+                        />
+                      ) : null}
                       {occupants.length ? (
                         <ul>{occupants.map(personRow)}</ul>
                       ) : (
