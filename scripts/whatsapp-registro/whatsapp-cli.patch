@@ -1,0 +1,452 @@
+diff --git a/internal/cli/send.go b/internal/cli/send.go
+index c654158..cd86dc3 100644
+--- a/internal/cli/send.go
++++ b/internal/cli/send.go
+@@ -11,9 +11,10 @@ import (
+ )
+ 
+ var (
+-	sendFile    string
+-	sendCaption string
+-	sendReplyTo string
++	sendFile               string
++	sendCaption            string
++	sendReplyTo            string
++	sendMentionReplySender bool
+ )
+ 
+ var sendCmd = &cobra.Command{
+@@ -45,6 +46,7 @@ Examples:
+ 
+ func init() {
+ 	rootCmd.AddCommand(sendCmd)
++	sendCmd.Flags().BoolVar(&sendMentionReplySender, "mention-reply-sender", false, "Mention the author of the replied message")
+ 	sendCmd.Flags().StringVar(&sendFile, "file", "", "Send a file (image, video, audio, document)")
+ 	sendCmd.Flags().StringVar(&sendCaption, "caption", "", "Caption for media file")
+ 	sendCmd.Flags().StringVar(&sendReplyTo, "reply-to", "", "Message ID to reply to")
+@@ -58,6 +60,7 @@ func runSend(cmd *cobra.Command, args []string) error {
+ 	}
+ 
+ 	return WithConnection(func(db *store.DB, client *whatsapp.Client) error {
++		client.MentionReplySender = sendMentionReplySender
+ 		var result *whatsapp.SendMessageResult
+ 		var err error
+ 
+diff --git a/internal/cli/sync.go b/internal/cli/sync.go
+index 72929bb..3413496 100644
+--- a/internal/cli/sync.go
++++ b/internal/cli/sync.go
+@@ -16,6 +16,8 @@ import (
+ 
+ var (
+ 	syncFollow        bool
++	syncLiveOnly      bool
++	syncChat          string
+ 	syncDownloadMedia bool
+ )
+ 
+@@ -31,6 +33,8 @@ Use --follow to run continuously and capture messages in real-time.`,
+ 
+ func init() {
+ 	rootCmd.AddCommand(syncCmd)
++	syncCmd.Flags().BoolVar(&syncLiveOnly, "live-only", false, "Skip old history and name backfill; receive live and queued messages only")
++	syncCmd.Flags().StringVar(&syncChat, "chat", "", "Persist live messages only from this exact JID")
+ 	syncCmd.Flags().BoolVar(&syncFollow, "follow", false, "Run continuously, syncing messages in real-time")
+ 	syncCmd.Flags().BoolVar(&syncDownloadMedia, "download-media", false, "Automatically download media files")
+ }
+@@ -69,6 +73,9 @@ func runSync(cmd *cobra.Command, args []string) error {
+ 		cancel()
+ 	}()
+ 
++	client.LiveOnly = syncLiveOnly
++	client.SyncChat = syncChat
++
+ 	// Connect
+ 	if err := client.Connect(); err != nil {
+ 		return fmt.Errorf("connection failed: %w", err)
+@@ -77,8 +84,12 @@ func runSync(cmd *cobra.Command, args []string) error {
+ 	if syncFollow {
+ 		fmt.Fprintln(os.Stderr, "Connected. Syncing messages continuously. Press Ctrl+C to stop.")
+ 
+-		// Run until interrupted
+-		<-ctx.Done()
++		// A live process is not evidence of a usable WhatsApp connection.
++		// Let the supervisor create a fresh receiver if auto-reconnect stalls.
++		if err := followConnection(ctx, client.IsConnected, client.IsLoggedIn); err != nil {
++			client.Disconnect()
++			return err
++		}
+ 	} else {
+ 		fmt.Fprintln(os.Stderr, "Connected. Performing one-time sync...")
+ 
+@@ -108,3 +119,32 @@ func runSync(cmd *cobra.Command, args []string) error {
+ 		"messages": msgCount,
+ 	}, fmt.Sprintf("Synced %d chats, %d messages", chatCount, msgCount))
+ }
++
++// connectionHealth allows a short reconnect/login grace period, but never waits forever.
++type connectionHealth struct{ unhealthySince time.Time }
++
++func (h *connectionHealth) expired(now time.Time, healthy bool) bool {
++	if healthy {
++		h.unhealthySince = time.Time{}
++		return false
++	}
++	if h.unhealthySince.IsZero() {
++		h.unhealthySince = now
++	}
++	return now.Sub(h.unhealthySince) >= 30*time.Second
++}
++func followConnection(ctx context.Context, connected, loggedIn func() bool) error {
++	ticker := time.NewTicker(5 * time.Second)
++	defer ticker.Stop()
++	health := connectionHealth{}
++	for {
++		select {
++		case <-ctx.Done():
++			return nil
++		case now := <-ticker.C:
++			if health.expired(now, connected() && loggedIn()) {
++				return fmt.Errorf("WhatsApp disconnected or unauthenticated for 30 seconds; restarting receiver")
++			}
++		}
++	}
++}
+diff --git a/internal/cli/sync_health_test.go b/internal/cli/sync_health_test.go
+new file mode 100644
+index 0000000..b83a87f
+--- /dev/null
++++ b/internal/cli/sync_health_test.go
+@@ -0,0 +1,31 @@
++package cli
++
++import (
++	"context"
++	"testing"
++	"time"
++)
++
++func TestConnectionHealthRecovery(t *testing.T) {
++	now := time.Now()
++	h := connectionHealth{}
++	if h.expired(now, false) || h.expired(now.Add(29*time.Second), false) {
++		t.Fatal("reconnect grace missing")
++	}
++	if !h.expired(now.Add(30*time.Second), false) {
++		t.Fatal("stalled receiver never exits")
++	}
++	if h.expired(now.Add(31*time.Second), true) {
++		t.Fatal("healthy receiver stopped")
++	}
++	if h.expired(now.Add(32*time.Second), false) {
++		t.Fatal("grace was not reset")
++	}
++}
++func TestFollowStopsImmediatelyOnCancellation(t *testing.T) {
++	ctx, cancel := context.WithCancel(context.Background())
++	cancel()
++	if err := followConnection(ctx, func() bool { return false }, func() bool { return false }); err != nil {
++		t.Fatal(err)
++	}
++}
+diff --git a/internal/store/store.go b/internal/store/store.go
+index 3504828..0ae83cb 100644
+--- a/internal/store/store.go
++++ b/internal/store/store.go
+@@ -82,6 +82,8 @@ func migrate(db *sql.DB) error {
+ 			FOREIGN KEY (chat_jid) REFERENCES chats(jid)
+ 		);
+ 
++		CREATE TABLE IF NOT EXISTS message_context (id TEXT, chat_jid TEXT, sender_jid TEXT, quoted_id TEXT, quoted_sender TEXT, quoted_text TEXT, quoted_media TEXT, PRIMARY KEY(id,chat_jid));
++
+ 		CREATE TABLE IF NOT EXISTS lid_mappings (
+ 			lid TEXT PRIMARY KEY,
+ 			phone TEXT,
+diff --git a/internal/whatsapp/client.go b/internal/whatsapp/client.go
+index 332ae14..b3b4534 100644
+--- a/internal/whatsapp/client.go
++++ b/internal/whatsapp/client.go
+@@ -21,6 +21,10 @@ import (
+ 
+ // Client wraps a WhatsApp client with store integration.
+ type Client struct {
++	MentionReplySender bool
++
++	SyncChat     string
++	LiveOnly     bool
+ 	WA           *whatsmeow.Client
+ 	Store        *store.DB
+ 	Logger       *slog.Logger
+diff --git a/internal/whatsapp/live_sync_test.go b/internal/whatsapp/live_sync_test.go
+new file mode 100644
+index 0000000..a691798
+--- /dev/null
++++ b/internal/whatsapp/live_sync_test.go
+@@ -0,0 +1,26 @@
++package whatsapp
++
++import (
++	"go.mau.fi/whatsmeow"
++	"go.mau.fi/whatsmeow/types"
++	"go.mau.fi/whatsmeow/types/events"
++	"testing"
++)
++
++func TestLiveOnlySkipsHistoryAndNameBackfill(t *testing.T) {
++	c := &Client{LiveOnly: true}
++	c.handleHistorySync(&events.HistorySync{})
++	c.backfillChatNames() // No database/network is needed in live-only mode.
++}
++func TestLiveMessagesFromOtherGroupsAreDiscarded(t *testing.T) {
++	c := &Client{SyncChat: "allowed@g.us"}
++	m := &events.Message{}
++	m.Info.Chat = types.JID{User: "other", Server: "g.us"}
++	c.handleMessage(m) // A non-allowed message must return before touching storage.
++}
++func TestPDFMimeType(t *testing.T) {
++	media, mime := classify("invitation.pdf")
++	if media != whatsmeow.MediaDocument || mime != "application/pdf" {
++		t.Fatalf("unexpected classification: %s %s", media, mime)
++	}
++}
+diff --git a/internal/whatsapp/message_context.go b/internal/whatsapp/message_context.go
+new file mode 100644
+index 0000000..e7718c4
+--- /dev/null
++++ b/internal/whatsapp/message_context.go
+@@ -0,0 +1,68 @@
++package whatsapp
++
++import (
++	waE2E "go.mau.fi/whatsmeow/proto/waE2E"
++	"go.mau.fi/whatsmeow/types/events"
++	"strings"
++)
++
++func messageContext(m *waE2E.Message) *waE2E.ContextInfo {
++	if m == nil {
++		return nil
++	}
++	switch {
++	case m.ExtendedTextMessage != nil:
++		return m.ExtendedTextMessage.GetContextInfo()
++	case m.ImageMessage != nil:
++		return m.ImageMessage.GetContextInfo()
++	case m.VideoMessage != nil:
++		return m.VideoMessage.GetContextInfo()
++	case m.DocumentMessage != nil:
++		return m.DocumentMessage.GetContextInfo()
++	case m.AudioMessage != nil:
++		return m.AudioMessage.GetContextInfo()
++	case m.StickerMessage != nil:
++		return m.StickerMessage.GetContextInfo()
++	}
++	return nil
++}
++func contextText(m *waE2E.Message) string {
++	if m == nil {
++		return ""
++	}
++	if s := extractTextContent(m); s != "" {
++		return s
++	}
++	if m.ImageMessage != nil {
++		return m.ImageMessage.GetCaption()
++	}
++	if m.VideoMessage != nil {
++		return m.VideoMessage.GetCaption()
++	}
++	if m.DocumentMessage != nil {
++		return m.DocumentMessage.GetCaption()
++	}
++	return ""
++}
++func (c *Client) persistMessageContext(m *events.Message) {
++	ctx := messageContext(m.Message)
++	id, sender, text, media := "", "", "", ""
++	if ctx != nil && (ctx.GetRemoteJID() == "" || ctx.GetRemoteJID() == m.Info.Chat.String()) {
++		id, sender, text = ctx.GetStanzaID(), ctx.GetParticipant(), contextText(ctx.GetQuotedMessage())
++		if q := ctx.GetQuotedMessage(); q != nil {
++			media, _, _, _, _, _, _ = extractMediaInfo(q)
++		}
++	}
++	_, err := c.Store.Messages.Exec("INSERT OR REPLACE INTO message_context VALUES (?,?,?,?,?,?,?)", m.Info.ID, m.Info.Chat.String(), m.Info.Sender.String(), id, sender, text, media)
++	if err != nil {
++		c.Logger.Warn("failed to store message context", "err", err)
++	}
++}
++func mentionReply(text string, ctx *waE2E.ContextInfo, enabled bool) string {
++	if !enabled || ctx == nil || ctx.GetParticipant() == "" {
++		return text
++	}
++	jid := ctx.GetParticipant()
++	ctx.MentionedJID = []string{jid}
++	return "@" + strings.Split(jid, "@")[0] + " " + text
++}
+diff --git a/internal/whatsapp/message_context_test.go b/internal/whatsapp/message_context_test.go
+new file mode 100644
+index 0000000..757add5
+--- /dev/null
++++ b/internal/whatsapp/message_context_test.go
+@@ -0,0 +1,60 @@
++package whatsapp
++
++import (
++	"github.com/eddmann/whatsapp-cli/internal/store"
++	waE2E "go.mau.fi/whatsmeow/proto/waE2E"
++	"go.mau.fi/whatsmeow/types"
++	"go.mau.fi/whatsmeow/types/events"
++	"log/slog"
++	"path/filepath"
++	"testing"
++)
++
++func TestQuoteAndMention(t *testing.T) {
++	ctx := &waE2E.ContextInfo{Participant: protoString("593123@s.whatsapp.net"), StanzaID: protoString("original")}
++	m := &waE2E.Message{ExtendedTextMessage: &waE2E.ExtendedTextMessage{ContextInfo: ctx}}
++	if messageContext(m).GetStanzaID() != "original" {
++		t.Fatal("quote missing")
++	}
++	if got := mentionReply("Listo", ctx, true); got != "@593123 Listo" || len(ctx.MentionedJID) != 1 || ctx.MentionedJID[0] != "593123@s.whatsapp.net" {
++		t.Fatal("native mention missing", got)
++	}
++	if mentionReply("Listo", nil, true) != "Listo" {
++		t.Fatal("nil context")
++	}
++	if mentionReply("Listo", ctx, false) != "Listo" {
++		t.Fatal("unrequested mention")
++	}
++	image := &waE2E.Message{ImageMessage: &waE2E.ImageMessage{Caption: protoString("Nombre citado"), ContextInfo: ctx}}
++	if contextText(image) != "Nombre citado" || messageContext(image) != ctx {
++		t.Fatal("caption missing")
++	}
++}
++
++func TestPersistQuotesRestrictedToSourceChat(t *testing.T) {
++	db, err := store.Open(filepath.Join(t.TempDir(), "messages.db"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer db.Close()
++	c := &Client{Store: db, Logger: slog.Default()}
++	ctx := &waE2E.ContextInfo{StanzaID: protoString("old"), Participant: protoString("123@lid"), QuotedMessage: &waE2E.Message{Conversation: protoString("quoted body")}}
++	m := &events.Message{Message: &waE2E.Message{ExtendedTextMessage: &waE2E.ExtendedTextMessage{ContextInfo: ctx}}}
++	m.Info.ID = "new"
++	m.Info.Chat = types.JID{User: "group", Server: "g.us"}
++	m.Info.Sender = types.JID{User: "sender", Server: "lid"}
++	c.persistMessageContext(m)
++	var body, sender string
++	if err := db.Messages.QueryRow("SELECT quoted_text,sender_jid FROM message_context WHERE id='new'").Scan(&body, &sender); err != nil {
++		t.Fatal(err)
++	}
++	if body != "quoted body" || sender != "sender@lid" {
++		t.Fatal("lost context", body, sender)
++	}
++	ctx.RemoteJID = protoString("other@g.us")
++	c.persistMessageContext(m)
++	db.Messages.QueryRow("SELECT quoted_text FROM message_context WHERE id='new'").Scan(&body)
++	if body != "" {
++		t.Fatal("cross-chat quote leaked")
++	}
++}
+diff --git a/internal/whatsapp/messaging.go b/internal/whatsapp/messaging.go
+index 22fb827..89b9510 100644
+--- a/internal/whatsapp/messaging.go
++++ b/internal/whatsapp/messaging.go
+@@ -52,7 +52,7 @@ func (c *Client) SendText(recipient, text, replyToMessageID string) (*SendMessag
+ 		}
+ 
+ 		msg.ExtendedTextMessage = &waE2E.ExtendedTextMessage{
+-			Text:        protoString(text),
++			Text:        protoString(mentionReply(text, quotedMsg, c.MentionReplySender)),
+ 			ContextInfo: quotedMsg,
+ 		}
+ 	} else {
+@@ -107,6 +107,7 @@ func (c *Client) SendMedia(recipient, path, caption, replyToMessageID string) (*
+ 		}
+ 	}
+ 
++	caption = mentionReply(caption, quotedCtx, c.MentionReplySender)
+ 	switch mediaType {
+ 	case whatsmeow.MediaImage:
+ 		m.ImageMessage = &waE2E.ImageMessage{
+@@ -135,6 +136,7 @@ func (c *Client) SendMedia(recipient, path, caption, replyToMessageID string) (*
+ 	case whatsmeow.MediaDocument:
+ 		m.DocumentMessage = &waE2E.DocumentMessage{
+ 			Title:         protoString(base),
++			FileName:      protoString(base),
+ 			Caption:       protoString(caption),
+ 			Mimetype:      protoString(mime),
+ 			URL:           &up.URL,
+@@ -390,6 +392,11 @@ func (c *Client) buildQuotedMessage(messageID, chatJID string) (*waE2E.ContextIn
+ 		return nil, fmt.Errorf("failed to find quoted message: %w", err)
+ 	}
+ 
++	var nativeSender string
++	_ = c.Store.Messages.QueryRow("SELECT sender_jid FROM message_context WHERE id=? AND chat_jid=?", messageID, chatJID).Scan(&nativeSender)
++	if nativeSender != "" {
++		sender = nativeSender
++	}
+ 	participantJID := ""
+ 	if strings.HasSuffix(chatJID, "@g.us") {
+ 		resolved := c.resolveParticipantJIDForGroup(sender, chatJID)
+@@ -475,7 +482,11 @@ func (c *Client) resolveParticipantJIDForGroup(sender, groupJID string) string {
+ 			}
+ 		}
+ 		// Retry after populating mappings
+-		result, _ = c.resolveParticipantJID(sender)
++		var ok bool
++		result, ok = c.resolveParticipantJID(sender)
++		if !ok && strings.HasSuffix(sender, "@lid") {
++			result = sender
++		}
+ 	}
+ 
+ 	return result
+@@ -515,6 +526,8 @@ func classify(path string) (whatsmeow.MediaType, string) {
+ 		return whatsmeow.MediaVideo, "video/avi"
+ 	case ".mov":
+ 		return whatsmeow.MediaVideo, "video/quicktime"
++	case ".pdf":
++		return whatsmeow.MediaDocument, "application/pdf"
+ 	case ".ogg":
+ 		return whatsmeow.MediaAudio, "audio/ogg; codecs=opus"
+ 	default:
+diff --git a/internal/whatsapp/sync.go b/internal/whatsapp/sync.go
+index 7508475..5c20353 100644
+--- a/internal/whatsapp/sync.go
++++ b/internal/whatsapp/sync.go
+@@ -13,8 +13,12 @@ import (
+ // handleMessage processes real-time incoming messages and persists them.
+ func (c *Client) handleMessage(msg *events.Message) {
+ 	chatJID := msg.Info.Chat.String()
++	if c.SyncChat != "" && chatJID != c.SyncChat {
++		return
++	}
++	c.persistMessageContext(msg)
+ 	sender := msg.Info.Sender.User
+-	content := extractTextContent(msg.Message)
++	content := contextText(msg.Message)
+ 	mediaType, filename, url, mediaKey, fileSHA256, fileEncSHA256, fileLength := extractMediaInfo(msg.Message)
+ 
+ 	if content == "" && mediaType == "" {
+@@ -56,6 +60,9 @@ func (c *Client) handleMessage(msg *events.Message) {
+ 
+ // handleHistorySync persists conversations and messages received during a history sync.
+ func (c *Client) handleHistorySync(hs *events.HistorySync) HistorySyncResult {
++	if c.LiveOnly {
++		return HistorySyncResult{}
++	}
+ 	if hs == nil || hs.Data == nil || hs.Data.Conversations == nil {
+ 		return HistorySyncResult{}
+ 	}
+@@ -189,6 +196,9 @@ func (c *Client) handleHistorySync(hs *events.HistorySync) HistorySyncResult {
+ 
+ // backfillChatNames finds chats without a proper name and updates them.
+ func (c *Client) backfillChatNames() {
++	if c.LiveOnly {
++		return
++	}
+ 	if c.Store == nil || c.Store.Messages == nil {
+ 		return
+ 	}
