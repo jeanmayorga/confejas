@@ -21,11 +21,9 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { cn } from "@/lib/utils";
-import {
-  CompanyParticipantFilters,
-  DEFAULT_COMPANY_PARTICIPANT_FILTERS,
-} from "@/modules/companies/components/company-participant-filters.client";
-import { sortParticipantsByName } from "@/modules/companies/participant-order";
+import { CompanyParticipantFilters } from "@/modules/companies/components/company-participant-filters.client";
+import type { LodgingListInput } from "../board-pagination";
+import { LodgingPagination } from "./lodging-data.client";
 import type { LodgingParticipantSummary } from "../server/queries";
 import {
   getAgeLabel,
@@ -33,13 +31,13 @@ import {
   getInitials,
   getSexLabel,
   LodgingParticipantActionsMenu,
-  matchesLodgingParticipant,
   ParticipantStatusBadge,
   type DraggedLodgingParticipants,
   type LodgingRoomTarget,
 } from "./lodging-participant-ui.client";
 
 export function LodgingUnassignedPanel({
+  remote,
   participants,
   rooms,
   canManage,
@@ -59,6 +57,16 @@ export function LodgingUnassignedPanel({
   onDragLeave,
   onDrop,
 }: {
+  remote: {
+    input: LodgingListInput;
+    page: number;
+    total: number;
+    ages: number[];
+    loading: boolean;
+    error: boolean;
+    retry: () => void;
+    onChange: (input: LodgingListInput) => void;
+  };
   participants: LodgingParticipantSummary[];
   rooms: LodgingRoomTarget[];
   canManage: boolean;
@@ -87,14 +95,9 @@ export function LodgingUnassignedPanel({
   onDragLeave: (event: DragEvent<HTMLDivElement>) => void;
   onDrop: (event: DragEvent<HTMLDivElement>) => void;
 }) {
-  const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState(DEFAULT_COMPANY_PARTICIPANT_FILTERS);
+  const { search, filters } = remote.input;
   const [selecting, setSelecting] = useState(false);
-  const filtered = sortParticipantsByName(
-    participants.filter((participant) =>
-      matchesLodgingParticipant(participant, search, filters),
-    ),
-  );
+  const filtered = participants;
   const selected = filtered.filter((participant) =>
     selectedParticipantIds.has(participant.id),
   );
@@ -120,13 +123,21 @@ export function LodgingUnassignedPanel({
               placeholder="Buscar"
               aria-label="Buscar participantes sin alojamiento"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) =>
+                remote.onChange({
+                  ...remote.input,
+                  search: event.target.value,
+                  page: 1,
+                })
+              }
             />
           </InputGroup>
           <CompanyParticipantFilters
-            participants={participants}
+            ages={remote.ages}
             value={filters}
-            onChange={setFilters}
+            onChange={(filters) =>
+              remote.onChange({ ...remote.input, filters, page: 1 })
+            }
             label="Filtrar participantes sin alojamiento"
           />
         </div>
@@ -198,7 +209,16 @@ export function LodgingUnassignedPanel({
               : "Arrastra aquí para quitar del dormitorio"}
           </div>
         ) : null}
-        {filtered.length ? (
+        {remote.loading ? (
+          <p role="status" className="p-3">
+            Cargando participantes…
+          </p>
+        ) : remote.error ? (
+          <div role="alert" className="p-3">
+            No se pudo cargar la lista.{" "}
+            <Button onClick={remote.retry}>Reintentar</Button>
+          </div>
+        ) : filtered.length ? (
           <ul
             aria-label="Participantes sin alojamiento"
             className="flex flex-col gap-2"
@@ -308,16 +328,12 @@ export function LodgingUnassignedPanel({
           </Empty>
         )}
       </div>
-      <div className="flex shrink-0 items-center justify-between gap-2 border-t px-4 py-3 text-sm">
-        <span className="text-muted-foreground">
-          {hasFilters ? "Resultados" : "Sin alojamiento"}
-        </span>
-        <span className="tabular-nums" aria-live="polite">
-          {hasFilters
-            ? `${filtered.length} de ${participants.length}`
-            : participants.length}
-        </span>
-      </div>
+      <LodgingPagination
+        page={remote.page}
+        total={remote.total}
+        disabled={remote.loading || dragDisabled}
+        onPageChange={(page) => remote.onChange({ ...remote.input, page })}
+      />
     </div>
   );
 }
