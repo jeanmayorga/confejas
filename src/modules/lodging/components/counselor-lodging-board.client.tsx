@@ -15,14 +15,18 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
+  NativeSelectOptGroup,
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import {
+  moveParticipantToStaffAction,
   assignCounselorRoomAction,
   saveStaffGuestAction,
   removeStaffGuestAction,
 } from "../server/counselor-actions";
+import { moveLodgingParticipantsAction } from "../server/actions";
+import { getStaffRoomName } from "../staff-room";
 import type { CounselorLodgingOverview } from "../server/counselor-queries";
 
 type StaffRoom = CounselorLodgingOverview["rooms"][number];
@@ -34,11 +38,25 @@ function staffRoomName(room: StaffRoom) {
 function AddStaffOccupant({
   room,
   people,
+  participantRows,
 }: {
   room: StaffRoom;
   people: CounselorLodgingOverview["people"];
+  participantRows: CounselorLodgingOverview["participantRows"];
 }) {
   const [choice, setChoice] = useState("");
+  const [search, setSearch] = useState("");
+  const selectedParticipant = participantRows.find(
+    (person) => `participant:${person.id}` === choice,
+  );
+  const participantCandidates = participantRows.filter(
+    (person) =>
+      person.sex === (room.sex === "female" ? "Femenino" : "Masculino") &&
+      person.roomName !== getStaffRoomName(room.buildingName, room.number) &&
+      `${person.firstNames} ${person.lastNames}`
+        .toLocaleLowerCase("es")
+        .includes(search.toLocaleLowerCase("es")),
+  );
   const [name, setName] = useState("");
   const [pending, startTransition] = useTransition();
   const candidates = people.filter(
@@ -55,11 +73,17 @@ function AddStaffOccupant({
           const result =
             choice === "manual"
               ? await saveStaffGuestAction(room.id, name)
-              : await assignCounselorRoomAction({
-                  counselorId: choice,
-                  sex: room.sex,
-                  roomId: room.id,
-                });
+              : selectedParticipant
+                ? await moveParticipantToStaffAction({
+                    participantId: selectedParticipant.id,
+                    roomId: room.id,
+                    previousRoomName: selectedParticipant.roomName,
+                  })
+                : await assignCounselorRoomAction({
+                    counselorId: choice,
+                    sex: room.sex,
+                    roomId: room.id,
+                  });
           if (result.success) {
             toast.success(result.message);
             setChoice("");
@@ -69,6 +93,21 @@ function AddStaffOccupant({
       }}
     >
       <FieldGroup className="gap-2">
+        <Field>
+          <FieldLabel htmlFor={`search-staff-${room.id}`}>
+            Buscar participante
+          </FieldLabel>
+          <Input
+            id={`search-staff-${room.id}`}
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setChoice("");
+            }}
+            placeholder="Nombre o apellido"
+            disabled={pending}
+          />
+        </Field>
         <Field>
           <FieldLabel htmlFor={`add-staff-${room.id}`}>
             Agregar ocupante
@@ -82,19 +121,45 @@ function AddStaffOccupant({
             required
           >
             <NativeSelectOption value="">
-              Seleccionar consejero o escribir nombre
+              Consejero, participante u otro nombre
             </NativeSelectOption>
             <NativeSelectOption value="manual">
               Escribir otro nombre…
             </NativeSelectOption>
-            {candidates.map((person) => (
-              <NativeSelectOption key={person.id} value={person.id}>
-                {person.name}
-                {person.sex === null ? " · Sexo sin registrar" : ""}
-              </NativeSelectOption>
-            ))}
+            <NativeSelectOptGroup label="Participantes">
+              {participantCandidates.slice(0, 30).map((person) => (
+                <NativeSelectOption
+                  key={person.id}
+                  value={`participant:${person.id}`}
+                >
+                  {person.firstNames} {person.lastNames} ·{" "}
+                  {person.roomName ?? "Sin habitación"}
+                </NativeSelectOption>
+              ))}
+            </NativeSelectOptGroup>
+            <NativeSelectOptGroup label="Consejeros">
+              {candidates.map((person) => (
+                <NativeSelectOption key={person.id} value={person.id}>
+                  {person.name}
+                  {person.sex === null ? " · Sexo sin registrar" : ""}
+                </NativeSelectOption>
+              ))}
+            </NativeSelectOptGroup>
           </NativeSelect>
         </Field>
+        {participantCandidates.length > 30 ? (
+          <p className="text-xs text-muted-foreground">
+            Mostrando 30 participantes. Busca por nombre para encontrar a los
+            demás.
+          </p>
+        ) : null}
+        {selectedParticipant ? (
+          <p className="text-sm text-muted-foreground">
+            Se trasladará desde{" "}
+            {selectedParticipant.roomName ?? "sin habitación"} y liberará su
+            cama anterior.
+          </p>
+        ) : null}
         {choice === "manual" ? (
           <Field>
             <FieldLabel htmlFor={`staff-name-${room.id}`}>
@@ -129,6 +194,46 @@ function AddStaffOccupant({
         </Button>
       </FieldGroup>
     </form>
+  );
+}
+
+function StaffParticipantRow({
+  person,
+  canManage,
+}: {
+  person: CounselorLodgingOverview["participantRows"][number];
+  canManage: boolean;
+}) {
+  const [pending, startTransition] = useTransition();
+  return (
+    <li className="flex flex-col gap-2 border-t py-3">
+      <Link
+        className="font-medium hover:underline"
+        href={`/dashboard/participants/${person.id}`}
+      >
+        {person.firstNames} {person.lastNames}
+      </Link>
+      <p className="text-xs text-muted-foreground">Participante</p>
+      {canManage ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={pending}
+          onClick={() =>
+            startTransition(async () => {
+              const result = await moveLodgingParticipantsAction(
+                [{ participantId: person.id, roomName: person.roomName }],
+                null,
+              );
+              if (result.success) toast.success(result.message);
+              else toast.error(result.message);
+            })
+          }
+        >
+          {pending ? "Quitando…" : "Quitar de la habitación"}
+        </Button>
+      ) : null}
+    </li>
   );
 }
 
@@ -209,6 +314,7 @@ function CounselorAssignment({
   rooms,
   people,
   guests,
+  participantRows,
 }: CounselorLodgingOverview & { person: Person }) {
   const [sex, setSex] = useState(person.sex ?? "");
   const [roomId, setRoomId] = useState(person.roomId?.toString() ?? "");
@@ -269,7 +375,12 @@ function CounselorAssignment({
                     (other) =>
                       other.roomId === room.id && other.id !== person.id,
                   ).length +
-                  guests.filter((guest) => guest.roomId === room.id).length;
+                  guests.filter((guest) => guest.roomId === room.id).length +
+                  participantRows.filter(
+                    (person) =>
+                      person.roomName ===
+                      getStaffRoomName(room.buildingName, room.number),
+                  ).length;
                 return (
                   <NativeSelectOption
                     key={room.id}
@@ -300,10 +411,12 @@ export function CounselorLodgingBoard({
   rooms,
   people,
   guests,
+  participantRows,
   canManage,
 }: CounselorLodgingOverview & { canManage: boolean }) {
   const assigned =
-    people.filter((person) => person.roomId !== null).length + guests.length;
+    people.filter((person) => person.roomId !== null).length + guests.length +
+    participantRows.filter((person) => rooms.some((room) => person.roomName === getStaffRoomName(room.buildingName, room.number))).length;
   const capacity = rooms.reduce((total, room) => total + room.capacity, 0);
   function personRow(person: Person) {
     return (
@@ -329,6 +442,7 @@ export function CounselorLodgingBoard({
                 rooms={rooms}
                 people={people}
                 guests={guests}
+                participantRows={participantRows}
               />
             </div>
           </details>
@@ -382,7 +496,15 @@ export function CounselorLodgingBoard({
                 const roomGuests = guests.filter(
                   (guest) => guest.roomId === room.id,
                 );
-                const occupied = occupants.length + roomGuests.length;
+                const roomParticipants = participantRows.filter(
+                  (person) =>
+                    person.roomName ===
+                    getStaffRoomName(room.buildingName, room.number),
+                );
+                const occupied =
+                  occupants.length +
+                  roomGuests.length +
+                  roomParticipants.length;
                 return (
                   <Card key={room.id} id={`room-${room.id}`}>
                     <CardHeader>
@@ -398,6 +520,13 @@ export function CounselorLodgingBoard({
                     <CardContent>
                       <ul>
                         {occupants.map(personRow)}
+                        {roomParticipants.map((person) => (
+                          <StaffParticipantRow
+                            key={person.id}
+                            person={person}
+                            canManage={canManage}
+                          />
+                        ))}
                         {roomGuests.map((guest) => (
                           <StaffGuestRow
                             key={`${guest.id}-${guest.name}`}
@@ -412,7 +541,11 @@ export function CounselorLodgingBoard({
                         </p>
                       ) : null}
                       {canManage && occupied < room.capacity ? (
-                        <AddStaffOccupant room={room} people={people} />
+                        <AddStaffOccupant
+                          room={room}
+                          people={people}
+                          participantRows={participantRows}
+                        />
                       ) : null}
                       {occupied >= room.capacity ? (
                         <p className="text-sm text-muted-foreground">

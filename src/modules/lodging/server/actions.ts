@@ -165,6 +165,7 @@ export async function moveLodgingParticipantsAction(
       };
     }
 
+    revalidatePath("/dashboard/lodging/counselors");
     revalidatePath("/dashboard/lodging");
     revalidatePath("/dashboard/participants");
 
@@ -243,7 +244,10 @@ export async function autoAssignLodgingRoomsAction(
           wardId: participants.wardId,
         })
         .from(participants)
-        .innerJoin(wards, eq(participants.wardId, wards.id)),
+        .innerJoin(wards, eq(participants.wardId, wards.id))
+        .where(
+          sql`not exists (select 1 from lodging_counselor_rooms cr join lodging_rooms r on r.id=cr.id join lodging_buildings b on b.id=r.building_id where ${participants.roomName}=concat(b.name, ' · Habitación ', r.number, ' staff'))`,
+        ),
     ]);
 
     if (roomRows.length === 0) {
@@ -290,9 +294,11 @@ export async function autoAssignLodgingRoomsAction(
           updated_at = ${new Date()}
         from requested_assignments
         where participant.id = requested_assignments.participant_id
+          and not exists (select 1 from lodging_counselor_rooms cr join lodging_rooms r on r.id=cr.id join lodging_buildings b on b.id=r.building_id where participant.room_name=concat(b.name, ' · Habitación ', r.number, ' staff'))
       `);
     }
 
+    revalidatePath("/dashboard/lodging/counselors");
     revalidatePath("/dashboard/lodging");
     revalidatePath("/dashboard/participants");
 

@@ -7,7 +7,13 @@ import { participants } from "@/modules/participants/server/schema";
 import type { ParticipantStatus } from "@/modules/participants/status";
 import { db } from "@/server/db";
 
-import { lodgingBuildings, lodgingRooms, type LodgingSex } from "./schema";
+import { getStaffRoomName } from "../staff-room";
+import {
+  lodgingCounselorRooms,
+  lodgingBuildings,
+  lodgingRooms,
+  type LodgingSex,
+} from "./schema";
 
 export type LodgingRoomOverview = {
   id: number;
@@ -161,10 +167,22 @@ export async function getLodgingOverview() {
   const validRoomNames = new Set(
     buildings.flatMap((building) => building.rooms.map((room) => room.name)),
   );
+  const staffNames = new Set(
+    buildings.flatMap((building) =>
+      building.rooms.map((room) =>
+        getStaffRoomName(building.name, room.number),
+      ),
+    ),
+  );
+  const staffAssignedCount = participantRows.filter(
+    (person) => person.roomName && staffNames.has(person.roomName),
+  ).length;
   const unassignedParticipants = participantRows
     .filter(
       (participant) =>
-        !participant.roomName || !validRoomNames.has(participant.roomName),
+        !participant.roomName ||
+        (!validRoomNames.has(participant.roomName) &&
+          !staffNames.has(participant.roomName)),
     )
     .map((participant) => ({
       id: participant.id,
@@ -239,7 +257,9 @@ export async function getLodgingOverview() {
       ...totals,
       unassignedParticipants: Math.max(
         0,
-        totals.registeredParticipants - totals.assignedParticipants,
+        totals.registeredParticipants -
+          totals.assignedParticipants -
+          staffAssignedCount,
       ),
     },
   };
@@ -258,6 +278,42 @@ export async function validateLodgingRoomAssignment({
 }: ValidateLodgingRoomAssignmentInput) {
   if (!roomName) {
     return { success: true as const };
+  }
+
+  const [staffRoom] = await db
+    .select({
+      sex: lodgingBuildings.sex,
+      capacity: lodgingRooms.coordinatorCapacity,
+      id: lodgingCounselorRooms.id,
+    })
+    .from(lodgingCounselorRooms)
+    .innerJoin(lodgingRooms, eq(lodgingRooms.id, lodgingCounselorRooms.id))
+    .innerJoin(
+      lodgingBuildings,
+      eq(lodgingBuildings.id, lodgingRooms.buildingId),
+    )
+    .where(
+      sql`concat(${lodgingBuildings.name}, ' · Habitación ', ${lodgingRooms.number}, ' staff') = ${roomName}`,
+    );
+  if (staffRoom) {
+    if (
+      participantSex !== (staffRoom.sex === "female" ? "Femenino" : "Masculino")
+    )
+      return {
+        success: false as const,
+        message:
+          "La habitación de staff no corresponde al sexo del participante.",
+      };
+    const result = await db.execute(sql`select
+      (select count(*) from counselors where lodging_room_id=${staffRoom.id}) +
+      (select count(*) from lodging_staff_guests where room_id=${staffRoom.id}) +
+      (select count(*) from participants where room_name=${roomName} and id is distinct from ${participantId ?? null}::uuid) as occupied`);
+    return Number(result.rows[0].occupied) < staffRoom.capacity
+      ? { success: true as const }
+      : {
+          success: false as const,
+          message: "La habitación de staff ya no tiene cupos disponibles.",
+        };
   }
 
   const roomRows = await db
