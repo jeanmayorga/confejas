@@ -5,6 +5,7 @@ import {
   useTransition,
   type ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import CheckmarkCircle02Icon from "@hugeicons/core-free-icons/CheckmarkCircle02Icon";
 import DashboardSquare01Icon from "@hugeicons/core-free-icons/DashboardSquare01Icon";
 import InformationCircleIcon from "@hugeicons/core-free-icons/InformationCircleIcon";
 import MedicalFileIcon from "@hugeicons/core-free-icons/MedicalFileIcon";
@@ -40,7 +42,10 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { DeleteParticipantButton } from "@/modules/participants/components/delete-participant-button.client";
 import { SendWelcomeEmailButton } from "@/modules/participants/components/send-welcome-email-button.client";
-import { updateParticipantMedicalNotesAction } from "@/modules/participants/server/actions";
+import {
+  updateParticipantMedicalNotesAction,
+  updateParticipantStatusAction,
+} from "@/modules/participants/server/actions";
 import { getWhatsAppHref } from "@/modules/participants/whatsapp";
 import {
   getParticipantStatusLabel,
@@ -135,6 +140,7 @@ type ParticipantDetailsProps = {
   canManage?: boolean;
   canViewWelcome?: boolean;
   canChangeStatus?: boolean;
+  canMarkArrival?: boolean;
   canDelete?: boolean;
   className?: string;
   onEdit?: () => void;
@@ -166,6 +172,7 @@ export function ParticipantDetails({
   canManage = false,
   canViewWelcome = false,
   canChangeStatus = canManage,
+  canMarkArrival = canManage,
   canDelete = false,
   className,
   onEdit = () => {},
@@ -175,12 +182,41 @@ export function ParticipantDetails({
   onStatusChange,
   isStatusUpdating = false,
 }: ParticipantDetailsProps) {
+  const router = useRouter();
   const participantName = `${participant.firstNames} ${participant.lastNames}`;
   const preferredName = participant.preferredName?.trim() || participant.firstNames;
   const [medicalNotes, setMedicalNotes] = useState(
     participant.medicalNotes ?? "",
   );
   const [isSavingMedicalNotes, startSavingMedicalNotes] = useTransition();
+  const [isMarkingArrival, startMarkingArrival] = useTransition();
+  const needsArrival =
+    participant.status !== "arrived" || !participant.checkedInAt;
+
+  function markArrival() {
+    startMarkingArrival(async () => {
+      try {
+        const result = await updateParticipantStatusAction(
+          participant.id,
+          "arrived",
+        );
+
+        if (!result.success) {
+          toast.error(result.message);
+          return;
+        }
+
+        toast.success("Llegada registrada.");
+        if (onDataChanged) {
+          onDataChanged();
+        } else {
+          router.refresh();
+        }
+      } catch {
+        toast.error("No se pudo registrar la llegada. Inténtalo nuevamente.");
+      }
+    });
+  }
 
   function saveMedicalNotes() {
     const nextNotes = medicalNotes.trim();
@@ -231,7 +267,7 @@ export function ParticipantDetails({
             <Select
               items={PARTICIPANT_STATUS_OPTIONS}
               value={participant.status}
-              disabled={isStatusUpdating}
+              disabled={isStatusUpdating || isMarkingArrival}
               onValueChange={(nextStatus) => {
                 if (nextStatus && isParticipantStatus(nextStatus)) {
                   onStatusChange?.(nextStatus);
@@ -296,6 +332,24 @@ export function ParticipantDetails({
           Me gustaría que me llamen: {preferredName}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
+          {canMarkArrival && needsArrival ? (
+            <Button
+              type="button"
+              size="sm"
+              onClick={markArrival}
+              disabled={isMarkingArrival || isStatusUpdating}
+            >
+              {isMarkingArrival ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <HugeiconsIcon
+                  icon={CheckmarkCircle02Icon}
+                  data-icon="inline-start"
+                />
+              )}
+              {isMarkingArrival ? "Registrando llegada…" : "Marcar llegada"}
+            </Button>
+          ) : null}
           {canViewWelcome && participant.sourceRecordId ? (
             <>
               <Link
