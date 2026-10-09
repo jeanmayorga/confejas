@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import AlertCircleIcon from "@hugeicons/core-free-icons/AlertCircleIcon";
 import CheckmarkCircle02Icon from "@hugeicons/core-free-icons/CheckmarkCircle02Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useFormStatus } from "react-dom";
@@ -37,6 +38,9 @@ export type CheckInSheetParticipant = {
   shirtSize: string | null;
   companyName: string | null;
   roomName: string | null;
+  chronicCondition: string | null;
+  medicalTreatment: string | null;
+  medicalNotes: string | null;
   arrived: boolean;
   counselors: { id: string; name: string }[];
 };
@@ -97,6 +101,14 @@ export function ParticipantCheckInSheet({
   const [open, setOpen] = useState(true);
   const action = completeParticipantCheckInFromSheet.bind(null, returnPath);
   const preferredName = participant.preferredName?.trim();
+  const medicalDetails = [
+    { label: "Condición crónica", value: participant.chronicCondition },
+    { label: "Tratamiento médico", value: participant.medicalTreatment },
+    { label: "Notas médicas", value: participant.medicalNotes },
+  ].flatMap(({ label, value }) => {
+    const text = value?.trim();
+    return text ? [{ label, value: text }] : [];
+  });
 
   useEffect(() => {
     if (saved || !open) {
@@ -203,6 +215,34 @@ export function ParticipantCheckInSheet({
                 />
               </dl>
             </section>
+
+            {medicalDetails.length > 0 ? (
+              <section
+                role="alert"
+                aria-labelledby="check-in-medical-heading"
+                className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
+              >
+                <div className="flex items-center gap-2">
+                  <HugeiconsIcon icon={AlertCircleIcon} className="size-5 shrink-0" />
+                  <h2 id="check-in-medical-heading" className="font-semibold">
+                    Atención: información médica
+                  </h2>
+                </div>
+                <p className="mt-2 text-sm">
+                  Revisa estos datos antes de confirmar la llegada.
+                </p>
+                <dl className="mt-4 grid gap-3">
+                  {medicalDetails.map(({ label, value }) => (
+                    <div key={label} className="min-w-0">
+                      <dt className="text-xs font-semibold">{label}</dt>
+                      <dd className="mt-1 whitespace-pre-wrap break-words text-sm">
+                        {value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            ) : null}
 
             <section
               className="rounded-xl border bg-card p-4"

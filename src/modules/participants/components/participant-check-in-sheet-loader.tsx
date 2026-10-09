@@ -39,6 +39,9 @@ export async function ParticipantCheckInSheetLoader({
         shirtSize: participant.shirtSize,
         companyName: participant.companyName,
         roomName: participant.roomName,
+        chronicCondition: participant.chronicCondition,
+        medicalTreatment: participant.medicalTreatment,
+        medicalNotes: participant.medicalNotes,
         arrived: Boolean(participant.checkedInAt),
         counselors: participant.counselors,
       }}
