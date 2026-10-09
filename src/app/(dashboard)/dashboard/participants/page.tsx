@@ -5,6 +5,7 @@ import { requireParticipantDirectoryAccess } from "@/modules/auth/server/session
 import {
   canDeleteParticipants,
   canManageParticipants,
+  hasRole,
 } from "@/modules/auth/roles";
 import { ParticipantDirectory } from "@/modules/participants/components/participant-directory.client";
 import { listParticipantAgeOptions } from "@/modules/participants/server/queries";
@@ -26,6 +27,7 @@ export default async function ParticipantsPage() {
     <div className="flex min-h-full flex-col gap-5">
       <ParticipantDirectory
         canManage={canManageParticipants(session.user.role)}
+        canEditAssignments={hasRole(session.user.role, "admin")}
         canDelete={canDeleteParticipants(session.user.role)}
         companies={companies}
         wards={wards}
