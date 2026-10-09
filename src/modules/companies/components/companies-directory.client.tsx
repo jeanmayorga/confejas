@@ -23,6 +23,7 @@ import UserCheck01Icon from "@hugeicons/core-free-icons/UserCheck01Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { parseAsString, useQueryState } from "nuqs";
 
 import { DashboardPageSidebar } from "@/modules/dashboard/components/dashboard-page-sidebar.client";
 import {
@@ -361,27 +362,23 @@ export function CompaniesDirectory({
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
   const directoryRef = useRef<HTMLDivElement>(null);
-  const [activeCompanyId, setActiveCompanyId] = useState("");
+  const [activeCompanyId, setActiveCompanyId] = useQueryState(
+    "company",
+    parseAsString.withDefault("").withOptions({
+      history: "push", shallow: true, scroll: false,
+    }),
+  );
   const [participantSheet, setParticipantSheet] = useState<{
     id: string;
     mode: "view" | "edit";
   } | null>(null);
-  const [participantSearch, setParticipantSearch] = useState("");
+  const [participantSearch, setParticipantSearch] = useQueryState(
+    "search",
+    parseAsString.withDefault(""),
+  );
   const normalizedParticipantSearch = normalizeParticipantName(participantSearch);
   const hasParticipantSearch = normalizedParticipantSearch.length > 0;
 
-  // Each visit starts at the first company, including old bookmarked selections.
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    if (url.searchParams.has("company")) {
-      url.searchParams.delete("company");
-      window.history.replaceState(
-        null,
-        "",
-        `${url.pathname}${url.search}${url.hash}`,
-      );
-    }
-  }, []);
   const queryClient = useQueryClient();
   const [draggedParticipant, setDraggedParticipant] =
     useState<DraggedCompanyParticipants | null>(null);
@@ -1121,7 +1118,10 @@ function UnassignedParticipantsPanel({
 }) {
   const listViewportRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useQueryState(
+    "unassignedSearch",
+    parseAsString.withDefault(""),
+  );
   const [status, setStatus] = useState<UnassignedStatusFilterValue>("all");
   const deferredSearch = useDeferredValue(search);
   const unassignedParticipantsQuery = useInfiniteQuery({
@@ -1523,7 +1523,10 @@ function CompanyCard({
   const [openActionsParticipantId, setOpenActionsParticipantId] = useState<
     string | null
   >(null);
-  const [companySearch, setCompanySearch] = useState("");
+  const [companySearch, setCompanySearch] = useQueryState(
+    "participantSearch",
+    parseAsString.withDefault(""),
+  );
   const [participantFilters, setParticipantFilters] =
     useState<CompanyParticipantFilterValues>(DEFAULT_COMPANY_PARTICIPANT_FILTERS);
   const [participantSort, setParticipantSort] =

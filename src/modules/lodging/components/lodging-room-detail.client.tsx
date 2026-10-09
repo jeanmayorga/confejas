@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { parseAsString, useQueryState } from "nuqs";
 import { type DragEvent, useState } from "react";
 import ArrowDown01Icon from "@hugeicons/core-free-icons/ArrowDown01Icon";
 import DragDropVerticalIcon from "@hugeicons/core-free-icons/DragDropVerticalIcon";
@@ -134,7 +135,10 @@ export function LodgingRoomDetail({
   onDragLeave: (event: DragEvent<HTMLDivElement>) => void;
   onDrop: (event: DragEvent<HTMLDivElement>) => void;
 }) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useQueryState(
+    "participantSearch",
+    parseAsString.withDefault(""),
+  );
   const [filters, setFilters] = useState(DEFAULT_COMPANY_PARTICIPANT_FILTERS);
   const [sort, setSort] = useState(DEFAULT_COMPANY_PARTICIPANT_SORT);
   const [selecting, setSelecting] = useState(false);
