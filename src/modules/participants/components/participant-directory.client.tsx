@@ -123,7 +123,7 @@ function getDirectoryQueryString(queryState: {
 
 function ParticipantDirectoryLoading() {
   return (
-    <Table className="min-w-[980px]" aria-label="Cargando participantes">
+    <Table className="min-w-[1160px]" aria-label="Cargando participantes">
       <TableHeader>
         <TableRow>
           <TableHead className="w-16">ID</TableHead>
@@ -131,7 +131,8 @@ function ParticipantDirectoryLoading() {
           <TableHead className="min-w-56">Participante</TableHead>
           <TableHead className="min-w-20">Edad</TableHead>
           <TableHead className="min-w-36">Compañía</TableHead>
-          <TableHead className="min-w-28">Alojamiento</TableHead>
+          <TableHead className="min-w-28">Edificio</TableHead>
+          <TableHead className="min-w-36">Dormitorio</TableHead>
           <TableHead className="min-w-32">Estaca</TableHead>
           <TableHead className="min-w-28">Barrio</TableHead>
           <TableHead className="w-24">Acciones</TableHead>
@@ -159,6 +160,9 @@ function ParticipantDirectoryLoading() {
             </TableCell>
             <TableCell>
               <Skeleton className="h-3 w-24" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-3 w-28" />
             </TableCell>
             <TableCell>
               <Skeleton className="h-3 w-28" />

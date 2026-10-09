@@ -159,6 +159,9 @@ function ParticipantTableLoadingRows() {
         <Skeleton className="h-3 w-28" />
       </TableCell>
       <TableCell>
+        <Skeleton className="h-3 w-28" />
+      </TableCell>
+      <TableCell>
         <Skeleton className="h-3 w-24" />
       </TableCell>
       <TableCell>
@@ -519,7 +522,7 @@ export function ParticipantsTable({
 
   return (
     <>
-      <Table className="min-w-[1420px] table-fixed">
+      <Table className="min-w-[1600px] table-fixed">
         <colgroup>
           <col className="w-[65px]" />
           <col className="w-[177px]" />
@@ -527,6 +530,7 @@ export function ParticipantsTable({
           <col className="w-[93px]" />
           <col className="w-[168px]" />
           <col className="w-[130px]" />
+          <col className="w-[180px]" />
           <col className="w-[148px]" />
           <col className="w-[195px]" />
           <col className="w-[98px]" />
@@ -563,8 +567,9 @@ export function ParticipantsTable({
               sort={sort}
               onSortChange={onSortChange}
             />
+            <TableHead>Edificio</TableHead>
             <SortableTableHead
-              label="Alojamiento"
+              label="Dormitorio"
               field="room"
               sort={sort}
               onSortChange={onSortChange}
@@ -591,6 +596,11 @@ export function ParticipantsTable({
             const hasAssignedRoom = Boolean(
               roomName && roomName.toLocaleLowerCase() !== "sin asignar",
             );
+            const lodgingParts = hasAssignedRoom
+              ? roomName?.match(/^(.*) · ((?:Dormitorio|Habitación) .+)$/)
+              : null;
+            const buildingName = lodgingParts?.[1]?.trim() || null;
+            const bedroomName = lodgingParts?.[2]?.trim() || roomName;
 
             return (
               <TableRow
@@ -665,11 +675,24 @@ export function ParticipantsTable({
                   )}
                 </TableCell>
                 <TableCell className="max-w-0 overflow-hidden">
-                  {hasAssignedRoom ? (
-                    <span className="inline-flex max-w-full items-center gap-1.5 truncate text-primary [&>svg]:size-3.5 [&>svg]:shrink-0">
-                      <HugeiconsIcon icon={Building03Icon} />
-                      {roomName}
+                  {buildingName ? (
+                    <span
+                      title={buildingName}
+                      className="inline-flex max-w-full items-center gap-1.5 text-primary [&>svg]:size-3.5 [&>svg]:shrink-0"
+                    >
+                      <HugeiconsIcon icon={Building03Icon} aria-hidden />
+                      <span className="truncate">{buildingName}</span>
                     </span>
+                  ) : (
+                    <span className="text-muted-foreground">Sin asignar</span>
+                  )}
+                </TableCell>
+                <TableCell
+                  className="max-w-0 truncate overflow-hidden"
+                  title={hasAssignedRoom ? bedroomName ?? undefined : undefined}
+                >
+                  {hasAssignedRoom ? (
+                    bedroomName
                   ) : (
                     <span className="text-muted-foreground">Sin asignar</span>
                   )}
