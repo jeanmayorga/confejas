@@ -56,8 +56,8 @@ export function getLodgingRoomName(buildingName: string, roomNumber: number) {
   return `${buildingName} · Dormitorio ${roomNumber}`;
 }
 
-export async function getLodgingOverview() {
-  const [rows, participantRows] = await Promise.all([
+export async function getLodgingOverview({ summaryOnly = false } = {}) {
+  const [rows, participantRows, roomCounts] = await Promise.all([
     db
       .select({
         buildingId: lodgingBuildings.id,
@@ -71,30 +71,43 @@ export async function getLodgingOverview() {
       .from(lodgingBuildings)
       .leftJoin(lodgingRooms, eq(lodgingRooms.buildingId, lodgingBuildings.id))
       .orderBy(asc(lodgingBuildings.position), asc(lodgingRooms.number)),
-    db
-      .select({
-        id: participants.id,
-        firstNames: participants.firstNames,
-        lastNames: participants.lastNames,
-        preferredName: participants.preferredName,
-        age: sql<
-          number | null
-        >`extract(year from age(current_date, ${participants.birthDate}))::integer`,
-        sex: participants.sex,
-        status: participants.status,
-        wardName: wards.name,
-        stakeName: stakes.name,
-        roomName: participants.roomName,
-      })
-      .from(participants)
-      .innerJoin(wards, eq(participants.wardId, wards.id))
-      .innerJoin(stakes, eq(wards.stakeId, stakes.id))
-      .orderBy(
-        asc(participants.firstNames),
-        asc(participants.lastNames),
-        asc(participants.id),
-      ),
+    summaryOnly
+      ? Promise.resolve([])
+      : db
+          .select({
+            id: participants.id,
+            firstNames: participants.firstNames,
+            lastNames: participants.lastNames,
+            preferredName: participants.preferredName,
+            age: sql<
+              number | null
+            >`extract(year from age(current_date, ${participants.birthDate}))::integer`,
+            sex: participants.sex,
+            status: participants.status,
+            wardName: wards.name,
+            stakeName: stakes.name,
+            roomName: participants.roomName,
+          })
+          .from(participants)
+          .innerJoin(wards, eq(participants.wardId, wards.id))
+          .innerJoin(stakes, eq(wards.stakeId, stakes.id))
+          .orderBy(
+            asc(participants.firstNames),
+            asc(participants.lastNames),
+            asc(participants.id),
+          ),
+    summaryOnly
+      ? db
+          .select({ roomName: participants.roomName, value: count() })
+          .from(participants)
+          .innerJoin(wards, eq(participants.wardId, wards.id))
+          .innerJoin(stakes, eq(wards.stakeId, stakes.id))
+          .groupBy(participants.roomName)
+      : Promise.resolve([]),
   ]);
+  const countsByRoom = new Map(
+    roomCounts.map((row) => [row.roomName, row.value]),
+  );
   const assignmentsByRoom = new Map<string, LodgingParticipantSummary[]>();
 
   for (const participant of participantRows) {
@@ -138,7 +151,9 @@ export async function getLodgingOverview() {
 
     const name = getLodgingRoomName(row.buildingName, row.roomNumber);
     const occupants = assignmentsByRoom.get(name) ?? [];
-    const assignedParticipants = occupants.length;
+    const assignedParticipants = summaryOnly
+      ? (countsByRoom.get(name) ?? 0)
+      : occupants.length;
     const availableParticipantCapacity = Math.max(
       0,
       row.participantCapacity - assignedParticipants,
@@ -174,9 +189,16 @@ export async function getLodgingOverview() {
       ),
     ),
   );
-  const staffAssignedCount = participantRows.filter(
-    (person) => person.roomName && staffNames.has(person.roomName),
-  ).length;
+  const staffAssignedCount = summaryOnly
+    ? roomCounts.reduce(
+        (total, row) =>
+          total +
+          (row.roomName && staffNames.has(row.roomName) ? row.value : 0),
+        0,
+      )
+    : participantRows.filter(
+        (person) => person.roomName && staffNames.has(person.roomName),
+      ).length;
   const unassignedParticipants = participantRows
     .filter(
       (participant) =>
@@ -224,7 +246,9 @@ export async function getLodgingOverview() {
       participants: 0,
       coordinators: 0,
       total: 0,
-      registeredParticipants: participantRows.length,
+      registeredParticipants: summaryOnly
+        ? roomCounts.reduce((total, row) => total + row.value, 0)
+        : participantRows.length,
       assignedParticipants: 0,
       availableParticipantCapacity: 0,
       bySex: {

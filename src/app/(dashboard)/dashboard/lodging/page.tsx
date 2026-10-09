@@ -10,13 +10,14 @@ export const metadata: Metadata = {
 
 export default async function LodgingPage() {
   const session = await requireParticipantDirectoryAccess();
-  const { buildings, unassignedParticipants } = await getLodgingOverview();
+  const { buildings, totals } = await getLodgingOverview({ summaryOnly: true });
   const canManage = canManageParticipants(session.user.role);
 
   return (
     <LodgingBoard
       buildings={buildings}
-      unassignedParticipants={unassignedParticipants}
+      unassignedCount={totals.unassignedParticipants}
+      revision={crypto.randomUUID()}
       canManage={canManage}
     />
   );

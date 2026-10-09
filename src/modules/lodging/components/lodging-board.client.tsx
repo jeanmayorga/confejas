@@ -1,13 +1,19 @@
 "use client";
 
-import {
-  type DragEvent,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { type DragEvent, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import type { LodgingListInput } from "../board-pagination";
+import {
+  getLodgingRoomOccupantsAction,
+  searchLodgingRoomsAction,
+} from "../server/board-actions";
+import {
+  LodgingPagination,
+  useDebouncedLodgingSearch,
+  useLodgingDesktop,
+  useUnassignedLodgingPage,
+} from "./lodging-data.client";
 import { useRouter } from "next/navigation";
 import Add01Icon from "@hugeicons/core-free-icons/Add01Icon";
 import BedBunkIcon from "@hugeicons/core-free-icons/BedBunkIcon";
@@ -68,9 +74,7 @@ import { ParticipantDetailSheet } from "@/modules/participants/components/partic
 import { DEFAULT_COMPANY_PARTICIPANT_FILTERS } from "@/modules/companies/components/company-participant-filters.client";
 import { setParticipantDragPreview } from "@/modules/companies/components/participant-drag-preview";
 import {
-  applyOptimisticLodgingMove,
   getLodgingMoveUnavailableReason,
-  isLodgingMoveReflected,
   type LodgingParticipantMove,
 } from "../participant-move";
 import { moveLodgingParticipantsAction } from "../server/actions";
@@ -88,14 +92,14 @@ import {
   getInitials,
   normalizeSearch,
   ParticipantStatusBadge,
-  matchesLodgingParticipant,
   type DraggedLodgingParticipants,
   type LodgingRoomTarget,
 } from "./lodging-participant-ui.client";
 
 type LodgingBoardProps = {
   buildings: LodgingBuildingOverview[];
-  unassignedParticipants: LodgingParticipantSummary[];
+  unassignedCount: number;
+  revision: string;
   canManage: boolean;
 };
 
@@ -103,8 +107,6 @@ type ActiveRoom = LodgingRoomOverview & {
   buildingName: string;
   buildingSex: LodgingSex;
 };
-
-type PendingLodgingMove = LodgingParticipantMove & { id: number };
 
 type RequestedLodgingMove = LodgingParticipantMove;
 
@@ -118,7 +120,8 @@ const sexPresentation = {
 
 export function LodgingBoard({
   buildings,
-  unassignedParticipants,
+  unassignedCount,
+  revision,
   canManage,
 }: LodgingBoardProps) {
   const router = useRouter();
@@ -145,12 +148,6 @@ export function LodgingBoard({
     null,
   );
   const [isUnassignedDropTarget, setIsUnassignedDropTarget] = useState(false);
-  const [pendingMoves, setPendingMoves] = useState<PendingLodgingMove[]>([]);
-  const [sourceOverview, setSourceOverview] = useState({
-    buildings,
-    unassignedParticipants,
-  });
-  const nextPendingMoveIdRef = useRef(0);
   const [requestedChange, setRequestedChange] =
     useState<RequestedLodgingMove | null>(null);
   const [pickerParticipants, setPickerParticipants] = useState<
@@ -164,46 +161,65 @@ export function LodgingBoard({
   } | null>(null);
   const [refreshing, startTransition] = useTransition();
 
-  if (
-    sourceOverview.buildings !== buildings ||
-    sourceOverview.unassignedParticipants !== unassignedParticipants
-  ) {
-    setSourceOverview({ buildings, unassignedParticipants });
-    // Retire saved moves so a later edit or reorganization stays authoritative.
-    setPendingMoves((current) =>
-      current.filter(
-        (move) =>
-          !isLodgingMoveReflected(buildings, unassignedParticipants, move),
-      ),
-    );
-  }
-
-  const dragDisabled = !canManage || moving || refreshing;
-  const displayedOverview = useMemo(
-    () =>
-      pendingMoves.reduce(
-        (current, move) =>
-          isLodgingMoveReflected(
-            current.buildings,
-            current.unassignedParticipants,
-            move,
-          )
-            ? current
-            : applyOptimisticLodgingMove(
-                current.buildings,
-                current.unassignedParticipants,
-                move,
-              ),
-        { buildings, unassignedParticipants },
-      ),
-    [buildings, pendingMoves, unassignedParticipants],
+  const isDesktop = useLodgingDesktop();
+  const [unassignedInput, setUnassignedInput] = useState<LodgingListInput>({
+    page: 1,
+    search: "",
+    filters: DEFAULT_COMPANY_PARTICIPANT_FILTERS,
+  });
+  const unassignedQuery = useUnassignedLodgingPage(
+    unassignedInput,
+    revision,
+    isDesktop || mobilePanelOpen,
   );
-  const displayedRooms = useMemo(
-    () =>
-      displayedOverview.buildings.flatMap((building) =>
-        building.rooms.map((room) => ({ ...room, buildingSex: building.sex })),
-      ),
-    [displayedOverview.buildings],
+  const roomId = selectedRoomId ?? buildings[0]?.rooms[0]?.id;
+  const roomQuery = useQuery({
+    queryKey: ["lodging-room", revision, roomId],
+    queryFn: () => getLodgingRoomOccupantsAction(roomId!),
+    enabled: roomId !== undefined,
+    gcTime: 0,
+    retry: false,
+  });
+  const navigationSearch = useDebouncedLodgingSearch(participantSearch);
+  const navigationMatches = useQuery({
+    queryKey: ["lodging-search", revision, navigationSearch],
+    queryFn: () => searchLodgingRoomsAction(navigationSearch),
+    enabled: Boolean(navigationSearch.trim()),
+    gcTime: 0,
+    retry: false,
+  });
+  const [assignmentPage, setAssignmentPage] = useState(1);
+  const assignmentQuery = useUnassignedLodgingPage(
+    {
+      page: assignmentPage,
+      search,
+      filters: {
+        ...DEFAULT_COMPANY_PARTICIPANT_FILTERS,
+        sex: activeRoom?.buildingSex ?? "all",
+      },
+    },
+    revision,
+    activeRoom !== null,
+  );
+  const eligibleParticipants = assignmentQuery.searching
+    ? []
+    : (assignmentQuery.data?.items ?? []);
+  const dragDisabled =
+    !canManage || moving || refreshing || roomQuery.isFetching;
+  const displayedOverview = {
+    buildings: buildings.map((building) => ({
+      ...building,
+      rooms: building.rooms.map((room) => ({
+        ...room,
+        occupants: room.id === roomId ? (roomQuery.data ?? []) : [],
+      })),
+    })),
+    unassignedParticipants: unassignedQuery.searching
+      ? []
+      : (unassignedQuery.data?.items ?? []),
+  };
+  const displayedRooms = displayedOverview.buildings.flatMap((building) =>
+    building.rooms.map((room) => ({ ...room, buildingSex: building.sex })),
   );
   const currentRoom =
     displayedRooms.find((room) => room.id === selectedRoomId) ??
@@ -225,18 +241,14 @@ export function LodgingBoard({
           normalizeSearch(
             `Edificio ${building.name} Dormitorio ${room.number}`,
           ).includes(navigationQuery) ||
-          room.occupants.some((participant) =>
-            matchesLodgingParticipant(
-              participant,
-              navigationQuery,
-              DEFAULT_COMPANY_PARTICIPANT_FILTERS,
-            ),
-          ),
+          (navigationSearch === participantSearch &&
+            navigationMatches.data?.includes(room.name)),
       ),
     }))
     .filter((building) => building.rooms.length > 0);
 
   function selectRoom(roomId: number) {
+    if (moving || refreshing) return;
     setSelectedRoomId(roomId);
     setSelectedRoomParticipantIds(new Set());
     setOpenMobile(false);
@@ -263,35 +275,12 @@ export function LodgingBoard({
             requestedTarget,
           );
 
-  const eligibleParticipants = useMemo(() => {
-    if (!activeRoom) {
-      return [];
-    }
-
-    const expectedSex =
-      sexPresentation[activeRoom.buildingSex].participantValue;
-    const normalizedSearch = normalizeSearch(search);
-
-    return displayedOverview.unassignedParticipants.filter((participant) => {
-      if (participant.sex !== expectedSex) {
-        return false;
-      }
-
-      if (!normalizedSearch) {
-        return true;
-      }
-
-      return normalizeSearch(
-        `${participant.firstNames} ${participant.lastNames} ${participant.preferredName ?? ""} ${participant.wardName}`,
-      ).includes(normalizedSearch);
-    });
-  }, [activeRoom, displayedOverview.unassignedParticipants, search]);
-
   function openAssignmentDialog(
     building: LodgingBuildingOverview,
     room: LodgingRoomOverview,
   ) {
     setSearch("");
+    setAssignmentPage(1);
     setSelectedParticipantId(null);
     setActiveRoom({
       ...room,
@@ -337,12 +326,6 @@ export function LodgingBoard({
       return;
     }
 
-    const move: PendingLodgingMove = {
-      id: nextPendingMoveIdRef.current++,
-      participants,
-      targetRoomName,
-    };
-    setPendingMoves((current) => [...current, move]);
     setMoving(true);
 
     const operation = moveLodgingParticipantsAction(
@@ -351,25 +334,18 @@ export function LodgingBoard({
         roomName: participant.roomName,
       })),
       targetRoomName,
-    )
-      .then((result) => {
-        if (!result.success) throw new Error(result.message);
+    ).then((result) => {
+      if (!result.success) throw new Error(result.message);
 
-        setSelectedRoomParticipantIds(new Set());
-        setSelectedUnassignedParticipantIds(new Set());
-        setActiveRoom(null);
-        setSearch("");
-        setSelectedParticipantId(null);
-        startTransition(() => router.refresh());
+      setSelectedRoomParticipantIds(new Set());
+      setSelectedUnassignedParticipantIds(new Set());
+      setActiveRoom(null);
+      setSearch("");
+      setSelectedParticipantId(null);
+      startTransition(() => router.refresh());
 
-        return result;
-      })
-      .catch((error: unknown) => {
-        setPendingMoves((current) =>
-          current.filter((item) => item.id !== move.id),
-        );
-        throw error;
-      });
+      return result;
+    });
 
     const participantLabel =
       participants.length === 1
@@ -551,6 +527,24 @@ export function LodgingBoard({
   function renderUnassignedPanel(inSheet: boolean) {
     return (
       <LodgingUnassignedPanel
+        remote={{
+          input: unassignedInput,
+          total: unassignedQuery.data?.total ?? 0,
+          page: unassignedQuery.data?.page ?? unassignedInput.page,
+          ages: unassignedQuery.data?.ages ?? [],
+          loading:
+            unassignedQuery.isPending ||
+            unassignedQuery.isFetching ||
+            unassignedQuery.searching,
+          error: unassignedQuery.isError,
+          retry: () => {
+            void unassignedQuery.refetch();
+          },
+          onChange: (input) => {
+            setUnassignedInput(input);
+            setSelectedUnassignedParticipantIds(new Set());
+          },
+        }}
         onOpenRequest={openParticipant}
         participants={displayedOverview.unassignedParticipants}
         rooms={displayedRooms}
@@ -558,7 +552,11 @@ export function LodgingBoard({
         draggedParticipant={draggedParticipant}
         selectedParticipantIds={selectedUnassignedParticipantIds}
         isDropTarget={isUnassignedDropTarget}
-        dragDisabled={dragDisabled}
+        dragDisabled={
+          dragDisabled ||
+          unassignedQuery.isFetching ||
+          unassignedQuery.searching
+        }
         onParticipantSelectionChange={(participantId, checked) =>
           handleSelectionChange(
             setSelectedUnassignedParticipantIds,
@@ -600,7 +598,11 @@ export function LodgingBoard({
     >
       <DashboardPageSidebar path="/dashboard/lodging">
         <div className="px-3 pb-3">
-          <Button variant="outline" className="w-full" render={<Link href="/dashboard/lodging/counselors" />}>
+          <Button
+            variant="outline"
+            className="w-full"
+            render={<Link href="/dashboard/lodging/counselors" />}
+          >
             Habitaciones de staff
           </Button>
         </div>
@@ -609,9 +611,7 @@ export function LodgingBoard({
             <LodgingAutoAssignDialog
               appearance="sidebar"
               assignedCount={assignedCount}
-              registeredCount={
-                assignedCount + displayedOverview.unassignedParticipants.length
-              }
+              registeredCount={assignedCount + unassignedCount}
             />
           </div>
         ) : null}
@@ -629,6 +629,21 @@ export function LodgingBoard({
             />
           </InputGroup>
         </div>
+        {participantSearch.trim() &&
+        (navigationMatches.isFetching ||
+          navigationSearch !== participantSearch) ? (
+          <p className="px-3 text-sm" role="status">
+            Buscando…
+          </p>
+        ) : null}
+        {participantSearch.trim() && navigationMatches.isError ? (
+          <Button
+            variant="ghost"
+            onClick={() => void navigationMatches.refetch()}
+          >
+            No se pudo buscar. Reintentar
+          </Button>
+        ) : null}
         <SidebarContent className="gap-4 px-2 pb-3">
           <nav
             aria-label="Edificios y dormitorios"
@@ -714,7 +729,18 @@ export function LodgingBoard({
         </SidebarFooter>
       </DashboardPageSidebar>
       <div className="min-w-0 p-4 pb-24 sm:p-6 sm:pb-24 xl:p-8">
-        {currentRoom && currentBuilding ? (
+        {roomId && roomQuery.isPending ? (
+          <p role="status" className="p-6">
+            Cargando dormitorio…
+          </p>
+        ) : roomQuery.isError ? (
+          <div role="alert" className="p-6">
+            No se pudo cargar el dormitorio.{" "}
+            <Button variant="outline" onClick={() => void roomQuery.refetch()}>
+              Reintentar
+            </Button>
+          </div>
+        ) : currentRoom && currentBuilding ? (
           <LodgingRoomDetail
             key={currentRoom.id}
             building={currentBuilding}
@@ -781,30 +807,34 @@ export function LodgingBoard({
           </Empty>
         )}
       </div>
-      <aside
-        aria-label="Participantes sin alojamiento"
-        className="sticky top-0 hidden h-(--dashboard-content-height) min-h-0 flex-col border-l bg-sidebar text-sidebar-foreground xl:flex"
-      >
-        <h2 className="flex min-h-14 shrink-0 items-center px-4 text-sm font-semibold">
-          Participantes sin alojamiento
-        </h2>
-        {renderUnassignedPanel(false)}
-      </aside>
-      <MobileUnassignedSheet
-        title="Participantes sin alojamiento"
-        description="Busca participantes para asignarlos a un dormitorio."
-        icon={
-          <HugeiconsIcon
-            icon={BedBunkIcon}
-            strokeWidth={1.5}
-            data-icon="inline-start"
-          />
-        }
-        open={mobilePanelOpen}
-        onOpenChange={setMobilePanelOpen}
-      >
-        {mobilePanelOpen ? renderUnassignedPanel(true) : null}
-      </MobileUnassignedSheet>
+      {isDesktop ? (
+        <aside
+          aria-label="Participantes sin alojamiento"
+          className="sticky top-0 hidden h-(--dashboard-content-height) min-h-0 flex-col border-l bg-sidebar text-sidebar-foreground xl:flex"
+        >
+          <h2 className="flex min-h-14 shrink-0 items-center px-4 text-sm font-semibold">
+            Participantes sin alojamiento
+          </h2>
+          {renderUnassignedPanel(false)}
+        </aside>
+      ) : null}
+      {!isDesktop ? (
+        <MobileUnassignedSheet
+          title="Participantes sin alojamiento"
+          description="Busca participantes para asignarlos a un dormitorio."
+          icon={
+            <HugeiconsIcon
+              icon={BedBunkIcon}
+              strokeWidth={1.5}
+              data-icon="inline-start"
+            />
+          }
+          open={mobilePanelOpen}
+          onOpenChange={setMobilePanelOpen}
+        >
+          {mobilePanelOpen ? renderUnassignedPanel(true) : null}
+        </MobileUnassignedSheet>
+      ) : null}
       <ParticipantDetailSheet
         key={
           participantSheet
@@ -963,6 +993,7 @@ export function LodgingBoard({
                   disabled={moving}
                   onChange={(event) => {
                     setSearch(event.target.value);
+                    setAssignmentPage(1);
                     setSelectedParticipantId(null);
                   }}
                 />
@@ -971,7 +1002,16 @@ export function LodgingBoard({
           </FieldGroup>
 
           <div className="max-h-80 overflow-y-auto pr-1">
-            {eligibleParticipants.length > 0 ? (
+            {assignmentQuery.isPending || assignmentQuery.searching ? (
+              <p role="status">Buscando participantes…</p>
+            ) : assignmentQuery.isError ? (
+              <div role="alert">
+                No se pudo cargar la lista.{" "}
+                <Button onClick={() => void assignmentQuery.refetch()}>
+                  Reintentar
+                </Button>
+              </div>
+            ) : eligibleParticipants.length > 0 ? (
               <div className="flex flex-col gap-1">
                 {eligibleParticipants.map((participant) => {
                   const selected = selectedParticipantId === participant.id;
@@ -1029,6 +1069,18 @@ export function LodgingBoard({
             )}
           </div>
 
+          <LodgingPagination
+            page={assignmentQuery.data?.page ?? assignmentPage}
+            total={assignmentQuery.data?.total ?? 0}
+            disabled={
+              moving || assignmentQuery.isFetching || assignmentQuery.searching
+            }
+            onPageChange={(page) => {
+              setAssignmentPage(page);
+              setSelectedParticipantId(null);
+            }}
+          />
+
           <DialogFooter>
             <DialogClose
               render={<Button variant="outline" disabled={moving} />}
@@ -1037,13 +1089,18 @@ export function LodgingBoard({
             </DialogClose>
             <Button
               type="button"
-              disabled={!selectedParticipantId || !activeRoom || dragDisabled}
+              disabled={
+                !selectedParticipantId ||
+                !activeRoom ||
+                dragDisabled ||
+                assignmentQuery.isFetching ||
+                assignmentQuery.searching
+              }
               onClick={() => {
                 if (selectedParticipantId && activeRoom) {
-                  const participant =
-                    displayedOverview.unassignedParticipants.find(
-                      (item) => item.id === selectedParticipantId,
-                    );
+                  const participant = eligibleParticipants.find(
+                    (item) => item.id === selectedParticipantId,
+                  );
                   if (participant)
                     moveParticipants([participant], activeRoom.name);
                 }
