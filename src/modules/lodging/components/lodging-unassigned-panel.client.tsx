@@ -264,6 +264,12 @@ export function LodgingUnassignedPanel({
                         {getAgeLabel(participant.age)} ·{" "}
                         {getSexLabel(participant.sex)}
                       </span>
+                      <span className="mt-1 block break-words text-xs text-muted-foreground">
+                        Estaca: {participant.stakeName}
+                      </span>
+                      <span className="block break-words text-xs text-muted-foreground">
+                        Barrio: {participant.wardName}
+                      </span>
                     </span>
                   </button>
                   <div className="mt-2">
