@@ -306,9 +306,11 @@ export function LodgingBoard({
     setSelectedRoomId(roomId);
     setSelectedRoomParticipantIds(new Set());
     setOpenMobile(false);
-    directoryRef.current
-      ?.closest("[data-dashboard-scroll]")
-      ?.scrollTo({ top: 0, behavior: "instant" });
+    if (window.matchMedia("(min-width: 768px)").matches) {
+      directoryRef.current?.scrollTo({ top: 0, behavior: "instant" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
   }
 
   const requestedTarget = displayedRooms.find(
@@ -647,8 +649,7 @@ export function LodgingBoard({
 
   return (
     <div
-      ref={directoryRef}
-      className="grid min-h-(--dashboard-content-height) min-w-0 shrink-0 items-start xl:grid-cols-[minmax(0,1fr)_22.5rem]"
+      className="grid min-h-(--dashboard-content-height) min-w-0 shrink-0 items-start md:h-(--dashboard-content-height) md:min-h-0 md:overflow-hidden xl:grid-cols-[minmax(0,1fr)_22.5rem]"
     >
       <DashboardPageSidebar path="/dashboard/lodging">
         <div className="px-3 pb-3">
@@ -782,7 +783,13 @@ export function LodgingBoard({
           </dl>
         </SidebarFooter>
       </DashboardPageSidebar>
-      <div className="min-w-0 p-4 pb-24 sm:p-6 sm:pb-24 xl:p-8">
+      {/* Keep desktop scrolling and painting inside a bounded room viewport.
+          The adjacent panel stays outside the scrolling/clipped content. */}
+      <div
+        ref={directoryRef}
+        data-lodging-scroll
+        className="min-w-0 p-4 pb-24 sm:p-6 sm:pb-24 md:h-full md:min-h-0 md:overflow-y-auto md:overscroll-contain md:[contain:paint] xl:p-8"
+      >
         {roomId && roomQuery.isPending ? (
           <p role="status" className="p-6">
             Cargando dormitorio…
@@ -864,7 +871,7 @@ export function LodgingBoard({
       {isDesktop ? (
         <aside
           aria-label="Participantes sin alojamiento"
-          className="sticky top-0 hidden h-(--dashboard-content-height) min-h-0 flex-col border-l bg-sidebar text-sidebar-foreground xl:flex"
+          className="hidden h-(--dashboard-content-height) min-h-0 flex-col border-l bg-sidebar text-sidebar-foreground xl:flex"
         >
           <h2 className="flex min-h-14 shrink-0 items-center px-4 text-sm font-semibold">
             Participantes sin alojamiento
