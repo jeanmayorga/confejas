@@ -176,6 +176,13 @@
       "when": 1791513984537,
       "tag": "0024_friendly_sinister_six",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791554066863,
+      "tag": "0025_massive_katie_power",
+      "breakpoints": true
     }
   ]
 }

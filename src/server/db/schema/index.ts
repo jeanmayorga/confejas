@@ -4,3 +4,4 @@ export * from "../../../modules/counselors/server/schema";
 export * from "../../../modules/auth/server/schema";
 export * from "../../../modules/lodging/server/schema";
 export * from "../../../modules/participants/server/schema";
+export * from "../../../modules/attendance/server/schema";

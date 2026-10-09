@@ -172,6 +172,11 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
           href: "/dashboard/check-in",
           icon: QrCodeScanIcon,
         },
+        {
+          title: "Asistencia",
+          href: "/dashboard/attendance",
+          icon: UserGroupIcon,
+        },
       ]
     : [];
   const managementNavigation = [
