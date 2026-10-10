@@ -15,6 +15,7 @@ import ArrowDown02Icon from "@hugeicons/core-free-icons/ArrowDown02Icon";
 import ArrowUpDownIcon from "@hugeicons/core-free-icons/ArrowUpDownIcon";
 import ArrowUp02Icon from "@hugeicons/core-free-icons/ArrowUp02Icon";
 import ExternalLinkIcon from "@hugeicons/core-free-icons/ExternalLinkIcon";
+import PencilEdit02Icon from "@hugeicons/core-free-icons/PencilEdit02Icon";
 import UserGroupIcon from "@hugeicons/core-free-icons/UserGroupIcon";
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -670,14 +671,15 @@ export function ParticipantsTable({
                       variant="link"
                       className="h-auto max-w-full justify-start p-0"
                       aria-label={`Cambiar compañía de ${participantName}`}
+                      title="Editar compañía"
                       onClick={(event) => {
                         event.stopPropagation();
                         setAssignmentTarget({ participant, kind: "company" });
                       }}
                       onKeyDown={(event) => event.stopPropagation()}
                     >
-                      <HugeiconsIcon icon={UserGroupIcon} data-icon="inline-start" />
                       <span className="truncate">{participant.companyName || "Sin asignar"}</span>
+                      <HugeiconsIcon icon={PencilEdit02Icon} data-icon="inline-end" aria-hidden="true" />
                     </Button>
                   ) : participant.companyName && participant.companyId ? (
                     <button
@@ -719,6 +721,7 @@ export function ParticipantsTable({
                       variant="link"
                       className="h-auto max-w-full justify-start p-0"
                       aria-label={`Cambiar dormitorio de ${participantName}`}
+                      title="Editar dormitorio"
                       onClick={(event) => {
                         event.stopPropagation();
                         setAssignmentTarget({ participant, kind: "room" });
@@ -726,6 +729,7 @@ export function ParticipantsTable({
                       onKeyDown={(event) => event.stopPropagation()}
                     >
                       <span className="truncate">{hasAssignedRoom ? bedroomName : "Sin asignar"}</span>
+                      <HugeiconsIcon icon={PencilEdit02Icon} data-icon="inline-end" aria-hidden="true" />
                     </Button>
                   ) : hasAssignedRoom ? (
                     bedroomName
