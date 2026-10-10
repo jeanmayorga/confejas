@@ -8,6 +8,7 @@ export type FinalReportGroup = {
 
 export type FinalReportSnapshot = {
   groups: FinalReportGroup[];
+  stakes: { id: number | null; name: string; total: number }[];
   companies: { id: string; name: string }[];
   counselors: { total: number; arrived: number; assigned: number };
   registrations: { date: string; before: number; onDay: number; after: number };
@@ -82,6 +83,13 @@ export function buildFinalReport(snapshot: FinalReportSnapshot) {
               .localeCompare(b.name.replaceAll("#", ""), "es", {
                 numeric: true,
               }),
+    ),
+    stakes: [...snapshot.stakes].sort((a, b) =>
+      a.id === null
+        ? 1
+        : b.id === null
+          ? -1
+          : b.total - a.total || a.name.localeCompare(b.name, "es"),
     ),
     counselors: snapshot.counselors,
     registrations: snapshot.registrations,
