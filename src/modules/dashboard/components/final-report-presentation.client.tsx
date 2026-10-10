@@ -192,6 +192,7 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
   const touch = useRef<{ x: number; y: number } | null>(null);
   const router = useRouter();
   const a = report.attendance;
+  const recordedAttendance = a.yes + a.no;
   const m = report.membership;
   const c = report.counselors;
   const registrations = report.registrations;
@@ -287,16 +288,15 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
       key="attendance"
       eyebrow="01 / PARTICIPACIÓN"
       title="Asistencia final"
-      note={`Base: ${report.total} participantes. Se usa la respuesta «Asistió: Sí / No» guardada en el perfil.`}
+      note={`Base: ${recordedAttendance} participantes con respuesta «Asistió: Sí / No» guardada en el perfil.`}
     >
       <Donut
-        total={report.total}
-        center={`${percent(a.yes, report.total)}%`}
+        total={recordedAttendance}
+        center={`${percent(a.yes, recordedAttendance)}%`}
         caption="asistió"
         rows={[
           { label: "Sí asistió", value: a.yes, color: colors[0] },
           { label: "No asistió", value: a.no, color: colors[1] },
-          { label: "Sin registrar", value: a.unknown, color: colors[2] },
         ]}
       />
     </Slide>,
