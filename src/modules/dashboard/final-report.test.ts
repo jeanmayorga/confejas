@@ -3,6 +3,7 @@ import { buildFinalReport, type FinalReportSnapshot } from "./final-report";
 
 const empty: FinalReportSnapshot = {
   groups: [],
+  stakes: [],
   companies: [],
   counselors: { total: 0, arrived: 0, assigned: 0 },
   registrations: { date: "2026-10-08", before: 0, onDay: 0, after: 0 },

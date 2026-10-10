@@ -11,13 +11,14 @@ import { useRouter } from "next/navigation";
 import type { FinalReport } from "../final-report";
 import styles from "./final-report.module.css";
 
-const number = new Intl.NumberFormat("es-EC");
-const format = (n: number) => number.format(n);
-const percent = (n: number, total: number) =>
-  format(total ? Math.round((n / total) * 1000) / 10 : 0);
-const colors = ["#168478", "#b96b38", "#b8c3cc"];
-
-type Series = { label: string; value: number; color: string };
+import {
+  buildFinalReportSlides,
+  formatReportNumber as format,
+  reportPercent as percent,
+  reportColors as colors,
+  type ReportSlide,
+  type ReportSeries as Series,
+} from "../final-report-slides";
 
 function Donut({
   rows,
@@ -91,23 +92,27 @@ function Donut({
   );
 }
 
-function AgeChart({ rows, max }: { rows: FinalReport["ages"]; max: number }) {
+function AgeChart({
+  rows,
+  max,
+}: {
+  rows: Extract<ReportSlide, { kind: "bars" }>["rows"];
+  max: number;
+}) {
   return (
     <div className={styles.bars} role="list" aria-label="Asistentes por edad">
-      {rows.map(({ age, total }) => (
+      {rows.map(({ label, value }) => (
         <div
-          key={age}
+          key={label}
           className={styles.barRow}
           role="listitem"
-          aria-label={`${age} años: ${total} asistentes`}
+          aria-label={`${label}: ${value} asistentes`}
         >
-          <span>
-            {age} <small>años</small>
-          </span>
+          <span>{label}</span>
           <div className={styles.track} aria-hidden="true">
-            <div style={{ width: `${(total / max) * 100}%` }} />
+            <div style={{ width: `${(value / max) * 100}%` }} />
           </div>
-          <strong>{format(total)}</strong>
+          <strong>{format(value)}</strong>
         </div>
       ))}
     </div>
@@ -118,21 +123,21 @@ function CompanyChart({
   rows,
   max,
 }: {
-  rows: FinalReport["companies"];
+  rows: Extract<ReportSlide, { kind: "bars" }>["rows"];
   max: number;
 }) {
   return (
     <div className={styles.companyChart}>
       {rows.map((row) => (
-        <div key={row.id} className={styles.companyRow}>
+        <div key={row.label} className={styles.companyRow}>
           <div>
-            <strong>{row.name}</strong>
-            <span>{format(row.total)} asistentes</span>
+            <strong>{row.label}</strong>
+            <span>{format(row.value)} asistentes</span>
           </div>
           <div className={styles.companyTrack} aria-hidden="true">
             <span
               style={{
-                width: `${(row.total / max) * 100}%`,
+                width: `${(row.value / max) * 100}%`,
                 background: colors[0],
               }}
             />
@@ -179,40 +184,42 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
   const root = useRef<HTMLDivElement>(null);
   const touch = useRef<{ x: number; y: number } | null>(null);
   const router = useRouter();
-  const a = report.attendance;
-  const recordedAttendance = a.yes + a.no;
-  const m = report.membership;
-  const c = report.counselors;
-  const registrations = report.registrations;
-  const checkIns = report.checkIns;
-  const registrationDate = new Intl.DateTimeFormat("es-EC", {
-    timeZone: "America/Guayaquil",
-    day: "numeric",
-    month: "long",
-  }).format(new Date(`${registrations.date}T12:00:00-05:00`));
+  const [exporting, setExporting] = useState(false);
+  const slideData = buildFinalReportSlides(report);
+  const titles = slideData.map((slide) => slide.label);
   const date = new Intl.DateTimeFormat("es-EC", {
     timeZone: "America/Guayaquil",
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(report.asOf));
-  const ageMax = Math.max(1, ...report.ages.map((row) => row.total));
-  const companyMax = Math.max(1, ...report.companies.map((row) => row.total));
-  const ageNote = `Base: ${a.yes} asistentes. Edad al ${report.ageDate.split("-").reverse().join("/")}. ${report.ageUnknown} sin fecha de nacimiento · ${report.ageOutsideRange} fuera de 18–35 años.`;
-  const companyPages = Array.from(
-    { length: Math.ceil(report.companies.length / 6) },
-    (_, i) => report.companies.slice(i * 6, i * 6 + 6),
-  );
-  const titles = [
-    "Resumen",
-    "Asistencia final",
-    "Membresía",
-    "Edades 18–26",
-    "Edades 27–35",
-    "Consejeros",
-    "Registros del check-in",
-    "Llegadas del check-in",
-    ...companyPages.map((_, i) => `Compañías ${i + 1}/${companyPages.length}`),
-  ];
+
+  async function exportPdf() {
+    setExporting(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/reports/final/pdf");
+      if (
+        !response.ok ||
+        !response.headers.get("content-type")?.includes("application/pdf")
+      )
+        throw new Error("PDF unavailable");
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "confejas-informe-final.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      // Allow mobile browsers time to start reading the download.
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch {
+      setMessage(
+        "No se pudo exportar el PDF. Comprueba tu conexión e inténtalo de nuevo.",
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
   const active = Math.min(index, titles.length - 1);
   function go(delta: number) {
     setIndex(Math.max(0, Math.min(titles.length - 1, active + delta)));
@@ -244,180 +251,46 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
     }
   }
 
-  const slides = [
+  const slides = slideData.map((slide) => (
     <Slide
-      key="summary"
-      eyebrow="CONFEJAS · INFORME FINAL"
-      title="Nuestra conferencia, en cifras"
-      cover
-      note="El total corresponde a participantes registrados. El equipo de servicio se muestra por separado."
+      key={slide.key}
+      eyebrow={slide.eyebrow}
+      title={slide.title}
+      note={slide.note}
+      cover={slide.kind === "summary"}
     >
-      <div className={styles.hero}>
-        <strong>{format(report.total)}</strong>
-        <span>Total de participantes registrados</span>
-      </div>
-      <dl className={styles.summary}>
-        <div>
-          <dt>Consejeros</dt>
-          <dd>{format(c.total)}</dd>
-        </div>
-        <div>
-          <dt>Compañías</dt>
-          <dd>{format(report.companyCount)}</dd>
-        </div>
-        {/* Team counts confirmed by the conference organizers. */}
-        <div>
-          <dt>Coordinadores</dt>
-          <dd>
-            4<span>2 generales · 2 auxiliares</span>
-          </dd>
-        </div>
-        <div>
-          <dt>Logística</dt>
-          <dd>
-            8<span>jóvenes</span>
-          </dd>
-        </div>
-      </dl>
-    </Slide>,
-    <Slide
-      key="attendance"
-      eyebrow="01 / PARTICIPACIÓN"
-      title="Asistencia final"
-      note={`Base: ${recordedAttendance} participantes con respuesta «Asistió: Sí / No» guardada en el perfil.`}
-    >
-      <Donut
-        total={recordedAttendance}
-        center={`${percent(a.yes, recordedAttendance)}%`}
-        caption="asistió"
-        rows={[
-          { label: "Sí asistió", value: a.yes, color: colors[0] },
-          { label: "No asistió", value: a.no, color: colors[1] },
-        ]}
-      />
-    </Slide>,
-    <Slide
-      key="membership"
-      eyebrow="02 / ASISTENTES"
-      title="Membresía de la Iglesia"
-      note={`Base: ${a.yes} participantes con «Asistió: Sí». «Sin dato» se muestra por separado.`}
-    >
-      <Donut
-        total={a.yes}
-        center={format(m.no)}
-        caption="no miembros"
-        rows={[
-          { label: "Miembros", value: m.yes, color: colors[0] },
-          { label: "No miembros", value: m.no, color: colors[1] },
-          { label: "Sin dato", value: m.unknown, color: colors[2] },
-        ]}
-      />
-    </Slide>,
-    <Slide
-      key="ages1"
-      eyebrow="03 / DISTRIBUCIÓN POR EDAD"
-      title="De 18 a 26 años"
-      note={ageNote}
-    >
-      <AgeChart rows={report.ages.slice(0, 9)} max={ageMax} />
-    </Slide>,
-    <Slide
-      key="ages2"
-      eyebrow="04 / DISTRIBUCIÓN POR EDAD"
-      title="De 27 a 35 años"
-      note={ageNote}
-    >
-      <AgeChart rows={report.ages.slice(9)} max={ageMax} />
-    </Slide>,
-    <Slide
-      key="counselors"
-      eyebrow="05 / EQUIPO"
-      title="Consejeros que asistieron"
-      note={`Base: ${c.arrived} consejeros con llegada registrada. Contabilizados por separado de los participantes.`}
-    >
-      <Donut
-        total={c.arrived}
-        center={format(c.arrived)}
-        caption="asistieron"
-        rows={[
-          {
-            label: "Con compañía asignada",
-            value: c.assigned,
-            color: colors[0],
-          },
-          {
-            label: "Sin compañía asignada",
-            value: c.arrived - c.assigned,
-            color: colors[2],
-          },
-        ]}
-      />
-    </Slide>,
-    <Slide
-      key="registrations"
-      eyebrow={`06 / REGISTROS · ${registrationDate.toLocaleUpperCase("es-EC")}`}
-      title="Registros creados el día del check-in"
-      note={`Base: ${a.yes} participantes con «Asistió: Sí». Se cuenta su fecha de creación en hora de Ecuador, no la fecha en que se marcó su llegada.`}
-    >
-      <Donut
-        total={a.yes}
-        center={format(registrations.onDay)}
-        caption={`el ${registrationDate}`}
-        rows={[
-          {
-            label: "Antes del check-in",
-            value: registrations.before,
-            color: colors[2],
-          },
-          {
-            label: `El ${registrationDate}`,
-            value: registrations.onDay,
-            color: colors[0],
-          },
-          {
-            label: "Después del check-in",
-            value: registrations.after,
-            color: colors[1],
-          },
-        ]}
-      />
-    </Slide>,
-    <Slide
-      key="check-ins"
-      eyebrow={`07 / LLEGADAS · ${registrationDate.toLocaleUpperCase("es-EC")}`}
-      title="Llegadas registradas el día del check-in"
-      note={`Base: ${a.yes} participantes con «Asistió: Sí». Llegadas confirmadas en hora de Ecuador; no se guardó si se usó QR, código o búsqueda. No es un conteo de escaneos.`}
-    >
-      <Donut
-        total={a.yes}
-        center={format(checkIns.onDay)}
-        caption={`el ${registrationDate}`}
-        rows={[
-          {
-            label: `El ${registrationDate}`,
-            value: checkIns.onDay,
-            color: colors[0],
-          },
-          { label: "En otro día", value: checkIns.otherDays, color: colors[1] },
-          {
-            label: "Sin check-in registrado",
-            value: checkIns.notRecorded,
-            color: colors[2],
-          },
-        ]}
-      />
-    </Slide>,
-    ...companyPages.map((rows, i) => (
-      <Slide
-        key={`companies-${i}`}
-        eyebrow={`08 / COMPAÑÍAS · ${i + 1} DE ${companyPages.length}`}
-        title="Asistentes por compañía"
-        note={`Base: ${a.yes} participantes con «Asistió: Sí». Las barras comparan el número de asistentes en cada compañía con la misma escala.`}
-      >
-        <CompanyChart rows={rows} max={companyMax} />
-      </Slide>
-    )),
-  ];
+      {slide.kind === "summary" ? (
+        <>
+          <div className={styles.hero}>
+            <strong>{format(slide.total)}</strong>
+            <span>Total de participantes registrados</span>
+          </div>
+          <dl className={styles.summary}>
+            {slide.stats.map((stat) => (
+              <div key={stat.label}>
+                <dt>{stat.label}</dt>
+                <dd>
+                  {format(stat.value)}
+                  {stat.detail ? <span>{stat.detail}</span> : null}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </>
+      ) : slide.kind === "donut" ? (
+        <Donut
+          rows={slide.rows}
+          total={slide.total}
+          center={slide.center}
+          caption={slide.caption}
+        />
+      ) : slide.key.startsWith("ages") ? (
+        <AgeChart rows={slide.rows} max={slide.max} />
+      ) : (
+        <CompanyChart rows={slide.rows} max={slide.max} />
+      )}
+    </Slide>
+  ));
 
   return (
     <div
@@ -457,6 +330,13 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
             onClick={() => startRefresh(() => router.refresh())}
           >
             {refreshing ? "Actualizando…" : "Actualizar"}
+          </button>
+          <button
+            onClick={exportPdf}
+            disabled={exporting}
+            aria-busy={exporting}
+          >
+            {exporting ? "Exportando…" : "Exportar PDF"}
           </button>
           <button onClick={toggleFullscreen}>
             {fullscreen ? "Salir de pantalla completa" : "Presentar"}
