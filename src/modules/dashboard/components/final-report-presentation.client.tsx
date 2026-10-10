@@ -261,28 +261,33 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
       eyebrow="CONFEJAS · INFORME FINAL"
       title="Nuestra conferencia, en cifras"
       cover
-      note="Participantes: todos los registros, incluidos los cancelados. Consejeros contabilizados por separado."
+      note="El total corresponde a participantes registrados. El equipo de servicio se muestra por separado."
     >
       <div className={styles.hero}>
-        <strong>{format(a.yes)}</strong>
-        <span>
-          participantes con
-          <br />
-          asistencia confirmada
-        </span>
+        <strong>{format(report.total)}</strong>
+        <span>Total de participantes registrados</span>
       </div>
       <dl className={styles.summary}>
         <div>
-          <dt>Participantes registrados</dt>
-          <dd>{format(report.total)}</dd>
-        </div>
-        <div>
-          <dt>Consejeros registrados</dt>
+          <dt>Consejeros</dt>
           <dd>{format(c.total)}</dd>
         </div>
         <div>
           <dt>Compañías</dt>
           <dd>{format(report.companyCount)}</dd>
+        </div>
+        {/* Team counts confirmed by the conference organizers. */}
+        <div>
+          <dt>Coordinadores</dt>
+          <dd>
+            4<span>2 generales · 2 auxiliares</span>
+          </dd>
+        </div>
+        <div>
+          <dt>Logística</dt>
+          <dd>
+            8<span>jóvenes</span>
+          </dd>
         </div>
       </dl>
     </Slide>,

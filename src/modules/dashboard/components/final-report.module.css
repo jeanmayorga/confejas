@@ -127,7 +127,7 @@
   gap: clamp(1rem, 4cqw, 4rem);
 }
 .hero > strong {
-  font-size: clamp(5rem, 13cqw, 11rem);
+  font-size: clamp(5rem, 11cqw, 9rem);
   font-weight: 550;
   letter-spacing: -0.065em;
   line-height: 1.1;
@@ -140,7 +140,7 @@
 }
 .summary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
   padding-top: clamp(1.25rem, 3cqw, 3rem);
   margin-top: clamp(1rem, 2cqw, 2rem);
@@ -154,6 +154,12 @@
   font-size: clamp(1.8rem, 4cqw, 3rem);
   margin-top: 0.4rem;
   font-variant-numeric: tabular-nums;
+}
+.summary dd span {
+  display: block;
+  font-size: clamp(0.7rem, 1.1cqw, 0.9rem);
+  color: #c1cfda;
+  line-height: 1.4;
 }
 .split {
   display: grid;
@@ -423,10 +429,11 @@
     display: none;
   }
   .summary {
-    gap: 0.65rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.85rem;
   }
   .summary dt {
-    min-height: 2rem;
+    min-height: 0;
   }
   .summary dd {
     font-size: 1.8rem;
