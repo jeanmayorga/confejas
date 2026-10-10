@@ -118,13 +118,7 @@ function AgeChart({ rows, max }: { rows: FinalReport["ages"]; max: number }) {
   );
 }
 
-function CompanyChart({
-  rows,
-  max,
-}: {
-  rows: FinalReport["companies"];
-  max: number;
-}) {
+function CompanyChart({ rows }: { rows: FinalReport["companies"] }) {
   return (
     <div className={styles.companyChart}>
       <p className={styles.chartKey}>
@@ -137,20 +131,24 @@ function CompanyChart({
           <div>
             <strong>{row.name}</strong>
             <span>
-              {row.yes} sí · {row.no} no · {row.unknown} sin registrar
+              {row.total > 0
+                ? `${row.yes} sí · ${row.no} no · ${row.unknown} sin registrar`
+                : "Sin participantes"}
             </span>
           </div>
-          <div className={styles.companyTrack} aria-hidden="true">
-            {[row.yes, row.no, row.unknown].map((value, i) => (
-              <span
-                key={i}
-                style={{
-                  width: `${(value / max) * 100}%`,
-                  background: colors[i],
-                }}
-              />
-            ))}
-          </div>
+          {row.total > 0 ? (
+            <div className={styles.companyTrack} aria-hidden="true">
+              {[row.yes, row.no, row.unknown].map((value, i) => (
+                <span
+                  key={i}
+                  style={{
+                    width: `${(value / row.total) * 100}%`,
+                    background: colors[i],
+                  }}
+                />
+              ))}
+            </div>
+          ) : null}
         </div>
       ))}
     </div>
@@ -202,7 +200,6 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
     timeStyle: "short",
   }).format(new Date(report.asOf));
   const ageMax = Math.max(1, ...report.ages.map((row) => row.total));
-  const companyMax = Math.max(1, ...report.companies.map((row) => row.total));
   const ageNote = `Edad al ${report.ageDate.split("-").reverse().join("/")}. ${report.ageUnknown} sin fecha de nacimiento · ${report.ageOutsideRange} fuera de 18–35 años.`;
   const companyPages = Array.from(
     { length: Math.ceil(report.companies.length / 6) },
@@ -361,9 +358,9 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
         key={`companies-${i}`}
         eyebrow={`06 / COMPAÑÍAS · ${i + 1} DE ${companyPages.length}`}
         title="Asistencia por compañía"
-        note="Cada barra muestra participantes registrados. Las compañías comparten la misma escala."
+        note="Cada barra representa el 100% de los participantes de esa compañía. El gris indica únicamente asistencia sin registrar."
       >
-        <CompanyChart rows={rows} max={companyMax} />
+        <CompanyChart rows={rows} />
       </Slide>
     )),
   ];

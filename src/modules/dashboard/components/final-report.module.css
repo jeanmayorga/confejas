@@ -266,9 +266,10 @@
 .companyChart {
   display: flex;
   flex-direction: column;
-  justify-content: space-evenly;
+  justify-content: space-between;
   height: 100%;
-  gap: clamp(0.5rem, 1.2cqw, 1rem);
+  min-height: 0;
+  gap: clamp(0.3rem, 0.8cqw, 0.6rem);
 }
 .chartKey {
   display: flex;
@@ -288,7 +289,8 @@
   display: flex;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.25rem;
+  line-height: 1.2;
 }
 .companyRow strong {
   font-size: clamp(0.8rem, 1.3cqw, 1rem);
@@ -299,9 +301,8 @@
   color: var(--muted);
 }
 .companyTrack {
-  height: clamp(0.65rem, 1.8cqw, 1.25rem);
+  height: clamp(0.5rem, 1cqw, 0.875rem);
   display: flex;
-  background: #e8ece7;
   overflow: hidden;
   border-radius: 3px;
 }
