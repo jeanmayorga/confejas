@@ -11,6 +11,12 @@ export type FinalReportSnapshot = {
   companies: { id: string; name: string }[];
   counselors: { total: number; arrived: number; assigned: number };
   registrations: { date: string; before: number; onDay: number; after: number };
+  checkIns: {
+    date: string;
+    onDay: number;
+    otherDays: number;
+    notRecorded: number;
+  };
   asOf: string;
   ageDate: string;
 };
@@ -86,6 +92,7 @@ export function buildFinalReport(snapshot: FinalReportSnapshot) {
     ),
     counselors: snapshot.counselors,
     registrations: snapshot.registrations,
+    checkIns: snapshot.checkIns,
     asOf: snapshot.asOf,
     ageDate: snapshot.ageDate,
   };

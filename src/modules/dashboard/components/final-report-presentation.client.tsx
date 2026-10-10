@@ -196,6 +196,7 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
   const m = report.membership;
   const c = report.counselors;
   const registrations = report.registrations;
+  const checkIns = report.checkIns;
   const registrationDate = new Intl.DateTimeFormat("es-EC", {
     timeZone: "America/Guayaquil",
     day: "numeric",
@@ -220,6 +221,7 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
     "Edades 27–35",
     "Consejeros",
     "Registros del check-in",
+    "Llegadas del check-in",
     ...companyPages.map((_, i) => `Compañías ${i + 1}/${companyPages.length}`),
   ];
   const active = Math.min(index, titles.length - 1);
@@ -389,10 +391,35 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
         ]}
       />
     </Slide>,
+    <Slide
+      key="check-ins"
+      eyebrow={`07 / LLEGADAS · ${registrationDate.toLocaleUpperCase("es-EC")}`}
+      title="Llegadas registradas el día del check-in"
+      note={`Base: ${report.total} participantes. Llegadas confirmadas en hora de Ecuador; no se guardó si se usó QR, código o búsqueda. No es un conteo de escaneos.`}
+    >
+      <Donut
+        total={report.total}
+        center={format(checkIns.onDay)}
+        caption={`el ${registrationDate}`}
+        rows={[
+          {
+            label: `El ${registrationDate}`,
+            value: checkIns.onDay,
+            color: colors[0],
+          },
+          { label: "En otro día", value: checkIns.otherDays, color: colors[1] },
+          {
+            label: "Sin check-in registrado",
+            value: checkIns.notRecorded,
+            color: colors[2],
+          },
+        ]}
+      />
+    </Slide>,
     ...companyPages.map((rows, i) => (
       <Slide
         key={`companies-${i}`}
-        eyebrow={`07 / COMPAÑÍAS · ${i + 1} DE ${companyPages.length}`}
+        eyebrow={`08 / COMPAÑÍAS · ${i + 1} DE ${companyPages.length}`}
         title="Asistencia por compañía"
         note="Cada barra representa el 100% de los participantes de esa compañía. El gris indica únicamente asistencia sin registrar."
       >
