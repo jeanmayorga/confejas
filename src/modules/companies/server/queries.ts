@@ -39,6 +39,8 @@ export type CompanyParticipant = {
   sex: string | null;
   status: ParticipantStatus;
   finalAttendance: boolean | null;
+  finalAttendanceRevision: string;
+  updatedAt: Date;
   wardName: string;
   stakeId: number;
   stakeName: string;
@@ -116,6 +118,8 @@ const companyParticipantSelection = {
   age: sql<number | null>`extract(year from age(current_date, ${participants.birthDate}))::integer`,
   sex: participants.sex,
   finalAttendance: participants.finalAttendance,
+  finalAttendanceRevision: participants.finalAttendanceRevision,
+  updatedAt: participants.updatedAt,
   status: participants.status,
   wardName: wards.name,
   stakeId: wards.stakeId,
