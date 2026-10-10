@@ -14,7 +14,7 @@ import styles from "./final-report.module.css";
 const number = new Intl.NumberFormat("es-EC");
 const format = (n: number) => number.format(n);
 const percent = (n: number, total: number) =>
-  total ? Math.round((n / total) * 100) : 0;
+  format(total ? Math.round((n / total) * 1000) / 10 : 0);
 const colors = ["#168478", "#b96b38", "#b8c3cc"];
 
 type Series = { label: string; value: number; color: string };
@@ -194,6 +194,12 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
   const a = report.attendance;
   const m = report.membership;
   const c = report.counselors;
+  const registrations = report.registrations;
+  const registrationDate = new Intl.DateTimeFormat("es-EC", {
+    timeZone: "America/Guayaquil",
+    day: "numeric",
+    month: "long",
+  }).format(new Date(`${registrations.date}T12:00:00-05:00`));
   const date = new Intl.DateTimeFormat("es-EC", {
     timeZone: "America/Guayaquil",
     dateStyle: "medium",
@@ -212,6 +218,7 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
     "Edades 18–26",
     "Edades 27–35",
     "Consejeros",
+    "Registros del check-in",
     ...companyPages.map((_, i) => `Compañías ${i + 1}/${companyPages.length}`),
   ];
   const active = Math.min(index, titles.length - 1);
@@ -353,10 +360,39 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
         {c.assigned} con compañía asignada · {c.total - c.assigned} sin compañía
       </p>
     </Slide>,
+    <Slide
+      key="registrations"
+      eyebrow={`06 / REGISTROS · ${registrationDate.toLocaleUpperCase("es-EC")}`}
+      title="Registros creados el día del check-in"
+      note={`Base: ${report.total} fichas de participantes. Se cuenta su fecha de creación en hora de Ecuador, no la fecha en que se marcó su llegada.`}
+    >
+      <Donut
+        total={report.total}
+        center={format(registrations.onDay)}
+        caption={`el ${registrationDate}`}
+        rows={[
+          {
+            label: "Antes del check-in",
+            value: registrations.before,
+            color: colors[2],
+          },
+          {
+            label: `El ${registrationDate}`,
+            value: registrations.onDay,
+            color: colors[0],
+          },
+          {
+            label: "Después del check-in",
+            value: registrations.after,
+            color: colors[1],
+          },
+        ]}
+      />
+    </Slide>,
     ...companyPages.map((rows, i) => (
       <Slide
         key={`companies-${i}`}
-        eyebrow={`06 / COMPAÑÍAS · ${i + 1} DE ${companyPages.length}`}
+        eyebrow={`07 / COMPAÑÍAS · ${i + 1} DE ${companyPages.length}`}
         title="Asistencia por compañía"
         note="Cada barra representa el 100% de los participantes de esa compañía. El gris indica únicamente asistencia sin registrar."
       >

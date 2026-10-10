@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import { checkInRegistrationQuery } from "./check-in-registration-query";
 
 // A single statement gives every slide the same database snapshot. Only
 // aggregate counts leave the server; participant identities are never selected.
@@ -11,6 +12,7 @@ export const finalReportQuery = sql`
     group by 1, 2, 3, 4
   )
   select
+    (${checkInRegistrationQuery}) as registrations,
     coalesce((select jsonb_agg(g) from grouped g), '[]'::jsonb) as groups,
     coalesce((select jsonb_agg(jsonb_build_object('id', id, 'name', name)) from companies), '[]'::jsonb) as companies,
     (select jsonb_build_object(
