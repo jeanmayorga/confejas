@@ -43,9 +43,11 @@ export function buildFinalReport(snapshot: FinalReportSnapshot) {
     const key =
       group.attended === null ? "unknown" : group.attended ? "yes" : "no";
     attendance[key] += n;
-    membership[
-      group.member === null ? "unknown" : group.member ? "yes" : "no"
-    ] += n;
+    if (group.attended === true) {
+      membership[
+        group.member === null ? "unknown" : group.member ? "yes" : "no"
+      ] += n;
+    }
     if (group.age === null) ageUnknown += n;
     else if (group.age >= 18 && group.age <= 35)
       ages[group.age - 18].total += n;

@@ -302,12 +302,12 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
     </Slide>,
     <Slide
       key="membership"
-      eyebrow="02 / PARTICIPANTES"
+      eyebrow="02 / ASISTENTES"
       title="Membresía de la Iglesia"
-      note={`Base: los ${report.total} participantes registrados, hayan asistido o no. «Sin dato» se muestra por separado.`}
+      note={`Base: ${a.yes} participantes con «Asistió: Sí». «Sin dato» se muestra por separado.`}
     >
       <Donut
-        total={report.total}
+        total={a.yes}
         center={format(m.no)}
         caption="no miembros"
         rows={[

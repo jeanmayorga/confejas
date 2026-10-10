@@ -24,7 +24,7 @@ describe("final report", () => {
     });
     expect(report.total).toBe(17);
     expect(report.attendance).toEqual({ yes: 4, no: 6, unknown: 7 });
-    expect(report.membership).toEqual({ yes: 3, no: 6, unknown: 8 });
+    expect(report.membership).toEqual({ yes: 3, no: 0, unknown: 1 });
     expect(report.ages[0]).toEqual({ age: 18, total: 3 });
     expect(report.ages[17]).toEqual({ age: 35, total: 2 });
     expect(report.ageOutsideRange).toBe(5);
@@ -73,5 +73,27 @@ describe("final report", () => {
     expect(report.ages).toHaveLength(18);
     expect(report.ages.every((row) => row.total === 0)).toBe(true);
     expect(report.companies).toEqual([]);
+    expect(report.membership).toEqual({ yes: 0, no: 0, unknown: 0 });
+  });
+
+  test("membership includes only final attendance yes for every membership category", () => {
+    const report = buildFinalReport({
+      ...empty,
+      groups: [true, false, null].flatMap((attended) =>
+        [true, false, null].map((member) => ({
+          age: 18,
+          member,
+          attended,
+          companyId: null,
+          total: attended === true ? 2 : 10,
+        })),
+      ),
+    });
+    expect(report.total).toBe(66);
+    expect(report.membership).toEqual({ yes: 2, no: 2, unknown: 2 });
+    expect(
+      Object.values(report.membership).reduce((sum, n) => sum + n, 0),
+    ).toBe(report.attendance.yes);
+    expect(report.attendance).toEqual({ yes: 6, no: 30, unknown: 30 });
   });
 });
