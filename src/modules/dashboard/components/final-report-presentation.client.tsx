@@ -93,17 +93,13 @@ function Donut({
 
 function AgeChart({ rows, max }: { rows: FinalReport["ages"]; max: number }) {
   return (
-    <div
-      className={styles.bars}
-      role="list"
-      aria-label="Participantes por edad"
-    >
+    <div className={styles.bars} role="list" aria-label="Asistentes por edad">
       {rows.map(({ age, total }) => (
         <div
           key={age}
           className={styles.barRow}
           role="listitem"
-          aria-label={`${age} años: ${total} participantes`}
+          aria-label={`${age} años: ${total} asistentes`}
         >
           <span>
             {age} <small>años</small>
@@ -118,37 +114,29 @@ function AgeChart({ rows, max }: { rows: FinalReport["ages"]; max: number }) {
   );
 }
 
-function CompanyChart({ rows }: { rows: FinalReport["companies"] }) {
+function CompanyChart({
+  rows,
+  max,
+}: {
+  rows: FinalReport["companies"];
+  max: number;
+}) {
   return (
     <div className={styles.companyChart}>
-      <p className={styles.chartKey}>
-        <span>● Sí</span>
-        <span>● No</span>
-        <span>● Sin registrar</span>
-      </p>
       {rows.map((row) => (
         <div key={row.id} className={styles.companyRow}>
           <div>
             <strong>{row.name}</strong>
-            <span>
-              {row.total > 0
-                ? `${row.yes} sí · ${row.no} no · ${row.unknown} sin registrar`
-                : "Sin participantes"}
-            </span>
+            <span>{format(row.total)} asistentes</span>
           </div>
-          {row.total > 0 ? (
-            <div className={styles.companyTrack} aria-hidden="true">
-              {[row.yes, row.no, row.unknown].map((value, i) => (
-                <span
-                  key={i}
-                  style={{
-                    width: `${(value / row.total) * 100}%`,
-                    background: colors[i],
-                  }}
-                />
-              ))}
-            </div>
-          ) : null}
+          <div className={styles.companyTrack} aria-hidden="true">
+            <span
+              style={{
+                width: `${(row.total / max) * 100}%`,
+                background: colors[0],
+              }}
+            />
+          </div>
         </div>
       ))}
     </div>
@@ -208,7 +196,8 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
     timeStyle: "short",
   }).format(new Date(report.asOf));
   const ageMax = Math.max(1, ...report.ages.map((row) => row.total));
-  const ageNote = `Edad al ${report.ageDate.split("-").reverse().join("/")}. ${report.ageUnknown} sin fecha de nacimiento · ${report.ageOutsideRange} fuera de 18–35 años.`;
+  const companyMax = Math.max(1, ...report.companies.map((row) => row.total));
+  const ageNote = `Base: ${a.yes} asistentes. Edad al ${report.ageDate.split("-").reverse().join("/")}. ${report.ageUnknown} sin fecha de nacimiento · ${report.ageOutsideRange} fuera de 18–35 años.`;
   const companyPages = Array.from(
     { length: Math.ceil(report.companies.length / 6) },
     (_, i) => report.companies.slice(i * 6, i * 6 + 6),
@@ -343,38 +332,35 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
     <Slide
       key="counselors"
       eyebrow="05 / EQUIPO"
-      title="Consejeros"
-      note="Registro de llegada de consejeros. Este dato es independiente de la asistencia final de participantes."
+      title="Consejeros que asistieron"
+      note={`Base: ${c.arrived} consejeros con llegada registrada. Contabilizados por separado de los participantes.`}
     >
       <Donut
-        total={c.total}
-        center={format(c.total)}
-        caption="registrados"
+        total={c.arrived}
+        center={format(c.arrived)}
+        caption="asistieron"
         rows={[
           {
-            label: "Con llegada registrada",
-            value: c.arrived,
+            label: "Con compañía asignada",
+            value: c.assigned,
             color: colors[0],
           },
           {
-            label: "Sin llegada registrada",
-            value: c.total - c.arrived,
+            label: "Sin compañía asignada",
+            value: c.arrived - c.assigned,
             color: colors[2],
           },
         ]}
       />
-      <p className={styles.assignment}>
-        {c.assigned} con compañía asignada · {c.total - c.assigned} sin compañía
-      </p>
     </Slide>,
     <Slide
       key="registrations"
       eyebrow={`06 / REGISTROS · ${registrationDate.toLocaleUpperCase("es-EC")}`}
       title="Registros creados el día del check-in"
-      note={`Base: ${report.total} fichas de participantes. Se cuenta su fecha de creación en hora de Ecuador, no la fecha en que se marcó su llegada.`}
+      note={`Base: ${a.yes} participantes con «Asistió: Sí». Se cuenta su fecha de creación en hora de Ecuador, no la fecha en que se marcó su llegada.`}
     >
       <Donut
-        total={report.total}
+        total={a.yes}
         center={format(registrations.onDay)}
         caption={`el ${registrationDate}`}
         rows={[
@@ -400,10 +386,10 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
       key="check-ins"
       eyebrow={`07 / LLEGADAS · ${registrationDate.toLocaleUpperCase("es-EC")}`}
       title="Llegadas registradas el día del check-in"
-      note={`Base: ${report.total} participantes. Llegadas confirmadas en hora de Ecuador; no se guardó si se usó QR, código o búsqueda. No es un conteo de escaneos.`}
+      note={`Base: ${a.yes} participantes con «Asistió: Sí». Llegadas confirmadas en hora de Ecuador; no se guardó si se usó QR, código o búsqueda. No es un conteo de escaneos.`}
     >
       <Donut
-        total={report.total}
+        total={a.yes}
         center={format(checkIns.onDay)}
         caption={`el ${registrationDate}`}
         rows={[
@@ -425,10 +411,10 @@ export function FinalReportPresentation({ report }: { report: FinalReport }) {
       <Slide
         key={`companies-${i}`}
         eyebrow={`08 / COMPAÑÍAS · ${i + 1} DE ${companyPages.length}`}
-        title="Asistencia por compañía"
-        note="Cada barra representa el 100% de los participantes de esa compañía. El gris indica únicamente asistencia sin registrar."
+        title="Asistentes por compañía"
+        note={`Base: ${a.yes} participantes con «Asistió: Sí». Las barras comparan el número de asistentes en cada compañía con la misma escala.`}
       >
-        <CompanyChart rows={rows} />
+        <CompanyChart rows={rows} max={companyMax} />
       </Slide>
     )),
   ];

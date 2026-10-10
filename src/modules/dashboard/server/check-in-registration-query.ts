@@ -12,4 +12,5 @@ export const checkInRegistrationQuery = sql`
     'after', count(*) filter (where (created_at at time zone 'America/Guayaquil')::date > ${checkInDate}::date)::int
   ) as registrations
   from participants
+  where final_attendance is true
 `;
