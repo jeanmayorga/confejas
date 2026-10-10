@@ -10,6 +10,7 @@ export type FinalReportSnapshot = {
   groups: FinalReportGroup[];
   companies: { id: string; name: string }[];
   counselors: { total: number; arrived: number; assigned: number };
+  registrations: { date: string; before: number; onDay: number; after: number };
   asOf: string;
   ageDate: string;
 };
@@ -82,6 +83,7 @@ export function buildFinalReport(snapshot: FinalReportSnapshot) {
               }),
     ),
     counselors: snapshot.counselors,
+    registrations: snapshot.registrations,
     asOf: snapshot.asOf,
     ageDate: snapshot.ageDate,
   };

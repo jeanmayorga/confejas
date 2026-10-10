@@ -5,6 +5,7 @@ const empty: FinalReportSnapshot = {
   groups: [],
   companies: [],
   counselors: { total: 0, arrived: 0, assigned: 0 },
+  registrations: { date: "2026-10-08", before: 0, onDay: 0, after: 0 },
   asOf: "2026-10-10T12:00:00Z",
   ageDate: "2026-10-10",
 };
