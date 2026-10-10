@@ -99,6 +99,7 @@ export type ParticipantTableRow = {
   shirtSize: string | null;
   isChurchMember: boolean | null;
   status: ParticipantStatus;
+  finalAttendance: boolean | null;
   wardName: string;
   stakeName: string;
   companyId: string | null;

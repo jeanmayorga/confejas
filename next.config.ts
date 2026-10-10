@@ -17,10 +17,6 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-      {
-        source: "/attendance-shell.html",
-        headers: [{ key: "Cache-Control", value: "no-cache" }],
-      },
     ];
   },
   devIndicators: {

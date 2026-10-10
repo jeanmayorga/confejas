@@ -6,19 +6,12 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Confejas",
     description: "Gestión y acompañamiento de participantes de Confejas.",
     id: "/",
-    start_url: "/asistencia",
+    start_url: "/",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
     background_color: "#e8f8ff",
     theme_color: "#046db0",
-    shortcuts: [
-      {
-        name: "Asistencia",
-        url: "/asistencia",
-        description: "Tomar asistencia por compañía",
-      },
-    ],
     categories: ["productivity", "utilities"],
     icons: [
       {

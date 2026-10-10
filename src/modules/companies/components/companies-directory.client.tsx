@@ -110,6 +110,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getParticipantInitials } from "@/modules/participants/components/participant-details.client";
 import { ParticipantDetailSheet } from "@/modules/participants/components/participant-detail-sheet.client";
+import { FinalAttendanceToggle } from "@/modules/attendance/components/final-attendance-toggle.client";
 import { ParticipantStatusDot } from "@/modules/participants/components/participant-status-dot";
 import {
   UnassignedStatusFilter,
@@ -1728,14 +1729,15 @@ function CompanyCard({
                 isDropTarget && "border-primary/40 ring-2 ring-primary/10",
               )}
             >
-              <Table className="block w-full md:table md:min-w-[620px] md:table-fixed">
+              <Table className="block w-full md:table md:min-w-[700px] md:table-fixed">
                 <colgroup className="hidden md:table-column-group">
                   <col className="md:w-11" />
                   <col className="md:w-12" />
                   <col className="md:w-24" />
                   <col />
-                  <col className="md:w-40" />
                   <col className="md:w-28" />
+                  <col className="md:w-24" />
+                  <col className="md:w-24" />
                   <col className="md:w-11" />
                 </colgroup>
                 <TableHeader className="hidden md:table-header-group">
@@ -1758,6 +1760,7 @@ function CompanyCard({
                     >
                       Participantes
                     </TableHead>
+                    <TableHead className="text-center">Asistió</TableHead>
                     <TableHead
                       aria-sort={
                         participantSort.field === "age" ? sortDirection : undefined
@@ -1895,6 +1898,16 @@ function CompanyCard({
                                 </span>
                               </span>
                             </Button>
+                          </TableCell>
+                          <TableCell className="shrink-0 border-r-0 p-0 text-center md:table-cell md:border-r md:px-1 md:py-[3px]">
+                            <span className="mb-1 block text-xs text-muted-foreground md:hidden">Asistió</span>
+                            <FinalAttendanceToggle
+                              key={`${participant.id}:${participant.finalAttendance}`}
+                              participantId={participant.id}
+                              participantName={getParticipantName(participant)}
+                              companyId={company.id}
+                              value={participant.finalAttendance}
+                            />
                           </TableCell>
                           <TableCell className="hidden whitespace-normal md:table-cell">
                             {getParticipantAge(participant.age)}
