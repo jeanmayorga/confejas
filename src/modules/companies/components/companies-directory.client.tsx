@@ -1902,11 +1902,13 @@ function CompanyCard({
                           <TableCell className="shrink-0 border-r-0 p-0 text-center md:table-cell md:border-r md:px-1 md:py-[3px]">
                             <span className="mb-1 block text-xs text-muted-foreground md:hidden">Asistió</span>
                             <FinalAttendanceToggle
-                              key={`${participant.id}:${participant.finalAttendance}`}
+                              key={`${participant.id}:${participant.finalAttendanceRevision}`}
                               participantId={participant.id}
                               participantName={getParticipantName(participant)}
                               companyId={company.id}
                               value={participant.finalAttendance}
+                              revision={participant.finalAttendanceRevision}
+                              updatedAt={participant.updatedAt}
                             />
                           </TableCell>
                           <TableCell className="hidden whitespace-normal md:table-cell">

@@ -44,6 +44,7 @@ export const participants = pgTable(
     shirtSize: varchar({ length: 16 }),
     isChurchMember: boolean(),
     finalAttendance: boolean(),
+    finalAttendanceRevision: uuid().defaultRandom().notNull(),
     status: participantStatusEnum().default("registered").notNull(),
     wardId: integer()
       .notNull()

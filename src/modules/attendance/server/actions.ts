@@ -30,7 +30,7 @@ export async function saveFinalAttendanceAction(input: {
   try {
     const result = await db.execute(sql`
       update participants
-      set final_attendance = ${input.attended}, updated_at = now()
+      set final_attendance = ${input.attended}, final_attendance_revision = gen_random_uuid(), updated_at = now()
       where id = ${input.participantId}::uuid
         and company_id = ${input.companyId}::uuid
       returning id

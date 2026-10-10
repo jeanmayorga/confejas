@@ -14,6 +14,7 @@ import { usePathname } from "next/navigation";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
+import { AttendanceQueueStatus } from "@/modules/attendance/components/attendance-queue-provider.client";
 import { AppSidebar, type DashboardUser } from "./app-sidebar.client";
 import { DashboardPageSidebarProvider } from "./dashboard-page-sidebar.client";
 import { getDashboardSidebarPanel } from "../sidebar-panels";
@@ -100,6 +101,7 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
               </svg>
             </SidebarTrigger>
           </header>
+          <AttendanceQueueStatus />
           <div
             ref={contentRef}
             data-dashboard-scroll
