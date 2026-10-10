@@ -172,11 +172,6 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
           href: "/dashboard/check-in",
           icon: QrCodeScanIcon,
         },
-        {
-          title: "Asistencia",
-          href: "/asistencia",
-          icon: UserGroupIcon,
-        },
       ]
     : [];
   const managementNavigation = [
@@ -291,8 +286,6 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
     setIsSigningOut(true);
 
     try {
-      const { lockOfflineAccount } = await import("@/modules/attendance/offline/store");
-      await lockOfflineAccount();
       await authClient.signOut();
       router.replace("/login");
       router.refresh();

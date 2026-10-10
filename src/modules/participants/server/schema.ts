@@ -43,6 +43,7 @@ export const participants = pgTable(
     welcomeEmailResendId: text(),
     shirtSize: varchar({ length: 16 }),
     isChurchMember: boolean(),
+    finalAttendance: boolean(),
     status: participantStatusEnum().default("registered").notNull(),
     wardId: integer()
       .notNull()

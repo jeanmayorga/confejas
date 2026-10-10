@@ -417,6 +417,10 @@ export function ParticipantDetails({
               <h3 className="text-sm font-semibold">Conferencia</h3>
               <dl className="mt-4 grid grid-cols-1 gap-x-4 gap-y-5 @sm/participant:grid-cols-2">
                 <DetailItem
+                  label="Asistió"
+                  value={membershipLabel(participant.finalAttendance)}
+                />
+                <DetailItem
                   label="Llegada"
                   value={
                     participant.checkedInAt
