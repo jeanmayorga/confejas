@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Calendar03Icon from "@hugeicons/core-free-icons/Calendar03Icon";
+import ChartColumnIcon from "@hugeicons/core-free-icons/ChartColumnIcon";
 import BedDoubleIcon from "@hugeicons/core-free-icons/BedDoubleIcon";
 import Building03Icon from "@hugeicons/core-free-icons/Building03Icon";
 import Building06Icon from "@hugeicons/core-free-icons/Building06Icon";
@@ -240,6 +241,11 @@ export function AppSidebar({ user, panel }: AppSidebarProps) {
                 title: "Calendario",
                 href: "/dashboard/calendar",
                 icon: Calendar03Icon,
+              },
+              {
+                title: "Informe final",
+                href: "/dashboard/final-report",
+                icon: ChartColumnIcon,
               },
             ]
           : []),
