@@ -181,12 +181,17 @@ export async function HomeReports({ name }: { name: string }) {
         description={`Hola, ${name}. Así va la organización de Confejas.`}
         badge={<Badge variant="secondary">Reportes</Badge>}
         actions={
-          <Button
-            variant="outline"
-            render={<Link href="/dashboard/participants" />}
-          >
-            Ver participantes
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button render={<Link href="/dashboard/final-report" />}>
+              Informe final
+            </Button>
+            <Button
+              variant="outline"
+              render={<Link href="/dashboard/participants" />}
+            >
+              Ver participantes
+            </Button>
+          </div>
         }
       />
       <section

@@ -1,0 +1,547 @@
+/* Presentation styles are scoped to the report, preserving the app shell. */
+.report {
+  --ink: #183047;
+  --paper: #faf9f5;
+  --muted: #536575;
+  color: var(--ink);
+  width: 100%;
+  max-width: 1440px;
+  margin: auto;
+  outline-offset: 4px;
+}
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.toolbar h1 {
+  font-size: 1.125rem;
+  font-weight: 650;
+}
+.toolbar p,
+.source {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.report button,
+.report select {
+  border: 1px solid #ced5d9;
+  border-radius: 0.5rem;
+  background: white;
+  min-height: 44px;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.8rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+.report button:hover:not(:disabled) {
+  background: #eaf0f1;
+}
+.report button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.report button:focus-visible,
+.report select:focus-visible {
+  outline: 3px solid #168478;
+  outline-offset: 3px;
+}
+.actions button:last-child {
+  background: var(--ink);
+  color: white;
+  border-color: var(--ink);
+}
+.actions button:last-child:hover {
+  background: #28516e;
+}
+.stage {
+  container-type: inline-size;
+  height: clamp(540px, calc(100dvh - 225px), 840px);
+  background: var(--paper);
+  border: 1px solid #dedfda;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.slide {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(1.25rem, 4cqw, 4rem);
+  gap: clamp(0.6rem, 2cqw, 1.8rem);
+  overflow: hidden;
+  animation: arrive 0.25s ease-out;
+}
+.slide header {
+  flex-shrink: 0;
+}
+.eyebrow {
+  color: #43766e;
+  font-size: clamp(0.6rem, 1.05cqw, 0.85rem);
+  font-weight: 650;
+  letter-spacing: 0.17em;
+  margin-bottom: clamp(0.5rem, 1cqw, 1rem);
+}
+.slide h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  font-size: clamp(1.8rem, 4cqw, 3.8rem);
+  letter-spacing: -0.035em;
+  line-height: 1.06;
+  text-wrap: balance;
+}
+.content {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.note {
+  font-size: clamp(0.65rem, 1cqw, 0.8rem);
+  line-height: 1.5;
+  color: var(--muted);
+  border-top: 1px solid #dce0dd;
+  padding-top: clamp(0.5rem, 1cqw, 1rem);
+  flex-shrink: 0;
+}
+.cover {
+  background: #183047;
+  color: #faf9f5;
+}
+.cover .eyebrow {
+  color: #a6d9c9;
+}
+.cover .note {
+  color: #c1cfda;
+  border-color: #476074;
+}
+.hero {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 4cqw, 4rem);
+}
+.hero > strong {
+  font-size: clamp(5rem, 13cqw, 11rem);
+  font-weight: 550;
+  letter-spacing: -0.065em;
+  line-height: 1.1;
+  color: #c0e3a7;
+  font-variant-numeric: tabular-nums;
+}
+.hero > span {
+  font-size: clamp(1rem, 2cqw, 1.6rem);
+  line-height: 1.45;
+}
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  padding-top: clamp(1.25rem, 3cqw, 3rem);
+  margin-top: clamp(1rem, 2cqw, 2rem);
+  border-top: 1px solid #476074;
+}
+.summary dt {
+  font-size: clamp(0.7rem, 1.2cqw, 1rem);
+  color: #c1cfda;
+}
+.summary dd {
+  font-size: clamp(1.8rem, 4cqw, 3rem);
+  margin-top: 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(1rem, 5cqw, 5rem);
+  align-items: center;
+  min-height: 0;
+}
+.donut {
+  width: min(100%, 330px, 36vh);
+  aspect-ratio: 1;
+  position: relative;
+  justify-self: center;
+}
+.donut svg {
+  width: 100%;
+  height: 100%;
+}
+.donutCenter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.donutCenter strong {
+  font-size: clamp(2.5rem, 5cqw, 4.5rem);
+  font-weight: 550;
+  letter-spacing: -0.05em;
+  line-height: 1.1;
+}
+.donutCenter span {
+  font-size: clamp(0.75rem, 1.4cqw, 1rem);
+  color: var(--muted);
+}
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.8rem, 2.5cqw, 2rem);
+}
+.legend dt {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: clamp(0.8rem, 1.5cqw, 1.15rem);
+}
+.legend i {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+}
+.legend dd {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding-left: 1.1rem;
+}
+.legend strong {
+  font-size: clamp(1.6rem, 3cqw, 2.8rem);
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+}
+.legend dd span {
+  font-size: clamp(0.65rem, 1.1cqw, 0.85rem);
+  color: var(--muted);
+}
+.bars {
+  display: grid;
+  grid-template-rows: repeat(9, 1fr);
+  gap: clamp(0.45rem, 1cqw, 0.9rem);
+  height: 100%;
+  max-height: 430px;
+}
+.barRow {
+  display: grid;
+  grid-template-columns: clamp(3.8rem, 8cqw, 6rem) 1fr 2.5rem;
+  gap: clamp(0.5rem, 1.5cqw, 1.5rem);
+  align-items: center;
+  font-size: clamp(0.8rem, 1.5cqw, 1.1rem);
+}
+.barRow small {
+  color: var(--muted);
+}
+.barRow strong {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+.track {
+  height: 70%;
+  max-height: 26px;
+  min-height: 12px;
+  background: #e8ece7;
+  border-radius: 0 4px 4px 0;
+  overflow: hidden;
+}
+.track > div {
+  height: 100%;
+  background: #168478;
+  border-radius: 0 4px 4px 0;
+}
+.assignment {
+  text-align: center;
+  color: var(--muted);
+  font-size: clamp(0.75rem, 1.2cqw, 1rem);
+  margin-top: 1rem;
+}
+.companyChart {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  height: 100%;
+  gap: clamp(0.5rem, 1.2cqw, 1rem);
+}
+.chartKey {
+  display: flex;
+  gap: 1rem;
+  font-size: clamp(0.65rem, 1.1cqw, 0.85rem);
+}
+.chartKey span:nth-child(1) {
+  color: #137368;
+}
+.chartKey span:nth-child(2) {
+  color: #945024;
+}
+.chartKey span:nth-child(3) {
+  color: #536575;
+}
+.companyRow > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+.companyRow strong {
+  font-size: clamp(0.8rem, 1.3cqw, 1rem);
+  font-weight: 550;
+}
+.companyRow div > span {
+  font-size: clamp(0.65rem, 1.1cqw, 0.85rem);
+  color: var(--muted);
+}
+.companyTrack {
+  height: clamp(0.65rem, 1.8cqw, 1.25rem);
+  display: flex;
+  background: #e8ece7;
+  overflow: hidden;
+  border-radius: 3px;
+}
+.navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+.navigation select {
+  max-width: 100%;
+}
+.navigation label {
+  min-width: 0;
+}
+.progress {
+  height: 3px;
+  background: #e2e8e7;
+  margin-top: 0.85rem;
+}
+.progress > div {
+  height: 100%;
+  background: #168478;
+  transition: width 0.2s ease;
+}
+.source {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.6rem;
+}
+.message {
+  font-size: 0.8rem;
+  margin-bottom: 0.8rem;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.report:fullscreen {
+  background: #f2f3ef;
+  padding: clamp(0.75rem, 2vw, 2rem);
+  height: 100dvh;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+}
+.report:fullscreen .stage {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+@keyframes arrive {
+  from {
+    opacity: 0.5;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 600px) {
+  .toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .actions {
+    width: 100%;
+  }
+  .actions button {
+    flex: 1;
+  }
+  .stage {
+    height: 560px;
+  }
+  .split {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+  .donut {
+    width: min(190px, 26vh);
+  }
+  .legend {
+    gap: 0.5rem;
+  }
+  .legend > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+  }
+  .legend dd {
+    padding: 0;
+  }
+  .legend dd span {
+    width: 4.5rem;
+    text-align: right;
+  }
+  .hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+  .hero > strong {
+    font-size: 5.5rem;
+  }
+  .hero br {
+    display: none;
+  }
+  .summary {
+    gap: 0.65rem;
+  }
+  .summary dt {
+    min-height: 2rem;
+  }
+  .summary dd {
+    font-size: 1.8rem;
+  }
+  .source {
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .source span {
+    font-size: 0.65rem;
+  }
+  .navigation button span {
+    display: none;
+  }
+  .companyRow > div:first-child {
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+}
+@media (max-height: 700px) {
+  .report:fullscreen .toolbar {
+    margin-bottom: 0.5rem;
+    flex-direction: row;
+    align-items: center;
+  }
+  .report:fullscreen .actions {
+    width: auto;
+  }
+  .report:fullscreen .slide {
+    padding: clamp(0.75rem, 2cqw, 1.5rem);
+    gap: 0.65rem;
+  }
+  .report:fullscreen .slide h2 {
+    font-size: clamp(1.5rem, 3cqw, 2.5rem);
+  }
+  .report:fullscreen .summary {
+    padding-top: 0.65rem;
+    margin-top: 0.65rem;
+  }
+  .report:fullscreen .hero > strong {
+    font-size: clamp(3rem, 9cqw, 6rem);
+  }
+}
+@media (max-height: 600px) {
+  .report:fullscreen .source span,
+  .report:fullscreen .toolbar p {
+    display: none;
+  }
+  .report:fullscreen .split {
+    grid-template-columns: 1fr 1fr;
+  }
+  .report:fullscreen .legend > div {
+    display: block;
+  }
+  .report:fullscreen .donut {
+    width: min(190px, 35vh);
+  }
+  .report:fullscreen .hero {
+    flex-direction: row;
+    align-items: center;
+  }
+  .report:fullscreen .companyChart {
+    gap: 0.3rem;
+  }
+  .report:fullscreen .companyRow > div:first-child {
+    flex-direction: row;
+  }
+}
+@media (max-height: 500px) {
+  .report:fullscreen {
+    padding: 0.5rem;
+  }
+  .report:fullscreen .eyebrow {
+    margin-bottom: 0.25rem;
+  }
+  .report:fullscreen .slide h2 {
+    font-size: 1.4rem;
+  }
+  .report:fullscreen .note {
+    font-size: 0.6rem;
+    padding-top: 0.3rem;
+  }
+  .report:fullscreen .bars {
+    gap: 0.2rem;
+  }
+  .report:fullscreen .barRow {
+    font-size: 0.7rem;
+  }
+  .report:fullscreen .track {
+    min-height: 6px;
+  }
+  .report:fullscreen .legend strong {
+    font-size: 1.25rem;
+  }
+  .report:fullscreen .navigation {
+    margin-top: 0.3rem;
+  }
+  .report:fullscreen .progress {
+    margin-top: 0.3rem;
+  }
+  .report:fullscreen .companyRow strong,
+  .report:fullscreen .companyRow div > span {
+    font-size: 0.65rem;
+  }
+  .report:fullscreen .companyTrack {
+    height: 0.4rem;
+  }
+  .report:fullscreen .companyRow > div:first-child {
+    margin-bottom: 0.15rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .slide {
+    animation: none;
+  }
+  .progress > div {
+    transition: none;
+  }
+}
