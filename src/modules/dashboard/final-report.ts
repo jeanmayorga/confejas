@@ -34,9 +34,6 @@ export function buildFinalReport(snapshot: FinalReportSnapshot) {
       {
         ...company,
         total: 0,
-        yes: 0,
-        no: 0,
-        unknown: 0,
       },
     ]),
   );
@@ -49,11 +46,11 @@ export function buildFinalReport(snapshot: FinalReportSnapshot) {
     const key =
       group.attended === null ? "unknown" : group.attended ? "yes" : "no";
     attendance[key] += n;
-    if (group.attended === true) {
-      membership[
-        group.member === null ? "unknown" : group.member ? "yes" : "no"
-      ] += n;
-    }
+    // Every participant breakdown after attendance uses this same cohort.
+    if (group.attended !== true) continue;
+    membership[
+      group.member === null ? "unknown" : group.member ? "yes" : "no"
+    ] += n;
     if (group.age === null) ageUnknown += n;
     else if (group.age >= 18 && group.age <= 35)
       ages[group.age - 18].total += n;
@@ -63,12 +60,8 @@ export function buildFinalReport(snapshot: FinalReportSnapshot) {
       id,
       name: "Sin compañía",
       total: 0,
-      yes: 0,
-      no: 0,
-      unknown: 0,
     };
     company.total += n;
-    company[key] += n;
     companies.set(id, company);
   }
   return {

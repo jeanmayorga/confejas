@@ -20,7 +20,7 @@ export const finalReportQuery = sql`
     (select jsonb_build_object(
       'total', count(*)::int,
       'arrived', count(*) filter (where arrived_at is not null)::int,
-      'assigned', count(*) filter (where company_id is not null)::int
+      'assigned', count(*) filter (where arrived_at is not null and company_id is not null)::int
     ) from counselors) as counselors,
     current_timestamp::text as "asOf", current_date::text as "ageDate"
 `;

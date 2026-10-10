@@ -11,4 +11,5 @@ export const checkInArrivalsQuery = sql`
     'notRecorded', count(*) filter (where checked_in_at is null)::int
   ) as check_ins
   from participants
+  where final_attendance is true
 `;
